@@ -1,0 +1,24 @@
+# virtualenv
+env/
+env/**
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+
+# IDE
+.vscode/
+.idea/
+
+# Flutter / build artifacts
+.immo_app/build/
+*.apk
+*.ipa
+.build/
+
+# OS
+.DS_Store
+
+# Optional large files
+memoire.pdf
