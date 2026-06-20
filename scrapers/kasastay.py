@@ -9,7 +9,6 @@ import re
 import urllib.parse
 
 from .base import BaseScraper
-from core.models import Annonce
 
 def telecharger_image_localement(url: str, prefix: str = "img") -> str:
     """Télécharge l'image physiquement (Architecture Trivago) sans faire de doublons"""
@@ -97,7 +96,7 @@ class KasastayScraper(BaseScraper):
                 urls_locales.append(chemin_local)
                 
         return ",".join(urls_locales)
-    def scrape(self) -> List[Annonce]:
+    def scrape(self) -> List[dict]:
         print(f"[{self.platform_name}] Début de l'exploration...")
         annonces_scrapees = []
         
@@ -139,12 +138,42 @@ class KasastayScraper(BaseScraper):
                         type_bien_trouve = "Maison"
                     else:
                         type_bien_trouve = "Autre"
+                    # Extraction de la vraie localisation
+                    localisation = ""
+                    meta_desc = soup_detail.find("meta", {"property": "og:description"})
+                    if meta_desc and meta_desc.get("content"):
+                        localisation = meta_desc["content"].strip()[:80]
+
+                    if not localisation:
+                        villes = ["Douala", "Yaoundé", "Bafoussam", "Garoua", "Maroua",
+                                  "Bamenda", "Ngaoundéré", "Bertoua", "Ebolowa", "Kribi",
+                                  "Limbe", "Buea", "Nkongsamba", "Edéa", "Kumba"]
+                        for tag in soup_detail.find_all(['span', 'p', 'div']):
+                            text = tag.get_text(strip=True)
+                            for ville in villes:
+                                if ville.lower() in text.lower() and len(text) < 100:
+                                    localisation = text
+                                    break
+                            if localisation:
+                                break
+
+                    if not localisation:
+                        meta_title = soup_detail.find("meta", {"property": "og:title"})
+                        if meta_title and meta_title.get("content"):
+                            localisation = meta_title["content"].strip()[:80]
+
+                    if not localisation:
+                        localisation = "Cameroun"  # sera rejeté par le filtre
+ 
                         
-                    annonce = Annonce(
+
+                        
+                    annonce = dict(
                         titre=titre,
                         type_de_bien=type_bien_trouve,
                         prix_entier=prix_entier,
-                        localisation_brute="Non renseignée",
+                        localisation_brute=localisation,
+
                         description=description,
                         url_source=url_detail,
                         nom_plateforme=self.platform_name,

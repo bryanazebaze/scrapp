@@ -1,22 +1,20 @@
 # =====================================================================
 #  CONTEXTE COMPLET DU PROJET : CentralImmo (Agrégateur Immobilier)
-#  🗓️  Dernière mise à jour : 14 Juin 2026
+#  🗓️  Dernière mise à jour : 18 Juin 2026
 #  📁  Dossier racine du projet : /home/bryan/Documents/soutenance/new/scrapp
 # =====================================================================
 
 ## C'est quoi le projet ?
 
 CentralImmo est un **agrégateur immobilier** pour le marché camerounais.
-L'idée est simple : au lieu que l'utilisateur aille sur Kasastay, puis Mapiole, puis d'autres sites un par un, notre application récupère les annonces de tous ces sites automatiquement et les affiche en un seul endroit, propre et sans doublons.
+L'idée est simple : au lieu que l'utilisateur aille sur Kasastay, puis Mapiole, puis d'autres sites un par un, notre application récupère les annonces de tous ces sites automatiquement, les déduplique, et les affiche en un seul endroit, propre et sans redondance.
 
 C'est le projet de soutenance de Licence 3 en Génie Logiciel.
-L'encadreur académique a proposé le thème. Smart Service Hub (SSH) a fourni l'accompagnement professionnel pour la réalisation.
+L'encadreur académique a proposé le thème. Smart Service Hub (SSH) a fourni l'accompagnement professionnel.
 
 ---
 
 ## Architecture du Projet
-
-Le projet est divisé en 3 parties qui communiquent entre elles :
 
 ```
 [Sites web : Mapiole, Kasastay]
@@ -36,87 +34,79 @@ Le projet est divisé en 3 parties qui communiquent entre elles :
 
 ```
 scrapp/
-├── main.py              ← Orchestrateur : lance tous les scrapers
-├── main_api.py          ← Serveur FastAPI (l'API REST)
+├── main.py              ← Orchestrateur : lance tous les scrapers → appelle fusion.py
+├── main_api.py          ← Serveur FastAPI (2 routes : /annonces et /annonces/{id})
+├── init_db.py           ← Réinitialiser la base de données (drop_all + create_all)
 ├── core/
-│   ├── models.py        ← Modèles de la base de données (SQLAlchemy)
-│   ├── schemas.py       ← Format de sortie JSON (Pydantic)
+│   ├── models.py        ← Deux tables : Annonce (Super) + SourceAnnonce
+│   ├── schemas.py       ← Trois schémas Pydantic : SourceAnnonceSchema, AnnonceBreve, AnnonceDetaillee
+│   ├── fusion.py        ← Algorithme de déduplication avec rapidfuzz
 │   └── database.py      ← Connexion à la base de données
 ├── scrapers/
 │   ├── base.py          ← Classe de base commune à tous les scrapers
-│   ├── kasastay.py      ← Scraper du site Kasastay ✅ (opérationnel)
-│   └── mapiole.py       ← Scraper du site Mapiole ✅ (opérationnel)
+│   ├── kasastay.py      ← Scraper Kasastay ✅ (retourne des dict{})
+│   └── mapiole.py       ← Scraper Mapiole ✅ (retourne des dict{})
 ├── static/images/       ← Images téléchargées localement (style Trivago)
 └── immo_app/            ← Application mobile Flutter
     └── lib/
         ├── main.dart
-        ├── models/annonce.dart    ← Modèle de données côté Flutter
-        ├── services/api_service.dart ← Appels HTTP vers FastAPI
+        ├── models/annonce.dart         ← ⚠️ À METTRE À JOUR (voir section Flutter ci-dessous)
+        ├── services/api_service.dart   ← Appels HTTP vers FastAPI
         └── screens/
-            ├── home_screen.dart   ← Écran d'accueil ✅ (opérationnel)
-            └── detail_screen.dart ← Écran de détail ✅ (opérationnel)
+            ├── home_screen.dart        ← ⚠️ À METTRE À JOUR (voir section Flutter ci-dessous)
+            └── detail_screen.dart      ← ⚠️ À METTRE À JOUR (voir section Flutter ci-dessous)
 ```
 
 ---
 
-## Ce qui est déjà fait ✅
+## Ce qui a été fait dans cette session (18 Juin 2026) ✅
 
-### Backend (Python)
-- [x] Scraper Kasastay opérationnel (collecte titres, prix, images, URL source)
-- [x] Scraper Mapiole opérationnel
-- [x] Téléchargement local des images (architecture Trivago : hash MD5 pour éviter les doublons de fichiers)
-- [x] Serveur FastAPI avec route `/annonces` qui renvoie les annonces en JSON
-- [x] Route `/static` pour servir les images locales téléchargées
-- [x] Déduplication basique par URL (si la même URL existe déjà, on ne la rajoute pas)
+### Vision Produit définie
+L'expérience utilisateur a été clarifiée et est la suivante :
+- Le client **ne sait pas** quelle plateforme a posté la maison sur l'écran d'accueil.
+- Sur la **page de détail**, il voit en grand : le **meilleur prix** avec une mention textuelle courte ("L'offre la moins chère"), une description **essentielle** (pas de roman), et un bouton "Voir l'offre" vers le site source.
+- En bas, une **liste de cartes verticales** présente les autres plateformes qui publient la même maison, avec leur prix et une petite particularité, et un bouton "Voir l'offre" pour chacune.
 
-### Application Mobile (Flutter)
-- [x] Écran d'accueil `HomeScreen` avec le design **Émeraude et Or**
-  - En-tête dégradé (CentralImmo logo + tagline)
-  - Barre de recherche (visuelle pour l'instant)
-  - Chips de filtres (Tout, Appartement, Studio, Villa...)
-  - Liste de cartes d'annonces avec photo, titre, prix
-- [x] Écran de détail `DetailScreen` style Trivago :
-  - Carrousel d'images avec points indicateurs
-  - Prix affiché en grand
-  - Localisation
-  - Description complète
-  - Bouton de redirection vers le site source avec animation de chargement
+### Backend (Python) ✅
+- **`core/models.py`** : Refactorisé. Le modèle `Annonce` est maintenant la "Super-Annonce" (`meilleur_prix`, sans `nom_plateforme` ni `url_source`). La table `SourceAnnonce` contient le champ `particularite`.
+- **`core/fusion.py`** : Entièrement réécrit pour accepter des `dict{}` en entrée (et non plus des objets `Annonce`). L'algorithme normalise les titres, compare les prix à ±15% et utilise `rapidfuzz` (score ≥ 78%) pour détecter les doublons. Il met à jour `meilleur_prix` si une source moins chère est trouvée.
+- **`scrapers/kasastay.py`** et **`scrapers/mapiole.py`** : Ne retournent plus des `Annonce(...)` mais des `dict(...)`. L'import `from core.models import Annonce` a été supprimé.
+- **`main.py`** : Simplifié. La boucle appelle directement `fusionner_ou_inserer(db, annonce)` sans normaliser manuellement le titre.
+- **`core/schemas.py`** : Trois schémas clairs : `SourceAnnonceSchema` (avec `particularite`), `AnnonceBreve` (pour HomeScreen, léger), `AnnonceDetaillee` (pour DetailScreen, avec la liste des sources).
+- **`main_api.py`** : Deux endpoints :
+  - `GET /annonces` → retourne `List[AnnonceBreve]` (ultra-léger pour la liste)
+  - `GET /annonces/{id}` → retourne `AnnonceDetaillee` avec les sources triées par prix croissant ✅
 
 ---
 
 ## Ce qui reste à faire 🚧
 
-### 🔴 PRIORITÉ 1 : Vraie Déduplication inter-plateformes (Le cœur du projet)
+### 🔴 PRIORITÉ 1 : Mettre à jour l'Application Mobile Flutter
 
-**Objectif** : Si la même maison est postée sur Kasastay ET Mapiole, afficher une seule fiche mais montrer les 2 prix dans la page de détail (comme Trivago fait avec les hôtels).
+#### Étape A — Mettre à jour `immo_app/lib/models/annonce.dart`
+Le modèle Dart est encore calé sur l'ancienne API. Il faut le refactoriser pour coller aux deux nouveaux schémas Pydantic :
+- Classe `Source` : ajouter le champ `String? particularite`
+- Classe `Annonce` : remplacer `int? prixEntier` par `int? meilleurPrix`, supprimer `String urlSource` et `String? nomPlateforme` (en tant que champs requis en HomeScreen)
 
-**Plan d'implémentation (Solution A — 2 tables SQL) :**
+#### Étape B — Mettre à jour `immo_app/lib/services/api_service.dart`
+Vérifier que le service appelle bien `/annonces` pour la liste, et `/annonces/{id}` pour le détail.
 
-**Étape 1 — Modifier la base de données** (`core/models.py`)
-- Ajouter un champ `titre_normalise` dans le modèle `Annonce` pour stocker le titre en minuscules sans accents (pour faciliter la comparaison)
-- Créer une nouvelle table `SourceAnnonce` avec les champs :
-  - `id`, `annonce_id` (clé étrangère vers `Annonce`), `nom_plateforme`, `url_source`, `prix_entier`, `date_collecte`
-- La table `Annonce` devient la "Super-Annonce" commune
-- La table `SourceAnnonce` stock chaque doublon détecté sous différentes sources
+#### Étape C — Mettre à jour `immo_app/lib/screens/home_screen.dart`
+- Remplacer `annonce.prixEntier` par `annonce.meilleurPrix`
+- Supprimer le badge de plateforme (le client ne doit pas voir d'où vient l'annonce !)
 
-**Étape 2 — Créer l'algorithme de fusion** (nouveau fichier `core/fusion.py`)
-- Installer `rapidfuzz` (`pip install rapidfuzz`)
-- Pour chaque nouvelle annonce scrapée, l'algorithme :
-  1. Filtre les annonces existantes dont le prix est dans un intervalle de ±15%
-  2. Compare les titres avec `fuzz.ratio()` (distance de Levenshtein)
-  3. Si similarité > 78% → c'est un doublon → on ajoute une nouvelle `SourceAnnonce` à la super-annonce existante
-  4. Sinon → on crée une nouvelle `Annonce` normalement
-
-**Étape 3 — Mettre à jour `main.py`**
-- Remplacer la vérification simple par URL par l'appel à `core/fusion.py`
-
-**Étape 4 — Mettre à jour l'API** (`main_api.py`)
-- Créer une route `/annonces/{id}/sources` qui retourne toutes les plateformes et prix d'une Super-Annonce
-
-**Étape 5 — Mettre à jour Flutter** (`detail_screen.dart`)
-- Afficher un bloc "Comparer les offres" dans la page de détail
-- Chaque source est représentée par une carte avec le logo de la plateforme et son prix
-- Un bouton "Voir sur [Plateforme]" sur chaque carte
+#### Étape D — Refaire `immo_app/lib/screens/detail_screen.dart`
+C'est le gros du travail restant. La nouvelle interface de détail doit avoir :
+1. **En haut** : Photo carousel, titre, localisation
+2. **Prix mis en valeur** : Grand chiffre + texte *"L'offre la moins chère de toutes les propositions"* (couleur verte de la charte)
+3. **Description courte** : Seulement l'essentiel (pas de texte interminable)
+4. **Bouton principal** : "Voir l'offre" → ouvre l'URL de la source la moins chère
+5. **Séparateur** avec titre "Autres offres disponibles"
+6. **Liste verticale de cartes** : une carte par `SourceAnnonce` avec :
+   - Nom de la plateforme (Kasastay, Mapiole...)
+   - Prix proposé
+   - Petite particularité textuelle
+   - Bouton "Voir l'offre" → ouvre l'URL de cette source
 
 ### 🟡 PRIORITÉ 2 : Recherche par Temps de Trajet (Isochrone)
 - Créer un écran `MapSearchScreen` dans Flutter
@@ -125,9 +115,16 @@ scrapp/
 - Appeler l'API OpenRouteService pour calculer la zone isochrone
 
 ### 🟢 PRIORITÉ 3 : Valorisation et Statistiques des Quartiers
-- Agréger les données de prix par zone géographique (PostGIS ou regroupement simple par texte de localisation)
+- Agréger les données de prix par zone géographique
 - Créer un widget de statistiques (prix moyen du quartier, types de biens dominants)
-- L'afficher dans la page de détail ou dans un écran dédié
+
+---
+
+## Charte Graphique (à respecter dans Flutter)
+- **Couleur principale** : Vert Émeraude `#00695C` (fond header, accents)
+- **Couleur secondaire** : Or Premium `#D4AF37` (chips sélectionnées, badges)
+- **Fond général** : `Colors.grey.shade100`
+- **Cartes** : Blanc avec coins arrondis à 20px et ombre douce
 
 ---
 
@@ -138,21 +135,18 @@ scrapp/
 cd /home/bryan/Documents/soutenance/new/scrapp
 source env/bin/activate
 
-# 2. Lancer le scraper (collecte les données)
+# 2. (Si 1ère fois ou reset) — Réinitialiser la base de données
+python init_db.py
+
+# 3. Lancer le scraper (collecte les données + déduplication)
 python main.py
 
-# 3. Lancer le serveur API (dans un terminal séparé)
+# 4. Lancer le serveur API (dans un terminal séparé)
 uvicorn main_api:app --reload --host 127.0.0.1 --port 8000
 
-# 4. Lancer l'application Flutter (dans un autre terminal)
+# 5. Lancer l'application Flutter (dans un autre terminal)
 cd immo_app
 flutter run
 ```
 
----
-
-## Recommandation technique (Solution A vs B)
-
-**→ Choisir la Solution A (2 tables).**
-
-Pourquoi : c'est ce qui est décrit dans le mémoire (base de données relationnelle structurée). C'est plus propre, plus évolutif, et ça donnera une bien meilleure impression au jury lors de la soutenance. La Solution B (JSON dans une colonne) est une rustine qui se voit immédiatement dans un code review.
+> 💡 **Port de l'API** : Sur émulateur Android, utiliser `10.0.2.2:8000` au lieu de `127.0.0.1:8000`. Sur appareil physique sur le même réseau Wi-Fi, utiliser l'adresse IP locale de la machine.

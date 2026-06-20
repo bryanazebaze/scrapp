@@ -23,8 +23,6 @@ def main():
             annonces = scraper.scrape()
 
             for annonce in annonces:
-                # On normalise le titre avant de chercher les doublons
-                annonce.titre_normalise = normaliser_titre(annonce.titre)
                 # L'algorithme de fusion gère tout : doublon ou nouvelle annonce
                 fusionner_ou_inserer(db, annonce)
 

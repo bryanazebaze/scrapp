@@ -8,7 +8,6 @@ import time
 import re
 
 from .base import BaseScraper
-from core.models import Annonce
 
 def telecharger_image_localement(url: str, prefix: str = "img") -> str:
     """Télécharge l'image physiquement (sans faire de doublons)"""
@@ -82,7 +81,7 @@ class MapioleScraper(BaseScraper):
                 
         return ",".join(urls_locales)
 
-    def scrape(self) -> List[Annonce]:
+    def scrape(self) -> List[dict]:
         print(f"[{self.platform_name}] Début de l'exploration...")
         annonces_scrapees = []
         
@@ -145,7 +144,7 @@ class MapioleScraper(BaseScraper):
                     else:
                         type_bien_trouve = "Autre"
                     
-                    annonce = Annonce(
+                    annonce = dict(
                         titre=titre,
                         type_de_bien=type_bien_trouve,
                         prix_entier=prix_entier,

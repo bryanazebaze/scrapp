@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
 import '../models/annonce.dart';
+import '../services/api_service.dart';
 import 'package:url_launcher/url_launcher.dart';
 
-class DetailScreen extends StatefulWidget {
-  final Annonce annonce;
+// On garde LA MÊME COULEUR PRIMAIRE pour une cohérence parfaite
+const Color primaryColor = Color(0xFFE94E1B);
 
+class DetailScreen extends StatefulWidget {
+  final Annonce annonce; // Reçoit la version brève depuis HomeScreen
   const DetailScreen({super.key, required this.annonce});
 
   @override
@@ -13,508 +16,334 @@ class DetailScreen extends StatefulWidget {
 
 class _DetailScreenState extends State<DetailScreen> {
   int _currentImageIndex = 0;
-  Source? _bestSource() {
-    if (widget.annonce.sources.isEmpty) return null;
-    final priced = widget.annonce.sources.where((s) => s.prixEntier != null).toList();
-    if (priced.isEmpty) return widget.annonce.sources.first;
-    priced.sort((a, b) => a.prixEntier!.compareTo(b.prixEntier!));
-    return priced.first;
+  late Future<Annonce> _futureDetail;
+  late Future<String> _futureAnalyse;
+
+  @override
+  void initState() {
+    super.initState();
+    // On charge le détail complet (avec les sources) dès l'ouverture
+    _futureDetail = ApiService().fetchAnnonceDetail(widget.annonce.id);
+    _futureAnalyse = ApiService().fetchAnalysePrix(widget.annonce.id);
   }
 
-  // Extraction propre de TOUTES les images (Trivago Style)
-  List<String> _getAllImages() {
-    if (widget.annonce.urlsImages == null || widget.annonce.urlsImages!.isEmpty)
-      return [];
-
-    final liens = widget.annonce.urlsImages!.split(',');
-    return liens
+  List<String> _getAllImages(Annonce annonce) {
+    if (annonce.urlsImages == null || annonce.urlsImages!.isEmpty) return [];
+    return annonce.urlsImages!
+        .split(',')
         .map((e) => e.trim())
         .where((e) => e.isNotEmpty)
-        .map((e) => "http://127.0.0.1:8000$e") // Ajout de l'host
+        .map((e) => "http://127.0.0.1:8000$e")
         .toList();
+  }
+
+  Future<void> _ouvrirUrl(String url) async {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => const Center(
+        child: Card(
+          child: Padding(
+            padding: EdgeInsets.all(20),
+            child: Column(mainAxisSize: MainAxisSize.min, children: [
+              CircularProgressIndicator(color: primaryColor), // Mis aux couleurs du design 
+              SizedBox(height: 16),
+              Text("Redirection en cours...", style: TextStyle(fontWeight: FontWeight.bold)),
+            ]),
+          ),
+        ),
+      ),
+    );
+    await Future.delayed(const Duration(milliseconds: 900));
+    if (url.isNotEmpty) {
+      await launchUrl(Uri.parse(url), mode: LaunchMode.inAppBrowserView);
+    }
+    if (mounted) Navigator.pop(context);
   }
 
   @override
   Widget build(BuildContext context) {
-    final images = _getAllImages();
-
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: Colors.grey[50], // Même fond clair que la HomeScreen
       appBar: AppBar(
-        title: const Text("Détails du bien"),
+        title: const Text("Détails du bien", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
         backgroundColor: Colors.white,
         foregroundColor: Colors.black87,
-        elevation: 0,
+        elevation: 0, // AppBar plate et moderne
+        centerTitle: true,
       ),
-      body: SingleChildScrollView(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // --- CARROUSEL D'IMAGES ---
-            if (images.isNotEmpty)
-              Stack(
-                alignment: Alignment.bottomCenter,
-                children: [
-                  SizedBox(
-                    height: 350,
-                    child: PageView.builder(
-                      itemCount: images.length,
-                      onPageChanged: (index) {
-                        setState(() {
-                          _currentImageIndex = index;
-                        });
-                      },
-                      itemBuilder: (context, index) {
-                        return Image.network(
-                          images[index],
+      body: FutureBuilder<Annonce>(
+        future: _futureDetail,
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator(color: primaryColor));
+          }
+          if (snapshot.hasError) {
+            return Center(child: Text("Erreur : ${snapshot.error}"));
+          }
+
+          final annonce = snapshot.data!;
+          final images = _getAllImages(annonce);
+          // La première source dans la liste est la moins chère (triée par l'API)
+          final bestSource = annonce.sources.isNotEmpty ? annonce.sources.first : null;
+          final otherSources = annonce.sources.isNotEmpty ? annonce.sources.skip(1).toList() : <Source>[];
+
+          return SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // --- CARROUSEL D'IMAGES ---
+                if (images.isNotEmpty)
+                  Stack(alignment: Alignment.bottomCenter, children: [
+                    SizedBox(
+                      height: 300,
+                      child: PageView.builder(
+                        itemCount: images.length,
+                        onPageChanged: (i) => setState(() => _currentImageIndex = i),
+                        itemBuilder: (_, i) => Image.network(
+                          images[i], 
                           fit: BoxFit.cover,
-                          width: double.infinity,
-                          errorBuilder: (ctx, err, stack) => const Center(
-                            child: Icon(
-                              Icons.broken_image,
-                              size: 50,
-                              color: Colors.grey,
-                            ),
-                          ),
-                        );
-                      },
+                          errorBuilder: (_, __, ___) => const Icon(Icons.broken_image, size: 50, color: Colors.grey)
+                        ),
+                      ),
                     ),
-                  ),
-                  // Les petits points indicateurs en bas du carrousel
-                  if (images.length > 1)
-                    Positioned(
-                      bottom: 16,
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: List.generate(
-                          images.length,
-                          (index) => Container(
+                    if (images.length > 1)
+                      Positioned(
+                        bottom: 15,
+                        child: Row(
+                          children: List.generate(images.length, (i) => AnimatedContainer(
+                            duration: const Duration(milliseconds: 250),
                             margin: const EdgeInsets.symmetric(horizontal: 4),
-                            width: _currentImageIndex == index ? 14 : 8,
+                            width: _currentImageIndex == i ? 18 : 8,
                             height: 8,
                             decoration: BoxDecoration(
-                              color: _currentImageIndex == index
-                                  ? Colors.blueAccent
-                                  : Colors.white70,
+                              // Indicateur Actif = couleur primaire
+                              color: _currentImageIndex == i ? primaryColor : Colors.white70,
                               borderRadius: BorderRadius.circular(4),
-                              boxShadow: const [
-                                BoxShadow(color: Colors.black26, blurRadius: 2),
-                              ],
+                              boxShadow: const [BoxShadow(color: Colors.black26, blurRadius: 4)],
+                            ),
+                          )),
+                        ),
+                      ),
+                  ])
+                else
+                  Container(height: 200, color: Colors.grey.shade200,
+                    child: const Center(child: Icon(Icons.image_not_supported, size: 50, color: Colors.grey))),
+
+                Padding(
+                  padding: const EdgeInsets.all(20),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Badge catégorie (Raccord avec les couleurs de la page d'accueil)
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: primaryColor.withOpacity(0.1), 
+                          borderRadius: BorderRadius.circular(8)
+                        ),
+                        child: Text(annonce.typeDeBien ?? 'Autre',
+                          style: const TextStyle(color: primaryColor, fontWeight: FontWeight.bold, fontSize: 13)),
+                      ),
+                      const SizedBox(height: 14),
+
+                      // Titre
+                      Text(annonce.titre,
+                        style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, height: 1.3, color: Colors.black87)),
+                      const SizedBox(height: 8),
+
+                      // Localisation
+                      Row(children: [
+                        Icon(Icons.location_on, color: Colors.grey[500], size: 18),
+                        const SizedBox(width: 4),
+                        Expanded(child: Text(annonce.localisationBrute ?? "Lieu non spécifié",
+                          style: TextStyle(color: Colors.grey[600], fontSize: 14))),
+                      ]),
+                      
+                      // --- ANALYSE DU PRIX ---
+                      FutureBuilder<String>(
+                        future: _futureAnalyse,
+                        builder: (context, snap) {
+                          if (!snap.hasData || snap.data!.isEmpty || snap.data!.toLowerCase().contains("non disponible")) {
+                            return const SizedBox.shrink(); 
+                          }
+                          return Padding(
+                            padding: const EdgeInsets.only(top: 16, bottom: 4),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                              decoration: BoxDecoration(
+                                color: Colors.indigo.shade50,
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(color: Colors.indigo.shade100)
+                              ),
+                              child: Row(
+                                children: [
+                                  Icon(Icons.analytics_outlined, color: Colors.indigo.shade400, size: 20),
+                                  const SizedBox(width: 10),
+                                  Expanded(
+                                    child: Text(
+                                      snap.data!,
+                                      style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Colors.indigo.shade800),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+
+                      const SizedBox(height: 24),
+
+                      // ★ LE MEILLEUR PRIX EN VEDETTE
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(20),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(16), // Arrondis homogènes
+                          border: Border.all(color: primaryColor.withOpacity(0.2), width: 1.5),
+                          boxShadow: [
+                            BoxShadow(color: primaryColor.withOpacity(0.06), blurRadius: 15, offset: const Offset(0, 8))
+                          ]
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start, 
+                          children: [
+                            Text(
+                              annonce.meilleurPrix != null ? "${annonce.meilleurPrix} XAF" : "Prix sur demande",
+                              style: const TextStyle(fontSize: 28, fontWeight: FontWeight.w900, color: primaryColor), // Même typo forte mais en Orange
+                            ),
+                            
+                            // La comparaison ne s'affiche QUE s'il y a d'autres sources
+                            if (otherSources.isNotEmpty) ...[
+                              const SizedBox(height: 12), 
+                              Row(
+                                children: [
+                                  Icon(Icons.verified_rounded, color: Colors.green.shade600, size: 18),
+                                  const SizedBox(width: 6),
+                                  Expanded(
+                                    child: Text(
+                                      "L'offre la moins chère de toutes les propositions",
+                                      style: TextStyle(color: Colors.green.shade700, fontWeight: FontWeight.w600, fontSize: 13)
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ]
+                        ),
+                      ),
+                      const SizedBox(height: 24),
+
+                      // Bouton principal "Voir l'offre"
+                      if (bestSource != null)
+                        SizedBox(
+                          width: double.infinity,
+                          child: ElevatedButton.icon(
+                            icon: const Icon(Icons.open_in_browser),
+                            label: const Text("Voir l'offre principale", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                            onPressed: () => _ouvrirUrl(bestSource.urlSource),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: primaryColor,
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(vertical: 16),
+                              elevation: 4,
+                              shadowColor: primaryColor.withOpacity(0.4),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                             ),
                           ),
                         ),
-                      ),
-                    ),
-                ],
-              )
-            else
-              Container(
-                height: 300,
-                color: Colors.grey.shade200,
-                child: const Center(
-                  child: Icon(Icons.image_not_supported, size: 50),
-                ),
-              ),
+                      
+                      const SizedBox(height: 32),
+                      const Divider(height: 1, thickness: 1, color: Colors.black12),
+                      const SizedBox(height: 32),
 
-            // --- CORPS DE LA FICHE ---
-            Padding(
-              padding: const EdgeInsets.all(20.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Badges de catégorie
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 14,
-                          vertical: 6,
-                        ),
-                        decoration: BoxDecoration(
-                          color: Colors.blue.shade50,
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        child: Text(
-                          widget.annonce.typeDeBien ?? 'Autre',
-                          style: const TextStyle(
-                            color: Colors.blueAccent,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 14,
-                          vertical: 6,
-                        ),
-                        decoration: BoxDecoration(
-                          color: Colors.orange.shade50,
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        child: Text(
-                          widget.annonce.nomPlateforme ?? 'Inconnu',
-                          style: TextStyle(
-                            color: Colors.orange.shade900,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ),
+                      // Description courte
+                      const Text("À propos du bien", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black87)),
+                      const SizedBox(height: 12),
+                      Text(annonce.description ?? "Aucune description disponible.",
+                        style: TextStyle(fontSize: 15, height: 1.6, color: Colors.grey.shade800)),
+
+                      // --- AUTRES OFFRES ---
+                      if (otherSources.isNotEmpty) ...[
+                        const SizedBox(height: 32),
+                        const Divider(height: 1, thickness: 1, color: Colors.black12),
+                        const SizedBox(height: 32),
+                        const Text("Autres offres disponibles", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black87)),
+                        const SizedBox(height: 6),
+                        Text("D'autres plateformes publient ce même bien à des tarifs différents.", style: TextStyle(color: Colors.grey.shade600, fontSize: 14)),
+                        const SizedBox(height: 16),
+                        ...otherSources.map((s) => _buildSourceCard(s)),
+                      ],
+
+                      const SizedBox(height: 40),
                     ],
                   ),
-                  const SizedBox(height: 20),
-
-                  // Titre
-                  Text(
-                    widget.annonce.titre,
-                    style: const TextStyle(
-                      fontSize: 22,
-                      fontWeight: FontWeight.bold,
-                      height: 1.3,
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-Builder(builder: (context) {
-  // Afficher d'abord NOTRE présentation (prix enregistré dans l'objet annonce)
-  final int? primaryPrice = widget.annonce.prixEntier;
-  final String primaryPlatform = widget.annonce.nomPlateforme ?? 'Notre offre';
-  // Sources externes (exclure notre plateforme si elle est listée dans sources)
-  final otherSources = widget.annonce.sources.where((s) => s.nomPlateforme != primaryPlatform).toList();
-
-  return Row(
-    children: [
-      Expanded(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              primaryPrice != null ? "$primaryPrice XAF" : "Prix sur demande",
-              style: const TextStyle(
-                fontSize: 26,
-                fontWeight: FontWeight.w900,
-                color: Colors.black87,
-              ),
-            ),
-            const SizedBox(height: 6),
-            Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: Colors.green.shade50,
-                    borderRadius: BorderRadius.circular(6),
-                  ),
-                  child: Text(
-                    primaryPlatform,
-                    style: TextStyle(color: Colors.green.shade800, fontWeight: FontWeight.bold),
-                  ),
                 ),
-                if (otherSources.isNotEmpty) ...[
-                  const SizedBox(width: 10),
-                  Text("${otherSources.length} autres offres", style: const TextStyle(color: Colors.black54)),
-                ],
               ],
-            )
-          ],
-        ),
-      ),
-      ElevatedButton(
-        onPressed: () async {
-          // Bouton principal : ouvre d'abord l'URL associée à NOTRE annonce (si fournie),
-          // sinon bascule sur la première source externe disponible
-          final fallback = otherSources.isNotEmpty ? otherSources.first.urlSource : "";
-          final urlString = widget.annonce.urlSource ?? fallback;
-          if (urlString.isNotEmpty) {
-            final Uri url = Uri.parse(urlString);
-            await launchUrl(url, mode: LaunchMode.inAppBrowserView);
-          }
+            ),
+          );
         },
-        style: ElevatedButton.styleFrom(
-          backgroundColor: Colors.blueAccent,
-          foregroundColor: Colors.white,
-          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-        ),
-        child: const Text("Voir sur notre fiche"),
-      ),
-    ],
-  );
-}),
-// ...existing code...
-// ...existing code...,
-
-                  const Divider(height: 40, thickness: 1),
-
-                  // Localisation
-                  Row(
-                    children: [
-                      const Icon(
-                        Icons.location_on,
-                        color: Colors.redAccent,
-                        size: 28,
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          widget.annonce.localisationBrute ??
-                              "Lieu non spécifié",
-                          style: const TextStyle(
-                            fontSize: 16,
-                            color: Colors.black54,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 30),
-
-                  // Description
-                  const Text(
-                    "Description du bien",
-                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-                  ),
-                  const SizedBox(height: 12),
-                  Text(
-                    widget.annonce.description ??
-                        "Aucune description fournie par la plateforme.",
-                    style: const TextStyle(
-                      fontSize: 16,
-                      height: 1.6,
-                      color: Colors.black87,
-                    ),
-                  ),
-                  // ...existing code...
-// --- AUTRES OFFRES (petites cartes rectangulaires) ---
-Builder(builder: (context) {
-  final String primaryPlatform = widget.annonce.nomPlateforme ?? 'Notre offre';
-  final otherSources = widget.annonce.sources.where((s) => s.nomPlateforme != primaryPlatform).toList();
-
-  if (otherSources.isEmpty) return const SizedBox.shrink();
-
-  return Column(
-    crossAxisAlignment: CrossAxisAlignment.start,
-    children: [
-      const Divider(height: 30, thickness: 1),
-      const Text(
-        "Autres offres",
-        style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-      ),
-      const SizedBox(height: 8),
-      const Text(
-        "D'autres plateformes publient ce bien — consultez leurs annonces ci‑dessous.",
-        style: TextStyle(color: Colors.black54),
-      ),
-      const SizedBox(height: 12),
-      Wrap(
-        spacing: 10,
-        runSpacing: 10,
-        children: otherSources.map((s) => _buildCompactSourceCard(s)).toList(),
-      ),
-    ],
-  );
-}),
-// ...existing code...
-
-                  const SizedBox(
-                    height: 120,
-                  ), // Espace confortable pour ne pas cacher de texte
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-
-      // LE BOUTON FLOTTANT FAÇON TRIVAGO
-      bottomNavigationBar: Container(
-        padding: const EdgeInsets.all(20),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.05),
-              blurRadius: 10,
-              offset: const Offset(0, -5),
-            ),
-          ],
-        ),
-        child: ElevatedButton(
-          onPressed: () async {
-            // 1. AFFICHER LE CHARGEMENT VISUEL (Style Trivago)
-            showDialog(
-              context: context,
-              barrierDismissible: false, // Empêche de fermer au clic
-              builder: (BuildContext context) {
-                return const Center(
-                  child: Card(
-                    color: Colors.white,
-                    child: Padding(
-                      padding: EdgeInsets.all(20.0),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          CircularProgressIndicator(color: Colors.blueAccent),
-                          SizedBox(height: 20),
-                          Text(
-                            "Redirection vers le partenaire...",
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                );
-              },
-            );
-
-            // 2. Petit délai "artistique" pour que l'utilisateur ait le temps de lire le message
-            await Future.delayed(const Duration(milliseconds: 1000));
-
-            // 3. Ouvrir l'URL
-            final String urlString = widget.annonce.urlSource ?? "";
-
-            if (urlString.isNotEmpty) {
-              final Uri url = Uri.parse(urlString);
-              try {
-                // On utilise inAppBrowserView (les Onglets Intégrés d'Android, plus rapides, pas d'écran noir)
-                await launchUrl(url, mode: LaunchMode.inAppBrowserView);
-              } catch (e) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text("Action indisponible. ($e)")),
-                );
-              }
-            }
-
-            // 4. FERMER LA BOITE DE CHARGEMENT une fois l'ouverture finie (ou si problème)
-            if (context.mounted) {
-              Navigator.pop(context);
-            }
-          },
-
-          style: ElevatedButton.styleFrom(
-            backgroundColor: Colors.blueAccent,
-            foregroundColor: Colors.white,
-            padding: const EdgeInsets.symmetric(vertical: 18),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
-          ),
-          child: const Text(
-            "Voir l'offre originale",
-            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-          ),
-        ),
       ),
     );
   }
 
   Widget _buildSourceCard(Source source) {
-    final isBest = _bestSource() == source;
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        border: Border.all(color: isBest ? Colors.green.shade300 : Colors.grey.shade200, width: isBest ? 1.6 : 1),
-        borderRadius: BorderRadius.circular(12),
-        color: isBest ? Colors.green.shade50 : Colors.grey.shade50,
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: Colors.grey.shade200),
+        boxShadow: [
+          BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 8, offset: const Offset(0, 4))
+        ]
       ),
-      child: Row(
-        children: [
-          // Logo / Badge de la plateforme
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+          // Nom de la plateforme
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-            decoration: BoxDecoration(
-              color: Colors.orange.shade100,
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Text(
-              source.nomPlateforme,
-              style: TextStyle(
-                color: Colors.orange.shade900,
-                fontWeight: FontWeight.bold,
-                fontSize: 13,
-              ),
-            ),
+            decoration: BoxDecoration(color: Colors.grey.shade100, borderRadius: BorderRadius.circular(8)),
+            child: Text(source.nomPlateforme, style: TextStyle(color: Colors.grey.shade800, fontWeight: FontWeight.bold, fontSize: 13)),
           ),
-          const SizedBox(width: 16),
-          // Prix de cette source
-          Expanded(
-            child: Text(
-              source.prixEntier != null ? "${source.prixEntier} XAF" : "Prix non renseigné",
-              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
-            ),
-          ),
-          if (isBest) const SizedBox(width: 8),
-          if (isBest) const Icon(Icons.check_circle, color: Colors.green, size: 20),
-          const SizedBox(width: 8),
-          // Bouton "Voir"
-          ElevatedButton(
-            onPressed: () async {
-              final Uri url = Uri.parse(source.urlSource);
-              await launchUrl(url, mode: LaunchMode.inAppBrowserView);
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF00695C),
-              foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8),
-              ),
-            ),
-            child: const Text("Voir"),
-          ),
-        ],
-      ),
-    );
-  }
-  Widget _buildCompactSourceCard(Source source) {
-    return Container(
-      width: 220,
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        border: Border.all(color: Colors.grey.shade200),
-        borderRadius: BorderRadius.circular(10),
-        color: Colors.white,
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(source.nomPlateforme ?? 'Plateforme', style: const TextStyle(fontWeight: FontWeight.bold)),
-          const SizedBox(height: 6),
+          // Prix
           Text(
             source.prixEntier != null ? "${source.prixEntier} XAF" : "Prix non renseigné",
-            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: Colors.black87),
           ),
-          const SizedBox(height: 8),
-          // Quelques détails courts (type + localisation) — utilisent les données de l'annonce principale
-          if (widget.annonce.typeDeBien != null)
-            Text(widget.annonce.typeDeBien!, style: const TextStyle(color: Colors.black54, fontSize: 12)),
-          if (widget.annonce.localisationBrute != null)
-            Text(
-              widget.annonce.localisationBrute!,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(color: Colors.black54, fontSize: 12),
-            ),
+        ]),
+        // Petite particularité
+        if (source.particularite != null && source.particularite!.isNotEmpty) ...[
           const SizedBox(height: 10),
-          ElevatedButton(
-            onPressed: () async {
-              final Uri url = Uri.parse(source.urlSource);
-              await launchUrl(url, mode: LaunchMode.inAppBrowserView);
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.blueGrey.shade700,
-              foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(vertical: 10),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-            ),
-            child: const Center(child: Text("Consulter", style: TextStyle(fontSize: 14))),
-          ),
+          Row(
+            children: [
+              Icon(Icons.info_outline, size: 14, color: Colors.grey.shade500),
+              const SizedBox(width: 6),
+              Expanded(
+                child: Text(source.particularite!, style: TextStyle(color: Colors.grey.shade700, fontStyle: FontStyle.italic, fontSize: 13)),
+              )
+            ],
+          )
         ],
-      ),
+        const SizedBox(height: 16),
+        // Bouton modernisé
+        SizedBox(
+          width: double.infinity,
+          child: OutlinedButton(
+            onPressed: () => _ouvrirUrl(source.urlSource),
+            style: OutlinedButton.styleFrom(
+              side: BorderSide(color: primaryColor.withOpacity(0.5)),
+              foregroundColor: primaryColor,
+              padding: const EdgeInsets.symmetric(vertical: 12),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)), // Design homogène
+            ),
+            child: Text("Voir sur ${source.nomPlateforme}", style: const TextStyle(fontWeight: FontWeight.bold)),
+          ),
+        ),
+      ]),
     );
   }
-// ...existing code...
 }

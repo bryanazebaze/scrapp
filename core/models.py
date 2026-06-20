@@ -19,9 +19,7 @@ class Annonce(Base):
     date_collecte = Column(DateTime(timezone=True), server_default=func.now())
 
     # Prix et plateforme de référence (la première source trouvée)
-    prix_entier = Column(BigInteger, nullable=True)
-    nom_plateforme = Column(String, index=True)
-    url_source = Column(String, unique=True, index=True)
+    meilleur_prix = Column(BigInteger, nullable=True)
 
     # Relation vers toutes les sources qui publient ce bien
     sources = relationship("SourceAnnonce", back_populates="annonce", cascade="all, delete-orphan")
@@ -39,3 +37,4 @@ class SourceAnnonce(Base):
     date_collecte = Column(DateTime(timezone=True), server_default=func.now())
 
     annonce = relationship("Annonce", back_populates="sources")
+    particularite = Column(String, nullable=True)
