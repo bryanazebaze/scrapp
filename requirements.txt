@@ -1,0 +1,14 @@
+# CentralImmo backend dependencies
+fastapi>=0.110
+uvicorn[standard]>=0.27
+sqlalchemy>=2.0
+alembic>=1.13
+psycopg2-binary>=2.9
+pydantic>=2.6
+pydantic-settings>=2.1
+python-dotenv>=1.0
+rapidfuzz>=3.6
+requests>=2.31
+beautifulsoup4>=4.12
+apscheduler>=3.10
+openai>=1.30

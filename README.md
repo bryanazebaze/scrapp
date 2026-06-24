@@ -1,119 +1,114 @@
-# Projet scrapp — instructions pour lancer localement
+# CentralImmo — Plateforme d'agrégation immobilière du Cameroun
 
-But : fournir les étapes minimum pour que tes camarades clonent le repo, installent l'environnement, lancent le backend (FastAPI) et l'application Flutter (immo_app) sur un téléphone ou émulateur.
+CentralImmo agrège les annonces immobilières de plusieurs sites camerounais (Mapiole, Kasastay, et tout autre site via le scraper universel), déduplique les annonces en "Super-Annonces", suit l'historique des prix, calcule des scores de marché par quartier, et sert une application Flutter premium.
 
-Prérequis (sur Linux)
-- Git
-- Python 3.8+ (3.10 recommandé)
-- pip
-- Flutter SDK (stable) + Android SDK (ou Xcode si iOS)
-- Pour appareil Android physique : activer Débogage USB
-- (Optionnel) gh / ssh si vous poussez/pull via SSH
+## Architecture
 
-Racine du projet : `scrapp/`
+Voir `docs/architecture.md` pour le schéma complet.
 
-1) Cloner le repo
+**Backend**: FastAPI + SQLAlchemy + PostgreSQL + APScheduler
+**Scrapers**: Python (requests + BeautifulSoup) avec anti-bot (BaseFetchMixin)
+**Frontend**: Flutter (Riverpod + go_router + Dio + flutter_map + fl_chart)
+**DB**: 5 tables core (sources, raw_listings, canonical_properties, listing_history, locations) + 3 opérationnelles (image_cache, scheduler_jobs, neighborhood_analytics)
+
+## Démarrage rapide
+
+### Prérequis
+- Python 3.10+
+- PostgreSQL 14+
+- Flutter 3.35+ (Dart 3.9+)
+
+### Backend
+
 ```bash
-git clone <URL_DU_REPO>   # ex: git@github.com:USER/REPO.git
 cd scrapp
-```
-
-2) Backend — installation Python et lancement
-- Créer et activer un virtualenv, installer dépendances :
-```bash
-# depuis scrapp/
-python3 -m venv env
-source env/bin/activate
-# si requirements.txt existe :
+cp .env.example .env          # éditer DATABASE_URL et autres configs
 pip install -r requirements.txt
-# sinon installer les paquets usuels :
-# pip install fastapi uvicorn sqlalchemy pydantic aiohttp
-```
 
-- Initialiser la base (si le repo fournit un script) :
-```bash
-# parfois nécessaire : vérifie si init_db.py existe
-python init_db.py || true
-```
+# Créer la base PostgreSQL
+sudo -u postgres createdb immo_db
+sudo -u postgres createuser immo_user
+sudo -u postgres psql -c "ALTER USER immo_user WITH PASSWORD '1234';"
+sudo -u postgres psql -c "GRANT ALL ON DATABASE immo_db TO immo_user;"
 
-- Lancer le serveur API en local (ordinateur seulement) :
-```bash
-uvicorn main_api:app --reload --host 127.0.0.1 --port 8000
-```
+# Migrations (crée les tables + backfill depuis legacy si présent)
+alembic upgrade head
 
-- Si l'app Flutter tourne SUR UN TÉLÉPHONE physique (réseau local), lancer le backend sur toutes les interfaces :
-```bash
+# Premier crawl
+python cli.py crawl --source mapiole --max-pages 2
+python cli.py analytics    # calculer les scores des quartiers
+
+# Démarrer l'API
 uvicorn main_api:app --reload --host 0.0.0.0 --port 8000
-# puis découvre l'IP de ton ordinateur sur le LAN :
-hostname -I | awk '{print $1}'
-# note l'IP (ex: 192.168.1.42)
 ```
 
-Remarque CORS : pour Flutter mobile ce n'est pas nécessaire. Pour Flutter Web ajoute les middlewares CORS côté FastAPI si besoin.
+### Flutter
 
-3) Frontend Flutter — configuration et run
-- Ouvrir un nouveau terminal, préparer Flutter :
 ```bash
-cd immo_app
+cd scrapp/immo_app
 flutter pub get
+
+# Émulateur Android: utiliser 10.0.2.2 au lieu de localhost
+flutter run --dart-define=API_BASE_URL=http://10.0.2.2:8000
+
+# Téléphone physique (même réseau Wi-Fi):
+# 1. Lancer le backend sur 0.0.0.0 (ci-dessus)
+# 2. Trouver l'IP du PC: hostname -I | awk '{print $1}'
+# 3. Lancer Flutter avec cette IP:
+flutter run --dart-define=API_BASE_URL=http://192.168.1.42:8000
+
+# Web (localhost):
+flutter run -d chrome --dart-define=API_BASE_URL=http://127.0.0.1:8000
 ```
 
-- Configurer l'URL de l'API si besoin (si tu as lancé le backend sur 0.0.0.0) :  
-  Ouvre `immo_app/lib/services/api_service.dart` et remplace l'URL de base par `http://<IP_ORDI>:8000` (remplace `<IP_ORDI>` par l'IP trouvée plus haut). Exemple :
-```dart
-// baseUrl = 'http://127.0.0.1:8000'; // localhost (ordinateur)
-// si mobile physique, mettre l'IP du PC :
-baseUrl = 'http://192.168.1.42:8000';
-```
+## Commandes CLI
 
-- Si tu testes sur un émulateur Android, tu peux aussi utiliser `adb reverse` pour que `127.0.0.1:8000` du PC soit accessible depuis l'émulateur :
 ```bash
-# sur la machine dev (avec appareil connecté ou émulateur démarré)
-adb reverse tcp:8000 tcp:8000
+python cli.py crawl                              # crawler toutes les sources actives
+python cli.py crawl --source mapiole             # crawler une source
+python cli.py crawl --source mapiole --max-pages 3
+python cli.py refresh                            # re-crawler (détecter changements de prix)
+python cli.py analytics                           # recalculer les scores des quartiers
+python cli.py jobs                                # voir l'état des jobs planifiés
+python cli.py universal --url https://example.com  # crawler un nouveau site
 ```
 
-- Lister les devices disponibles et lancer :
-```bash
-flutter devices
-# lancer sur le device désiré (ou par défaut)
-flutter run -d <deviceId>
-# pour Android physique connecte le téléphone via USB et accepte le débogage
-# pour build release (apk) :
-flutter build apk --release
-```
+## API Endpoints
 
-Raccourcis pendant le dev
-- Hot reload : appuie sur `r` dans le terminal où `flutter run` est lancé.
-- Hot restart : `R`.
+Voir `docs/api.md` pour la référence complète.
 
-4) Points importants / dépannage
-- Si le frontend n'arrive pas à joindre l'API :
-  - Vérifie que uvicorn est lancé et sur la bonne interface/port.
-  - Si mobile physique : assure-toi que le PC et le téléphone sont sur le même réseau Wi‑Fi.
-  - Vérifie le firewall (ufw / iptables) et ouvre le port 8000 si nécessaire.
-  - Pour émulateur Android, `adb reverse tcp:8000 tcp:8000` évite de changer l'URL dans le code.
-- Si `flutter pub get` échoue : mets à jour Flutter (`flutter upgrade`) et vérifie la version channel stable.
-- Si gros fichiers sont présents, ils ne doivent pas être poussés — le .gitignore contient déjà `env/` et artefacts.
+- `GET /annonces` — listings filtrés (type, ville, quartier, prix, chambres, surface)
+- `GET /annonces/{id}` — détail avec sources, historique de prix, explication de matching
+- `GET /search?q=3-bedroom house in Bastos under 120M` — recherche en langage naturel
+- `GET /neighborhoods/{slug}` — intelligence de marché (5 scores 0-10)
+- `GET /neighborhoods/trending/list` — quartiers en tendance
+- `POST /admin/review/{id}` — approuver/rejeter une annonce universelle
+- `GET /health` — santé de l'API + scheduler
 
-5) Commandes utiles récapitulées
-```bash
-# Backend
-cd scrapp
-python3 -m venv env
-source env/bin/activate
-pip install -r requirements.txt
-python init_db.py     # si présent
-uvicorn main_api:app --reload --host 0.0.0.0 --port 8000
+## Documentation
 
-# Frontend
-cd immo_app
-flutter pub get
-# si besoin : adb reverse tcp:8000 tcp:8000
-flutter devices
-flutter run -d <deviceId>
-```
+- `docs/architecture.md` — schéma d'architecture complet
+- `docs/adr/` — 8 ADRs (décisions architecturales)
+- `docs/burp-analysis.md` — analyse Burp Suite de Mapiole et Kasastay
+- `docs/api.md` — référence API
+- `CLAUDE.md` — conventions pour le développement
 
-6) Si vous voulez tester sans config réseau
-- Lancez le backend sur la même machine et utilisez un émulateur Android ; `adb reverse` simplifie la configuration.
+## Planificateur
 
-Si vos camarades ont des erreurs spécifiques (logs), partagez ici l'erreur exacte et j'indiquerai la correction précise.
+Le scheduler APScheduler tourne en arrière-plan avec l'API:
+- **Quotidien 02:00** — crawl de toutes les sources actives
+- **Toutes les 6h** — re-crawl (détecter les changements de prix/disponibilité)
+- **Lundi 03:00** — recalcul des scores de quartier
+
+État des jobs: `GET /admin/jobs` ou `python cli.py jobs`
+
+## Stack technique
+
+| Couche | Technologie |
+|--------|-------------|
+| Backend | FastAPI, SQLAlchemy 2.0, Pydantic, PostgreSQL |
+| Scrapers | requests, BeautifulSoup, rapidfuzz, urllib3 Retry |
+| Scheduling | APScheduler (BackgroundScheduler) |
+| Migrations | Alembic |
+| Frontend | Flutter, Riverpod, go_router, Dio, flutter_map, fl_chart |
+| Config | pydantic-settings (.env), --dart-define (Flutter) |

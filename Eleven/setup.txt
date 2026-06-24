@@ -1,0 +1,49 @@
+from elevenlabs.client import ElevenLabs
+from elevenlabs.play import play
+
+client = ElevenLabs(
+    api_key="YOUR_API_KEY"
+)
+
+audio = client.text_to_speech.convert(
+    text="The first move is what sets everything in motion.",
+    voice_id="JBFqnCBsd6RMkjVDRZzb",
+    model_id="eleven_multilingual_v2",
+    output_format="mp3_44100_128",
+)
+
+play(audio)
+
+
+
+For speach to text.
+from elevenlabs import ElevenLabsClient
+
+# Initialize the client with your API key
+elevenlabs = ElevenLabsClient(
+    api_key="YOUR_API_KEY"
+)
+
+# Assuming you have an audio file, for example, from a URL
+# Replace fileURL and fileType with your actual audio file details
+fileURL = "your_audio_file_url"
+fileType = "audio/mpeg" # or "audio/wav", etc.
+
+# Fetch the audio file
+sourceFileArrayBuffer = await fetch(fileURL).then((res) => res.arrayBuffer())
+sourceBlob = new Blob([sourceFileArrayBuffer], {
+    type: fileType,
+})
+
+# Convert speech to text
+scribeResult = await elevenlabs.speechToText.convert({
+    file: sourceBlob,
+    model_id: 'scribe_v2',
+    tag_audio_events: false,
+})
+
+transcript = scribeResult.text
+languageCode = scribeResult.language_code
+
+print(f"Transcript: {transcript}")
+print(f"Language Code: {languageCode}")

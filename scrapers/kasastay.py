@@ -1,192 +1,343 @@
-import os
-import requests
-import uuid
-import hashlib
-from bs4 import BeautifulSoup
-from typing import List
-import time
+"""Kasastay adapter — dedicated scraper for kasastay.com (Next.js).
+
+Refactor of the legacy KasastayScraper onto SourceAdapter + BaseFetchMixin.
+Key changes:
+
+- Removes the hard `[:5]` cap (kasastay.py:110) and paginates via `?page=N`
+  / `rel="next"`.
+- Uses BaseFetchMixin for hardened HTTP (browser headers, jittered delays,
+  session reuse, retries, robots.txt) instead of bare `requests.get`
+  (kasastay.py:104) with the default User-Agent.
+- Adds a `_next/data/{buildId}/...` JSON probe: Next.js apps expose the same
+  page data as JSON at that route. The buildId is extracted from the
+  `__NEXT_DATA__` script tag. If the probe returns JSON, we consume it
+  (richer, more stable than HTML); otherwise we fall back to HTML parsing.
+- Stores ORIGINAL image URLs in images_raw (decoded from the `_next/image`
+  proxy per the legacy kasastay.py:79-82 logic, now in utils.decode_next_image_url).
+- Extracts rooms/baths/area when present in the Next.js page props or HTML.
+
+No Burp capture of Kasastay exists (Burp/Kassastay.txt is only 3 lines), so
+the JSON route shape is inferred from the standard Next.js convention and
+verified at runtime with a graceful HTML fallback. A follow-up Burp capture
+of Kasastay is flagged in docs/burp-analysis.md.
+"""
+from __future__ import annotations
+
+import json
 import re
-import urllib.parse
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from typing import Optional
+from urllib.parse import urljoin, urlparse, parse_qs, urlsplit
 
-from .base import BaseScraper
+from bs4 import BeautifulSoup
 
-def telecharger_image_localement(url: str, prefix: str = "img") -> str:
-    """Télécharge l'image physiquement (Architecture Trivago) sans faire de doublons"""
-    if not url or not url.startswith('http'): 
-        return ""
-    
-    # On transforme l'URL en un nom unique mais constant
-    hash_nom = hashlib.md5(url.encode('utf-8')).hexdigest()[:10]
-    nom_fichier = f"{prefix}_{hash_nom}.jpg"
-    
-    dossier_destination = os.path.join(os.path.dirname(os.path.dirname(__file__)), "static", "images")
-    os.makedirs(dossier_destination, exist_ok=True)
-    chemin_sauvegarde = os.path.join(dossier_destination, nom_fichier)
-    url_locale = f"/static/images/{nom_fichier}"
-    
-    # Si le fichier a déjà été téléchargé, on donne juste le lien existant
-    if os.path.exists(chemin_sauvegarde):
-        return url_locale
-    
-    # On ajoute des entêtes pour rassurer le serveur Kasastay
-    headers = {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-        'Referer': 'https://kasastay.com/'
-    }
-    
-    try:
-        response = requests.get(url, headers=headers, timeout=10)
-        if response.status_code == 200:
-            with open(chemin_sauvegarde, 'wb') as f:
-                f.write(response.content)
-            return url_locale
-    except Exception as e:
-        print(f"Erreur téléchargement image Kasastay : {e}")
-        
-    return ""
+from .base import SourceAdapter
+from .drafts import RawListingDraft
+from .http_mixin import BaseFetchMixin
+from . import utils
 
 
-class KasastayScraper(BaseScraper):
-    def __init__(self):
-        super().__init__()
-        self.platform_name = "Kasastay"
-        self.base_url = "https://kasastay.com" 
-        self.catalogue_url = "https://kasastay.com/fr/property/search?business=LongStay"
+def _scan_count(text: str, pattern: str) -> int | None:
+    """Extract a small integer (1-50) from `text` matching `pattern`. Used
+    for bedrooms/bathrooms in the Kasastay HTML fallback where structured
+    fields aren't available."""
+    for m in re.finditer(pattern, text, re.IGNORECASE):
+        try:
+            v = int(m.group(1))
+        except (ValueError, IndexError):
+            continue
+        if 1 <= v <= 50:
+            return v
+    return None
 
-    def parse_prix(self, prix_text: str) -> int:
-        if not prix_text:
+
+class KasastayAdapter(SourceAdapter, BaseFetchMixin):
+    platform_slug = "kasastay"
+    base_url = "https://kasastay.com"
+    adapter_kind = "dedicated"
+
+    CATALOG_URL = "https://kasastay.com/fr/property/search?business=LongStay"
+    CARD_LINK_SELECTOR = "a.group.flex.h-full.flex-col"
+    # The buildId is discovered at runtime from __NEXT_DATA__.
+
+    def __init__(self, source_id: Optional[int] = None,
+                 crawl_config: dict | None = None) -> None:
+        super().__init__(source_id=source_id)
+        self.init_fetch(base_url=self.base_url, crawl_config=crawl_config)
+        self._build_id: str | None = None
+
+    # ----- Next.js buildId discovery -----
+    def _discover_build_id(self, html: str) -> str | None:
+        soup = BeautifulSoup(html, "html.parser")
+        script = soup.find("script", id="__NEXT_DATA__")
+        if not script or not script.string:
             return None
         try:
-            if "XAF" in prix_text:
-                partie_prix = prix_text.split("XAF")[1]
-            else:
-                partie_prix = prix_text
-
-            bloc_chiffres = re.search(r'[\d\s.,]+', partie_prix).group()
-            digits = re.sub(r'[^\d]', '', bloc_chiffres)
-            return int(digits)
+            data = json.loads(script.string)
+            return data.get("buildId")
         except Exception:
             return None
 
-    def extract_images(self, soup: BeautifulSoup) -> str:
-        images = []
-        for img in soup.find_all('img'):
-            src = img.get('src')
+    def _try_next_data(self, page_url: str) -> dict | None:
+        """Probe Next.js `_next/data/{buildId}/{page}.json`. Returns the
+        `pageProps` dict or None if unavailable / not JSON."""
+        if not self._build_id:
+            return None
+        path = urlparse(page_url).path.strip("/")
+        if not path:
+            return None
+        data_url = f"{self.base_url}/_next/data/{self._build_id}/{path}.json"
+        resp = self.fetch(data_url, referer=page_url)
+        if resp is None or resp.status_code >= 400:
+            return None
+        try:
+            payload = resp.json()
+            return payload.get("pageProps") or payload
+        except Exception:
+            return None
+
+    # ----- listing discovery -----
+    def fetch_listings(self, max_pages: int | None = None,
+                       max_workers: int = 8) -> list[RawListingDraft]:
+        """Fetch catalog pages sequentially, then crawl detail pages
+        concurrently with a thread pool."""
+        drafts: list[RawListingDraft] = []
+        pages = max_pages or 10
+        url = self.CATALOG_URL
+        for page in range(1, pages + 1):
+            page_url = f"{self.CATALOG_URL}&page={page}" if page > 1 else self.CATALOG_URL
+            html = self.fetch_text(page_url, referer=self.base_url)
+            if not html:
+                break
+            if page == 1 and not self._build_id:
+                self._build_id = self._discover_build_id(html)
+            soup = BeautifulSoup(html, "html.parser")
+            links = soup.select(self.CARD_LINK_SELECTOR)
+            if not links:
+                # Try JSON route before giving up.
+                props = self._try_next_data(page_url)
+                if props:
+                    drafts.extend(self._drafts_from_next_props(props))
+                    break
+                break
+            detail_urls = [
+                urljoin(self.base_url, a.get("href"))
+                for a in links if a.get("href")
+            ]
+            # Fetch detail pages concurrently.
+            with ThreadPoolExecutor(max_workers=max_workers) as pool:
+                futures = {pool.submit(self.fetch_details, u): u
+                           for u in detail_urls}
+                for future in as_completed(futures):
+                    u = futures[future]
+                    try:
+                        draft = future.result()
+                    except Exception as e:
+                        print(f"[kasastay] error fetching {u}: {e}")
+                        continue
+                    if draft is not None:
+                        drafts.append(draft)
+            # Next page link.
+            nxt = soup.find("a", attrs={"rel": "next"})
+            if not nxt and not soup.select_one(f'a[href*="page={page+1}"]'):
+                break
+        print(f"[kasastay] fetched {len(drafts)} listings ({max_workers} workers)")
+        return drafts
+
+    # Substrings that indicate boilerplate, not a real listing description.
+    _DESC_BANNED = [
+        "Newsletter mensuelle",
+        "Devenir hôte",
+        "Rentabilisez votre logement",
+        "Trouvez votre logement idéal au Cameroun",
+        "Copyright©",
+        "Tous droits réservés",
+        "Pas encore d'avis",
+        "soyez le premier à séjourner",
+        "Planifier une visite",
+        "Choisissez une date",
+        "l'hôte confirmera votre visite",
+        "D'autres logements",
+        "Hôte vérifié",
+        "Hote verifie",
+    ]
+
+    @staticmethod
+    def _clean_description(text: str) -> str:
+        """Remove boilerplate lines from a description string (newline-
+        separated). Used by both the HTML fallback and the JSON path."""
+        if not text:
+            return text
+        kept = []
+        for line in text.split("\n"):
+            t = line.strip()
+            if len(t) <= 10:
+                continue
+            if any(b in t for b in KasastayAdapter._DESC_BANNED):
+                continue
+            if "Cameroun, Wouri" in t or "Cameroun, Mfoundi" in t:
+                continue
+            kept.append(t)
+        return "\n".join(kept)
+
+    def _drafts_from_next_props(self, props: dict) -> list[RawListingDraft]:
+        """Best-effort extraction from Next.js pageProps JSON."""
+        out = []
+        items = props.get("properties") or props.get("listings") or []
+        if isinstance(items, dict):
+            items = items.get("data") or items.get("items") or []
+        for item in items:
+            if not isinstance(item, dict):
+                continue
+            raw = {
+                "url": urljoin(self.base_url, item.get("slug") or item.get("url") or ""),
+                "title": item.get("title") or item.get("name") or "",
+                "price_raw": str(item.get("price") or item.get("amount") or ""),
+                "location": item.get("location") or item.get("city") or "",
+                "description": self._clean_description(item.get("description") or ""),
+                "images": item.get("images") or item.get("photos") or [],
+                "bedrooms": item.get("bedrooms") or item.get("rooms"),
+                "bathrooms": item.get("bathrooms") or item.get("baths"),
+                "area_sqm": item.get("area") or item.get("surface"),
+                "lat": item.get("lat") or item.get("latitude"),
+                "lng": item.get("lng") or item.get("longitude"),
+                "amenities": item.get("amenities") or [],
+                "property_id": item.get("id"),
+            }
+            out.append(self.normalize_data(raw))
+        return out
+
+    # ----- detail extraction -----
+    def fetch_details(self, listing_url: str) -> Optional[RawListingDraft]:
+        # Prefer JSON if available.
+        props = self._try_next_data(listing_url)
+        if props:
+            drafts = self._drafts_from_next_props(props)
+            if drafts:
+                return drafts[0]
+        # HTML fallback.
+        html = self.fetch_text(listing_url, referer=self.CATALOG_URL)
+        if not html:
+            return None
+        soup = BeautifulSoup(html, "html.parser")
+        return self.normalize_data(self._extract_raw(soup, listing_url))
+
+    def _extract_raw(self, soup: BeautifulSoup, url: str) -> dict:
+        title_el = soup.find("h1")
+        title = title_el.get_text(strip=True) if title_el else "Appartement Kasastay"
+
+        # Price: search for visible text containing "XAF" (not inside script/style).
+        price_raw = ""
+        for el in soup.find_all(string=re.compile("XAF|FCFA|CFA")):
+            if el.parent and el.parent.name in ("script", "style", "noscript"):
+                continue
+            price_raw = el.strip()
+            break
+
+        # Description (filtered of boilerplate — Kasastay pages repeat the
+        # same navigation/footer/marketing text across all listings).
+        desc_parts = []
+        for p in soup.find_all("p"):
+            t = p.get_text(strip=True)
+            if len(t) <= 10:
+                continue
+            if any(b in t for b in self._DESC_BANNED):
+                continue
+            # Skip nearby-location suggestion strings.
+            if "Cameroun, Wouri" in t or "Cameroun, Mfoundi" in t:
+                continue
+            desc_parts.append(t)
+        description = "\n".join(desc_parts)
+
+        # Images: decode _next/image proxy URLs (utils.decode_next_image_url).
+        images: list[str] = []
+        for img in soup.find_all("img"):
+            src = img.get("src") or img.get("data-src")
             if not src:
                 continue
-                
-            # STRATÉGIE AVANCÉE : Kasastay utilise Next.js et masque les vraies URL.
-            if '_next/image' in src and 'url=' in src:
-                # On découpe l'URL pour extraire la vraie adresse cachée et on la "désencode"
-                vraie_url = urllib.parse.unquote(src.split('url=')[1].split('&')[0])
-                images.append(vraie_url)
-                
-            # Stratégie classique pour les autres images (.webp ajouté !)
-            elif '.jpg' in src or '.png' in src or '.jpeg' in src or '.webp' in src:
-                # On ignore le logo pour garder un rendu propre dans l'application
-                if "logo" not in src.lower():
-                    images.append(src)
-        valid_images = [img if img.startswith('http') else self.base_url + img for img in images]
-        
-        urls_locales = []
-        # On télécharge un tableau de 5 vraies images
-        for url in list(dict.fromkeys(valid_images))[:5]:
-            chemin_local = telecharger_image_localement(url, prefix="kasastay")
-            if chemin_local:
-                urls_locales.append(chemin_local)
-                
-        return ",".join(urls_locales)
-    def scrape(self) -> List[dict]:
-        print(f"[{self.platform_name}] Début de l'exploration...")
-        annonces_scrapees = []
-        
-        try:
-            reponse = requests.get(self.catalogue_url, timeout=15)
-            soup = BeautifulSoup(reponse.text, 'html.parser')
-            
-            liens_annonces = soup.find_all('a', class_='group flex h-full flex-col')
-            print(f"[{self.platform_name}] {len(liens_annonces)} annonces détectées.")
+            real = utils.decode_next_image_url(src, self.base_url)
+            if real and utils.is_real_image(real):
+                images.append(real)
 
-            for lien in liens_annonces[:5]:
-                url_detail = self.base_url + lien.get('href')
-                print(f"Extraction de : {url_detail}")
-                
-                try:
-                    resp_detail = requests.get(url_detail, timeout=10)
-                    soup_detail = BeautifulSoup(resp_detail.text, 'html.parser')
-                    
-                    titre_el = soup_detail.find('h1')
-                    titre = titre_el.text.strip() if titre_el else "Appartement Kasastay"
-                    
-                    prix_entier = None
-                    prix_texte = soup_detail.find(string=re.compile("XAF"))
-                    if prix_texte:
-                        prix_entier = self.parse_prix(prix_texte)
-                    
-                    desc_els = soup_detail.find_all('p')
-                    description = "\n".join([p.text.strip() for p in desc_els if len(p.text.strip()) > 10])
-                    
-                    # NOUVEAU: Extraction et téléchargement Trivago-style !
-                    urls_images = self.extract_images(soup_detail)
-                    
-                    texte_analyse = (titre + " " + url_detail).lower()
-                    if "appartement" in texte_analyse or "studio" in texte_analyse or "apartment" in texte_analyse:
-                        type_bien_trouve = "Appartement"
-                    elif "terrain" in texte_analyse or "land" in texte_analyse:
-                        type_bien_trouve = "Terrain"
-                    elif "maison" in texte_analyse or "villa" in texte_analyse or "house" in texte_analyse:
-                        type_bien_trouve = "Maison"
-                    else:
-                        type_bien_trouve = "Autre"
-                    # Extraction de la vraie localisation
-                    localisation = ""
-                    meta_desc = soup_detail.find("meta", {"property": "og:description"})
-                    if meta_desc and meta_desc.get("content"):
-                        localisation = meta_desc["content"].strip()[:80]
+        # Location: og:description first, then city scan, then og:title, then
+        # the h1 title (often "Appartement ... à [neighborhood]"). Do NOT
+        # default to "Cameroun" — that country-level string never resolves to
+        # a city and leaves 82% of canonicals with NULL location_id. Leaving
+        # None lets the resolver try neighborhood-based city inference cleanly.
+        location = ""
+        meta_desc = soup.find("meta", {"property": "og:description"})
+        if meta_desc and meta_desc.get("content"):
+            location = meta_desc["content"].strip()[:80]
+        if not location:
+            location = utils.detect_city_text(soup) or ""
+        if not location:
+            meta_title = soup.find("meta", {"property": "og:title"})
+            if meta_title and meta_title.get("content"):
+                location = meta_title["content"].strip()[:80]
+        if not location and title:
+            location = title
 
-                    if not localisation:
-                        villes = ["Douala", "Yaoundé", "Bafoussam", "Garoua", "Maroua",
-                                  "Bamenda", "Ngaoundéré", "Bertoua", "Ebolowa", "Kribi",
-                                  "Limbe", "Buea", "Nkongsamba", "Edéa", "Kumba"]
-                        for tag in soup_detail.find_all(['span', 'p', 'div']):
-                            text = tag.get_text(strip=True)
-                            for ville in villes:
-                                if ville.lower() in text.lower() and len(text) < 100:
-                                    localisation = text
-                                    break
-                            if localisation:
-                                break
+        # Bedrooms / bathrooms / area: Next.js HTML fallback doesn't expose
+        # these in stable structured elements, so scan the page text for
+        # common French real-estate patterns ("2 chambres", "1 douche", "50 m²").
+        page_text = soup.get_text(" ", strip=True)
+        bedrooms = _scan_count(page_text, r"(\d+)\s*(?:chambre|bedroom|piece|pièce)")
+        bathrooms = _scan_count(page_text, r"(\d+)\s*(?:douche|bath|salle\s*de\s*bain|sdb|wc|toilette)")
+        area_sqm = None
+        m = re.search(r"(\d[\d\s.,]*)\s*m[²2]", page_text)
+        if m:
+            parsed = utils.parse_price(m.group(1), min_value=1)
+            if parsed and 5 <= parsed <= 50000:
+                area_sqm = float(parsed)
 
-                    if not localisation:
-                        meta_title = soup_detail.find("meta", {"property": "og:title"})
-                        if meta_title and meta_title.get("content"):
-                            localisation = meta_title["content"].strip()[:80]
+        return {
+            "url": url,
+            "title": title,
+            "price_raw": price_raw,
+            "location": location,
+            "description": description,
+            "images": images,
+            "bedrooms": bedrooms,
+            "bathrooms": bathrooms,
+            "area_sqm": area_sqm,
+            "lat": None,
+            "lng": None,
+            "amenities": [],
+            "property_id": None,
+        }
 
-                    if not localisation:
-                        localisation = "Cameroun"  # sera rejeté par le filtre
- 
-                        
+    def normalize_data(self, raw: dict) -> RawListingDraft:
+        title = raw.get("title") or "Appartement Kasastay"
+        price_raw = raw.get("price_raw") or ""
+        price_parsed = utils.parse_price(price_raw, min_value=1000,
+                                         reject_per_sqm=True)
+        images_raw = [u for u in (raw.get("images") or []) if isinstance(u, str)]
+        type_raw = utils.classify_property_type(
+            f"{title} {raw.get('url','')} {raw.get('description','')}"
+        )
+        return RawListingDraft(
+            url_source=raw.get("url", ""),
+            title_raw=title,
+            price_raw=price_raw or None,
+            price_parsed=price_parsed,
+            currency="XAF",
+            location_raw=raw.get("location") or None,
+            description_raw=raw.get("description") or None,
+            property_type_raw=type_raw,
+            images_raw=images_raw,
+            bedrooms=raw.get("bedrooms"),
+            bathrooms=raw.get("bathrooms"),
+            area_sqm=raw.get("area_sqm"),
+            latitude=raw.get("lat"),
+            longitude=raw.get("lng"),
+            amenities=raw.get("amenities") or [],
+            confidence=1.0,
+            payload={
+                **{k: v for k, v in raw.items() if k != "images"},
+                "nom_plateforme": "Kasastay",
+            },
+        )
 
-                        
-                    annonce = dict(
-                        titre=titre,
-                        type_de_bien=type_bien_trouve,
-                        prix_entier=prix_entier,
-                        localisation_brute=localisation,
 
-                        description=description,
-                        url_source=url_detail,
-                        nom_plateforme=self.platform_name,
-                        urls_images=urls_images  # L'URL locale a été insérée ici !
-                    )
-                    annonces_scrapees.append(annonce)
-                    time.sleep(1)
-                    
-                except Exception as e:
-                    print(f"Erreur sur la page de détail : {e}")
-                    
-        except Exception as e:
-            print(f"Erreur d'accès au catalogue : {e}")
-            
-        print(f"[{self.platform_name}] Extraction finalisée. ({len(annonces_scrapees)} recensées).")
-        return annonces_scrapees
+# Backward-compatible alias.
+KasastayScraper = KasastayAdapter

@@ -1,0 +1,12 @@
+\contentsline {chapter}{\numberline {1}Architecture g\'en\'erale du syst\`eme}{2}{chapter.1}%
+\contentsline {chapter}{\numberline {2}D\'eploiement sur AWS EC2}{3}{chapter.2}%
+\contentsline {chapter}{\numberline {3}Mod\`ele de donn\'ees (ER)}{4}{chapter.3}%
+\contentsline {chapter}{\numberline {4}Framework de scraping}{5}{chapter.4}%
+\contentsline {chapter}{\numberline {5}Pipeline d'ingestion}{6}{chapter.5}%
+\contentsline {chapter}{\numberline {6}Orchestration des crawls (s\'equence)}{7}{chapter.6}%
+\contentsline {chapter}{\numberline {7}R\'esolution des doublons (DCS)}{8}{chapter.7}%
+\contentsline {chapter}{\numberline {8}Scraper universel}{10}{chapter.8}%
+\contentsline {chapter}{\numberline {9}Pipeline analytique et scoring}{11}{chapter.9}%
+\contentsline {chapter}{\numberline {10}Flux de requ\^etes API}{12}{chapter.10}%
+\contentsline {chapter}{\numberline {11}Machine \`a \'etats du review}{13}{chapter.11}%
+\contentsline {chapter}{\numberline {12}Synth\`ese et conventions cl\'es}{14}{chapter.12}%

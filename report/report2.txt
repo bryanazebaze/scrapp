@@ -1,0 +1,640 @@
+================================================================================
+CENTRALIMMO — SIMPLIFIED ARCHITECTURE REPORT (NON-TECHNICAL)
+================================================================================
+10 diagram descriptions in plain language for generating TikZ diagrams.
+Each diagram is simple enough for a non-technical reader to understand.
+
+Labels should be in French (matching the report style).
+Color theme: orange #E94E1B (primary), grey, green, blue for variety.
+Shapes: rounded boxes for components, arrows for flow, diamonds for decisions.
+
+================================================================================
+DIAGRAM 1 — LE MOTEUR DE SCRAPING (COMMENT ÇA COLLECTE)
+================================================================================
+
+Audience: non-technical. Shows what happens when the system visits a real-
+estate website to collect property listings.
+
+Layout: horizontal flow, left to right, 6 simple boxes with arrows between.
+
+Step-by-step flow (left → right):
+
+  [Site immobilier]          (e.g. mapiole.com — a real-estate website)
+       │
+       │  "Le robot visite le site"
+       ▼
+  [Page d'annonces]          (the page listing all properties for sale/rent)
+       │
+       │  "Le robot lit la page"
+       ▼
+  [Extraction]               (pulls out: title, price, location, photos, bedrooms, etc.)
+       │                      "Il copie les informations de chaque bien"
+       ▼
+  [Nettoyage]                (fixes typos, standardizes prices to XAF,
+       │                      detects city/neighborhood from raw text,
+       │                      removes duplicates on the same site)
+       │                      "Il corrige et uniformise les données"
+       ▼
+  [Comparaison]              (checks: is this property already in our database?
+       │                      did the price change since last visit?)
+       │                      "Il vérifie si le bien est déjà connu"
+       ▼
+  [Stockage]                 (saves to the central database:
+                              new properties get added,
+                              price changes get recorded in a history log)
+                              "Il sauvegarde tout dans la base de données"
+
+Key annotations (callout boxes below the flow):
+  - "Le robot visite le site une fois par jour, automatiquement"
+  - "Il respecte les règles du site (fichier robots.txt)"
+  - "Il attend entre chaque page pour ne pas surcharger le site"
+  - "Si le prix d'un bien change, l'ancien prix est conservé dans l'historique"
+
+Visual suggestion:
+  Use a "robot" icon or simple character at the [Extraction] step.
+  Use a "database cylinder" icon at [Stockage].
+  Color: orange for the robot steps, blue for storage.
+
+================================================================================
+DIAGRAM 2 — ARCHITECTURE GLOBALE (VUE D'ENSEMBLE)
+================================================================================
+
+Audience: non-technical. Shows the 3 main parts of the system and how they
+talk to each other. Very simple — just 3 big boxes and arrows.
+
+Layout: 3 large boxes arranged in a triangle or horizontal row.
+
+Boxes:
+
+  [APPLICATION MOBILE/WEB]           [SERVEUR (API)]              [BASE DE DONNÉES]
+  (Flutter)                          (FastAPI + scrapers)         (PostgreSQL)
+
+  What the user sees:                The brain:                    The memory:
+  - Écran d'accueil                  - Reçoit les requêtes          - Toutes les annonces
+  - Recherche                        - Cherche dans la base          - L'historique des prix
+  - Détails du bien                  - Lance les scrapers            - Les quartiers
+  - Favoris                          - Calcule les statistiques      - Les sources
+  - Carte                            - Gère le planning              - Les scores de quartiers
+  - Quartiers
+
+Arrows:
+
+  [APPLICATION] ←→ [SERVEUR API]
+    Label: "L'application envoie une recherche → le serveur répond avec des résultats"
+    Label: "L'application affiche les photos depuis les sites d'origine directement"
+
+  [SERVEUR API] ←→ [BASE DE DONNÉES]
+    Label: "Le serveur lit et écrit dans la base de données"
+
+  [SERVEUR API] ←→ [SITES IMMOBILIERS]
+    Label: "Chaque jour, le serveur envoie le robot collecter les nouvelles annonces"
+    (draw a small "sites web" cloud icon connected to the serveur)
+
+  [APPLICATION] ←→ [SITES IMMOBILIERS]
+    Label: "Les photos sont chargées directement depuis les sites d'origine"
+    (dashed arrow — no intermediary storage)
+
+Simple summary (callout at bottom):
+  "L'utilisateur voit l'application. L'application parle au serveur.
+   Le serveur parle à la base de données. Le serveur envoie aussi des robots
+   collecter les annonces sur les sites immobiliers."
+  "Les photos ne sont jamais copiées — elles sont affichées depuis leur site d'origine."
+
+Visual suggestion:
+  Phone icon for the app, server icon (box with rack) for the API,
+  cylinder icon for the database, cloud icon for internet sites.
+  Keep it to 3-4 boxes maximum. Very clean, no internal detail.
+
+================================================================================
+DIAGRAM 3 — USE CASE: L'UTILISATEUR CHERCHE UN BIEN
+================================================================================
+
+Audience: non-technical. Shows the step-by-step journey of a user typing a
+search query and getting results. A simple numbered sequence.
+
+Layout: horizontal flow, left to right, with numbered steps.
+User on the far left, database on the far right, results come back left.
+
+Steps (numbered, left to right then looping back):
+
+  1. [Utilisateur]                    (person with phone)
+       │
+       │  "Je tape: appartement à Douala entre 30 et 50 millions"
+       ▼
+  2. [Application]                    (Flutter app on phone)
+       │
+       │  "L'application envoie la recherche au serveur"
+       ▼
+  3. [Serveur API]                    (FastAPI)
+       │
+       │  "Le serveur comprend la phrase:
+       │   - type: Appartement
+       │   - ville: Douala
+       │   - prix min: 30 000 000
+       │   - prix max: 50 000 000"
+       ▼
+  4. [Base de données]                (PostgreSQL)
+       │
+       │  "La base cherche tous les biens qui correspondent"
+       ▼
+  5. [Résultats]                       (list of matching properties)
+       │
+       │  ← sends back to the server ←
+       ▼
+  6. [Serveur API]
+       │
+       │  "Le serveur prépare les résultats:
+       │   titre, prix, quartier, photos, nombre de chambres"
+       ▼
+  7. [Application]
+       │
+       │  "L'application affiche les biens sous forme de cartes
+       │   avec photos, prix et quartier"
+       ▼
+  8. [Utilisateur]                     (sees results on screen)
+       "L'utilisateur voit les appartements à Douala dans son budget"
+
+Layout suggestion:
+  Draw it as a "round trip": steps go left→right (1-5), then right→left (5-8).
+  The user is on both ends. Use a phone icon at steps 1, 7, 8.
+  Use a magnifying glass icon at step 3 (understanding the search).
+  Use a database cylinder at step 4-5.
+
+Annotation:
+  "Le serveur comprend le langage naturel: 'appartement', 'Douala',
+   '30 millions'. Pas besoin de remplir des formulaires compliqués."
+
+================================================================================
+DIAGRAM 4 — USE CASE: L'UTILISATEUR CONSULTE LE DÉTAIL D'UN BIEN
+================================================================================
+
+Audience: non-technical. Shows what happens when a user taps on a listing
+to see full details.
+
+Layout: vertical flow, top to bottom, with the phone screen on one side
+and the server/database on the other.
+
+Steps:
+
+  [Utilisateur tape sur une annonce]
+       │
+       ▼
+  [Application: envoie "donne-moi les détails du bien #42"]
+       │
+       ▼
+  [Serveur API: GET /annonces/42]
+       │
+       ├─→ [Base de données: cherche le bien canonique #42]
+       │     → titre, type, prix, quartier, chambres, surface
+       │
+       ├─→ [Base de données: cherche toutes les sources de ce bien]
+       │     → "Ce bien est listé sur Mapiole ET Kasastay"
+       │     → prix sur Mapiole: 45 000 000 XAF
+       │     → prix sur Kasastay: 47 500 000 XAF
+       │     → meilleur prix = 45 000 000 XAF (Mapiole)
+       │
+       ├─→ [Base de données: cherche l'historique des prix]
+       │     → 1er mars: 50 000 000 XAF (première apparition)
+       │     → 15 mars: 45 000 000 XAF (baisse de prix)
+       │     → 1er avril: 45 000 000 XAF (pas de changement)
+       │
+       ├─→ [Serveur: calcule la position sur le marché]
+       │     → "Ce bien est 10% sous le prix médian des appartements à Douala"
+       │     → Verdict: below_market (bon affaire)
+       │
+       ▼
+  [Application affiche:]
+       - Photos (depuis le site d'origine, sans copie)
+       - Titre + prix + quartier
+       - "Meilleur prix: 45 000 000 XAF sur Mapiole"
+       - "Aussi disponible sur Kasastay: 47 500 000 XAF"
+       - Bouton "Voir l'offre principale" → ouvre le site Mapiole
+       - Graphique de l'historique des prix
+       - Analyse: "10% sous le marché — bonne affaire"
+       - Spécifications: 3 chambres, 2 salles de bain, 120 m²
+       - Lien vers l'intelligence du quartier
+
+Layout suggestion:
+  Left column: phone screens (user → app → results display).
+  Right column: server and database doing the work.
+  Arrows go left→right (request) and right→left (response).
+  Use a small chart icon for the price history section.
+  Use a "badge/checkmark" icon for the market analysis verdict.
+
+================================================================================
+DIAGRAM 5 — COMMENT LE SYSTÈME ÉVITE LES DOUBLONS
+================================================================================
+
+Audience: non-technical. Explains deduplication with a concrete example:
+the same apartment listed on two different websites.
+
+Layout: top section shows the problem (two sites, same property),
+bottom section shows how the system merges them.
+
+Top section — LE PROBLÈME:
+
+  [Mapiole.com]                    [Kasastay.com]
+   Annonce A:                        Annonce B:
+   "Bel appartement 3 chambres"      "Appartement 3 ch Bastos"
+   Bastos, Yaoundé                   Bastos, Yaoundé
+   45 000 000 XAF                    47 500 000 XAF
+   120 m²                            122 m²
+   photos: [img1, img2]              photos: [img3, img4]
+
+   "Deux annonces, mais c'est LE MÊME BIEN"
+
+Middle section — LA COMPARAISON:
+
+  [Le système compare:]
+    ✓ Type: Appartement = Appartement          (pareil)
+    ✓ Ville: Yaoundé = Yaoundé                  (pareil)
+    ✓ Quartier: Bastos = Bastos                 (pareil)
+    ~ Titre: "Bel appartement 3 chambres" ≈ "Appartement 3 ch Bastos"  (similaire à 85%)
+    ~ Prix: 45M vs 47.5M — proche (écart 5%)
+    ✓ Surface: 120 m² ≈ 122 m²                  (pareil, ±2 m²)
+    ✓ Chambres: 3 = 3                            (pareil)
+
+  [Score de confiance: 0.89 → Confirmé: c'est le même bien]
+
+Bottom section — LE RÉSULTAT:
+
+  [UNE SEULE ANNONCE CANONIQUE]
+   "Bel appartement 3 chambres, Bastos Yaoundé"
+   Meilleur prix: 45 000 000 XAF (Mapiole)
+   Aussi disponible sur Kasastay: 47 500 000 XAF
+   Sources: 2 plateformes
+   L'utilisateur voit une seule annonce, pas deux.
+
+Layout suggestion:
+  Top: two boxes side by side with slightly different content.
+  Middle: a "comparison" box with checkmarks (✓) and tildes (~).
+  Bottom: one merged box with a "merged" icon.
+  Use green checkmarks for matches, orange for similarities.
+  The score (0.89) should be prominent — maybe in a badge.
+
+Annotation:
+  "Sans cette étape, l'utilisateur verrait le même bien deux fois.
+   Le système reconnaît les doublons et n'affiche qu'une seule annonce,
+   avec le meilleur prix parmi toutes les plateformes."
+
+================================================================================
+DIAGRAM 6 — LE SUIVI DES PRIX DANS LE TEMPS
+================================================================================
+
+Audience: non-technical. Shows how the system tracks price changes over
+multiple crawls, building a price history.
+
+Layout: timeline (horizontal), with crawl events as dots/boxes and a
+price chart forming below.
+
+Timeline:
+
+  Jour 1 (1er mars):
+    [Robot visite le site]
+    → Trouve "Appartement Bastos, 50 000 000 XAF"
+    → C'est nouveau → enregistre "première apparition"
+    → Point sur le graphique: (1 mars, 50M)
+
+  Jour 15 (15 mars):
+    [Robot visite le site]
+    → Trouve "Appartement Bastos, 45 000 000 XAF"
+    → Le bien existe déjà (même URL)
+    → Le prix a changé: 50M → 45M (baisse de 5M)
+    → Enregistre "changement de prix"
+    → Point sur le graphique: (15 mars, 45M)
+
+  Jour 30 (30 mars):
+    [Robot visite le site]
+    → Trouve "Appartement Bastos, 45 000 000 XAF"
+    → Le bien existe déjà
+    → Le prix n'a pas changé (toujours 45M)
+    → Aucune action (pas de nouvel événement)
+    → Le graphique reste à 45M
+
+  Jour 45 (15 avril):
+    [Robot visite le site]
+    → Le bien n'est plus sur le site!
+    → Enregistre "retiré du marché"
+    → Point sur le graphique: (15 avril, retiré)
+
+Resulting price chart (shown below the timeline):
+
+  Prix (XAF)
+  50M ─●─
+      │  ╲
+      │   ╲
+  45M │    ●────────●──── (retiré)
+      │
+      └──────────────────────────→ Temps
+       1 mars  15 mars  30 mars  15 avril
+
+Key points (callout):
+  "Chaque fois que le robot visite le site, il compare le prix actuel
+   avec le prix précédent. S'il a changé, il l'enregistre.
+   L'utilisateur voit un graphique de l'évolution du prix."
+
+  "L'ancien prix n'est JAMAIS effacé. Tout est conservé dans un historique
+   qui ne fait que grandir."
+
+Layout suggestion:
+  Top: 4 crawl events as boxes with timestamps.
+  Bottom: a simple line chart with points.
+  Use a robot icon at each crawl event.
+  Use a red "X" or "removed" icon at the last event.
+  Green for price drops, red for price increases (or vice versa).
+
+================================================================================
+DIAGRAM 7 — L'INTELLIGENCE DU QUARTIER
+================================================================================
+
+Audience: non-technical. Shows how raw property listings are transformed
+into neighborhood-level market intelligence scores.
+
+Layout: funnel shape — many listings go in at the top, 5 scores come
+out at the bottom.
+
+Top (inputs):
+
+  [Toutes les annonces de Bastos, Yaoundé]
+   (e.g. 45 appartements, 20 villas, 8 terrains)
+   ↓
+  [Le système regroupe par quartier]
+   ↓
+
+Middle (computation — shown as 5 parallel paths):
+
+  [Prix premium]
+    "Bastos est 2× plus cher que la moyenne de Yaoundé"
+    → Score premium: 7.5/10 → "Haut de gamme"
+
+  [Demande]
+    "Les biens à Bastos se vendent en ~14 jours en moyenne"
+    → Score demande: 8.0/10 → "Forte demande"
+
+  [Croissance]
+    "Les prix à Bastos ont monté de 12% en 90 jours"
+    → Score croissance: 8.0/10 → "En hausse"
+
+  [Activité]
+    "6 nouvelles annonces par semaine à Bastos"
+    → Score activité: 7.0/10 → "Quartier actif"
+
+  [Luxe]
+    "40% des biens ont une piscine, jardin ou terrasse"
+    → Score luxe: 6.5/10 → "Élégant"
+
+Bottom (output):
+
+  [FICHE QUARTIER: BASTOS]
+   - Prix médian: 65 000 000 XAF
+   - Prix au m²: 540 000 XAF
+   - Premium: 7.5/10 (Haut de gamme)
+   - Demande: 8.0/10 (Forte)
+   - Croissance: 8.0/10 (En hausse)
+   - Activité: 7.0/10 (Actif)
+   - Luxe: 6.5/10 (Élégant)
+   - Tendance: ↑ +12% sur 90 jours
+
+  "Cette fiche est calculée une fois par semaine et mise en cache.
+   L'utilisateur la consulte en un clic, sans attendre."
+
+Layout suggestion:
+  Funnel shape at the top (wide → narrow).
+  5 horizontal computation rows in the middle, each with an icon.
+  A "report card" box at the bottom with a summary.
+  Use score badges (colored circles with numbers) for each score.
+  Colors: green = high, yellow = medium, orange/red = low.
+  Use a "trending up" arrow icon for the trend.
+
+================================================================================
+DIAGRAM 8 — LE CYCLE AUTOMATIQUE (PLANIFICATEUR)
+================================================================================
+
+Audience: non-technical. Shows the daily/weekly automatic cycle that keeps
+the data fresh without any human intervention.
+
+Layout: circular/clock arrangement showing the recurring schedule.
+
+Three concentric rings or a clock-like layout:
+
+  OUTER RING — Toutes les 6 heures:
+    [06h00] → [12h00] → [18h00] → [00h00]
+    "Mise à jour des prix: le robot revisite les biens déjà connus
+     pour détecter les changements de prix et de disponibilité"
+    → flèche circulaire revenant au point de départ
+
+  MIDDLE RING — Tous les jours à 02h00:
+    [02h00]
+    "Crawl complet: le robot visite toutes les pages des sites
+     immobiliers pour trouver de nouvelles annonces"
+    → flèche vers le centre
+
+  INNER RING — Tous les lundis à 03h00:
+    [Lundi 03h00]
+    "Recalcul des statistiques: le système recalcule les scores
+     de tous les quartiers (prix, demande, croissance, etc.)"
+    → flèche vers le centre
+
+Center:
+
+  [BASE DE DONNÉES]
+   "Tout est sauvegardé ici:
+    - nouvelles annonces
+    - changements de prix
+    - biens retirés
+    - scores de quartiers"
+
+Below the rings (callout box):
+
+  "Le système fonctionne tout seul, 24h/24, 7j/7.
+   Personne n'a besoin de lancer les robots manuellement.
+   Mais un administrateur peut aussi déclencher un crawl
+   à la demande via l'interface d'administration."
+
+Manual triggers (small box, bottom right):
+  [Bouton manuel]
+   - "Crawler un site maintenant"
+   - "Recalculer les statistiques maintenant"
+   (accessible via API admin ou ligne de commande)
+
+Layout suggestion:
+  Three concentric circles or a clock face.
+  Icons at each time point (moon for 02h, sun for 12h, etc.).
+  Circular arrows showing the cycle.
+  Database cylinder in the center.
+  Use a calendar icon for the weekly task.
+
+================================================================================
+DIAGRAM 9 — COMMENT AJOUTER UN NOUVEAU SITE (SCRAPER UNIVERSEL)
+================================================================================
+
+Audience: non-technical. Shows how a new real-estate website can be
+onboarded quickly using the universal scraper, with a human review step.
+
+Layout: horizontal flow with a decision gate and a review step.
+
+Flow:
+
+  1. [Administrateur]
+       "J'ajoute un nouveau site: exemple-immo.cm"
+       │
+       ▼
+
+  2. [Scraper universel — Étape 1: Découverte]
+       "Le robot explore le site:
+        - lit le plan du site (sitemap)
+        - suit les liens vers les pages d'annonces
+        - détecte la pagination"
+       │
+       ▼
+
+  3. [Scraper universel — Étape 2: Détection des cartes]
+       "Le robot repère les cartes d'annonces:
+        - structures répétées (même format)
+        - contiennent une image, un prix, un lien
+        - 3 critères sur 5 nécessaires"
+       │
+       ▼
+
+  4. [Scraper universel — Étape 3: Extraction]
+       "Le robot extrait les champs de chaque annonce:
+        - priorité 1: JSON-LD (structured data — le plus fiable)
+        - priorité 2: OpenGraph (meta tags)
+        - priorité 3: heuristiques (regex, CSS selectors)"
+       │
+       ▼
+
+  5. [Scraper universel — Étape 4: Score de confiance]
+       "Le système calcule un score de 0 à 1:
+        - a-t-on trouvé des données structurées? (40%)
+        - l'annonce vient-elle d'une carte détectée? (20%)
+        - y a-t-il un prix? (15%)
+        - les images sont-elles valides? (10%)
+        - la ville est-elle reconnue? (10%)
+        - le domaine est-il camerounais? (5%)"
+       │
+       ▼
+
+  6. Decision gate (diamond):
+       {Score de confiance?}
+       │
+       ├─ ≥ 0.75 → [AUTO-APPROUVÉ]
+       │           "L'annonce est ajoutée automatiquement"
+       │           "Elle apparaît sur l'application immédiatement"
+       │
+       ├─ 0.40–0.74 → [EN ATTENTE]
+       │              "L'annonce est sauvegardée mais masquée"
+       │              "Un humain doit la vérifier"
+       │              ↓
+       │           [Administrateur: file d'attente]
+       │              "L'admin voit: titre, prix, lieu, photo, score"
+       │              ↓
+       │           Decision: {L'admin décide}
+       │             ├─ Approuver → [APPROUVÉ] → apparaît sur l'app
+       │             └─ Rejeter → [REJETÉ] → reste archivé, invisible
+       │
+       └─ < 0.40 → [REJETÉ]
+                   "L'annonce n'est pas sauvegardée"
+                   "Trop peu fiable pour être conservée"
+
+Bottom annotation:
+  "Ce système permet d'ajouter un nouveau site en quelques minutes,
+   sans écrire de code. Les annonces les plus fiables sont ajoutées
+   automatiquement; les autres attendent une vérification humaine."
+
+Layout suggestion:
+  Numbered steps as boxes flowing down.
+  Diamond at the decision gate (step 6).
+  Three colored paths from the diamond: green (auto-approved),
+  yellow (pending), red (rejected).
+  A "human review" sub-flow for the pending path.
+  Use a robot icon for steps 1-4, a person icon for the admin review.
+
+================================================================================
+DIAGRAM 10 — COMMENT LES IMAGES SONT GÉRÉES
+================================================================================
+
+Audience: non-technical. Explains why the system does NOT download/copy
+images, but instead loads them directly from the original websites.
+
+Layout: comparison — two approaches side by side.
+
+LEFT SIDE (what the system does NOT do — shown with a red X):
+
+  [Site immobilier]                 [Serveur CentralImmo]           [Application]
+   photo du bien                     télécharge la photo             affiche la copie
+       │                             │                              │
+       └──→ [Téléchargement] ──→     [Stockage local 23MB]    ──→   [Photo copiée]
+       "Copier l'image"               "Garder une copie"             "Afficher la copie"
+
+  ❌ Problèmes:
+     - 23 MB d'espace disque utilisé
+     - Images qui deviennent obsolètes
+     - Photos périmées si le site source les met à jour
+     - Complexité de gestion (cache, nettoyage, chemins)
+     - Risque de droits d'auteur (copie non autorisée)
+
+RIGHT SIDE (what the system DOES — shown with a green checkmark):
+
+  [Site immobilier]                                                [Application]
+   photo du bien (URL: https://mapiole.com/img/123.jpg)
+       │                                                           │
+       └──────→ [URL stockée dans la base] ──────────────────→    [Charge l'image
+                 "raw_listings.images_raw =                       directement depuis
+                  ['https://mapiole.com/img/123.jpg',              le site d'origine"
+                   'https://mapiole.com/img/124.jpg']"             (CachedNetworkImage)
+       │                                                           │
+       │  "On garde juste le LIEN, pas le fichier"                  │
+       │                                                           ▼
+       │                                              [L'utilisateur voit la photo
+       │                                               en temps réel depuis le site]
+
+  ✅ Avantages:
+     - 0 MB d'espace disque (pas de téléchargement)
+     - Toujours à jour (l'image change → l'app suit)
+     - Pas de problème de droits d'auteur (on affiche, on copie pas)
+     - Simplicité (pas de gestion de cache de fichiers)
+     - Si l'image est supprimée du site → l'app affiche un placeholder
+
+Bottom annotation:
+
+  "Le système stocke uniquement les LIENS (URLs) vers les photos,
+   pas les photos elles-mêmes. Quand l'utilisateur ouvre une annonce,
+   l'application charge la photo directement depuis le site immobilier.
+
+   C'est comme un favori dans votre navigateur: vous gardez le lien,
+   pas une copie de la page web."
+
+  "Si une photo n'est plus disponible sur le site d'origine,
+   l'application affiche une image de remplacement (placeholder)
+   au lieu d'une image cassée."
+
+Layout suggestion:
+  Two columns: left (red, "ancienne approche — copie"), right (green, "nouvelle approche — lien").
+  Use a photo icon, a server icon, and a phone icon in each column.
+  Red X over the left approach, green checkmark on the right.
+  Show the URL string in a "code" style box.
+  Use a "broken image" placeholder icon in the annotation about missing images.
+
+================================================================================
+END OF REPORT 2
+================================================================================
+
+Notes for the diagram generator:
+  1. All labels in French. Keep sentences SHORT (10-15 words max per box).
+  2. Use simple icons: robot, phone, database cylinder, magnifying glass,
+     chart, calendar, person, checkmark, X mark, photo, cloud.
+  3. Color scheme:
+     - Orange #E94E1B: primary actions, robot steps
+     - Green #4CAF50: success, approved, correct
+     - Red #F44336: rejected, error, "don't do this"
+     - Yellow #FFC107: pending, waiting
+     - Blue #2196F3: API/server, data flow
+     - Grey #9E9E9E: storage, background
+  4. Use large, readable font sizes. These are for non-technical readers.
+  5. Arrows should have short labels (2-5 words) on them when possible.
+  6. Each diagram should fit on ONE page. Do not split across pages.
+  7. Use rounded corners for all boxes.
+  8. For decision points, use diamond shapes with clear Yes/No labels.
+  9. Numbered steps should have circled numbers.
+  10. Keep each diagram SIMPLE — better to have 5 clear boxes than 15 cluttered ones.

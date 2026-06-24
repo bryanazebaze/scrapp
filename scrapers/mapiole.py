@@ -1,168 +1,243 @@
-import os
-import requests
-import uuid
-import hashlib
-from bs4 import BeautifulSoup
-from typing import List
-import time
+"""Mapiole adapter — dedicated scraper for mapiole.com.
+
+Refactor of the original MapioleScraper onto the SourceAdapter + BaseFetchMixin
+framework. Key changes vs the legacy scraper:
+
+- Removes the hard `[:5]` listing cap (mapiole.py:96) and paginates
+  `?page=1..N` per the Burp capture (Burp/Mapoile-Arch.txt documents 7 pages).
+- Uses BaseFetchMixin for browser headers, jittered delays, session reuse,
+  retries, robots.txt — instead of bare `requests.get` with the default
+  python-requests User-Agent (mapiole.py:89) and a fixed 1s sleep.
+- Extracts the additional fields the Burp doc documents but the old scraper
+  missed: rooms/baths/area (div.ab-keyfact), GPS lat/lng (Leaflet script),
+  amenities (div.ab-amenity), property_id (input[name="product_id"]).
+- Stores the ORIGINAL image URLs in images_raw (the old scraper kept only
+  the local cache paths, losing the source of truth).
+- Returns RawListingDraft (dataclass), not ORM models — persistence is owned
+  by the ingest pipeline.
+
+Selectors come from Burp/Mapoile-Arch.txt and Burp/Mapoile.txt.
+"""
+from __future__ import annotations
+
 import re
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from typing import Optional
+from urllib.parse import urljoin
 
-from .base import BaseScraper
+from bs4 import BeautifulSoup
 
-def telecharger_image_localement(url: str, prefix: str = "img") -> str:
-    """Télécharge l'image physiquement (sans faire de doublons)"""
-    if not url or not url.startswith('http'): 
-        return ""
-    
-    # On transforme l'URL en un nom unique mais TOUJOURS LE MÊME pour cette URL
-    hash_nom = hashlib.md5(url.encode('utf-8')).hexdigest()[:10]
-    nom_fichier = f"{prefix}_{hash_nom}.jpg"
-    
-    # On prépare le dossier de sauvegarde
-    dossier_destination = os.path.join(os.path.dirname(os.path.dirname(__file__)), "static", "images")
-    os.makedirs(dossier_destination, exist_ok=True)
-    chemin_sauvegarde = os.path.join(dossier_destination, nom_fichier)
-    
-    url_locale = f"/static/images/{nom_fichier}"
-    
-    # ARCHITECTURE SÉCURE: On vérifie si le fichier existe déjà physiquement !
-    # S'il existe déjà, on le retourne directement sans le télécharger une 2ème fois
-    if os.path.exists(chemin_sauvegarde):
-        return url_locale
-    
-    # S'il n'existe pas, on le télécharge avec les faux headers
-    headers = {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-        'Referer': 'https://mapiole.com/'
-    }
-    
-    try:
-        response = requests.get(url, headers=headers, timeout=10)
-        if response.status_code == 200:
-            with open(chemin_sauvegarde, 'wb') as f:
-                f.write(response.content)
-            return url_locale
-    except Exception as e:
-        print(f"Erreur de téléchargement image : {e}")
-        
-    return ""
+from .base import SourceAdapter
+from .drafts import RawListingDraft
+from .http_mixin import BaseFetchMixin
+from . import utils
 
 
-class MapioleScraper(BaseScraper):
-    def __init__(self):
-        super().__init__()
-        self.platform_name = "Mapiole"
-        self.base_url = "https://mapiole.com"
-        self.catalogue_url = "https://mapiole.com"
+class MapioleAdapter(SourceAdapter, BaseFetchMixin):
+    platform_slug = "mapiole"
+    base_url = "https://mapiole.com"
+    adapter_kind = "dedicated"
 
-    def parse_prix(self, prix_text: str) -> int:
-        if not prix_text:
+    # Listing index page. The Burp capture shows pagination via ?page=N.
+    CATALOG_URL = "https://mapiole.com/product-listing"
+    # Card title link selector (kept from the legacy scraper).
+    CARD_LINK_SELECTOR = "a.prop-card__title"
+    PAGINATION_SELECTOR = "ul.pagination a.page-link"
+
+    def __init__(self, source_id: Optional[int] = None,
+                 crawl_config: dict | None = None) -> None:
+        super().__init__(source_id=source_id)
+        self.init_fetch(base_url=self.base_url, crawl_config=crawl_config)
+
+    # ----- listing discovery -----
+    def fetch_listings(self, max_pages: int | None = None,
+                       max_workers: int = 8) -> list[RawListingDraft]:
+        """Fetch catalog pages sequentially, then crawl detail pages
+        concurrently with a thread pool. `max_workers` controls per-page
+        parallelism (8 is a safe default for most real-estate sites)."""
+        drafts: list[RawListingDraft] = []
+        pages = max_pages or 10  # sane default; Burp shows ~7 pages
+        for page in range(1, pages + 1):
+            url = f"{self.CATALOG_URL}?page={page}"
+            html = self.fetch_text(url, referer=self.base_url)
+            if not html:
+                break
+            soup = BeautifulSoup(html, "html.parser")
+            links = soup.select(self.CARD_LINK_SELECTOR)
+            if not links:
+                # No more cards → end of catalog.
+                break
+            detail_urls = [
+                urljoin(self.base_url, a.get("href"))
+                for a in links if a.get("href")
+            ]
+            # Fetch detail pages concurrently — I/O bound, safe with
+            # requests.Session (urllib3 pool is thread-safe, cookie jar has
+            # its own lock, headers are read-only after init).
+            with ThreadPoolExecutor(max_workers=max_workers) as pool:
+                futures = {pool.submit(self.fetch_details, u): u
+                           for u in detail_urls}
+                for future in as_completed(futures):
+                    u = futures[future]
+                    try:
+                        draft = future.result()
+                    except Exception as e:
+                        print(f"[mapiole] error fetching {u}: {e}")
+                        continue
+                    if draft is not None:
+                        drafts.append(draft)
+            # Stop if this page had no next-page link.
+            next_page = soup.select_one(f'a.page-link[href*="page={page+1}"]')
+            if not next_page:
+                break
+        print(f"[mapiole] fetched {len(drafts)} listings across pages "
+              f"({max_workers} workers)")
+        return drafts
+
+    # ----- detail extraction -----
+    def fetch_details(self, listing_url: str) -> Optional[RawListingDraft]:
+        html = self.fetch_text(listing_url, referer=self.CATALOG_URL)
+        if not html:
             return None
-        # Extraire uniquement les chiffres (ex: "150 000 FCFA" -> 150000)
-        digits = re.sub(r'[^\d]', '', prix_text)
-        return int(digits) if digits else None
+        soup = BeautifulSoup(html, "html.parser")
+        raw = self._extract_raw(soup, listing_url)
+        return self.normalize_data(raw)
 
-    def extract_images(self, soup: BeautifulSoup) -> str:
-        images = []
-        # On cible uniquement les images enfermées dans la galerie
-        for img in soup.select('.ab-gallery img'):
-            src = img.get('src')
+    def _extract_raw(self, soup: BeautifulSoup, url: str) -> dict:
+        """Extract every field Mapiole exposes on a detail page."""
+        title_el = soup.select_one("h1.ab-title")
+        title = title_el.get_text(strip=True) if title_el else ""
+
+        price_raw = ""
+        price_el = soup.select_one("div.ab-sidebar-price")
+        if price_el:
+            price_raw = price_el.get_text(" ", strip=True)
+        # Hidden raw numeric price (Burp: span#abPrice).
+        ab_price = soup.select_one("span#abPrice")
+        if ab_price and ab_price.get_text(strip=True).isdigit():
+            price_raw = price_raw or ab_price.get_text(strip=True)
+
+        # Location: div.ab-subtitle > a
+        loc = ""
+        subtitle = soup.select_one("div.ab-subtitle")
+        if subtitle:
+            a = subtitle.find("a")
+            loc = a.get_text(strip=True) if a else subtitle.get_text(strip=True)
+
+        # Description (filtered of boilerplate, as in the legacy scraper).
+        desc_parts = []
+        banned = [
+            "FCFA", "mensuel", "Carrefour ngousso", "Center city",
+            "Dites-moi", "Télécharger", "Assistance", "en direct",
+            "client entièrement gratuite", "+237", "Non spécifié",
+            "Aucun avis", "Vous ne serez pas encore facturé", "Total:",
+            "Cameroon", "Suivez-nous", "Restez à jour", "Recherche populaire",
+            "Liens rapides", "© Mapiole", "Mapiole.com",
+        ]
+        for p in soup.find_all("p"):
+            t = p.get_text(strip=True)
+            if len(t) > 10 and not any(b in t for b in banned):
+                desc_parts.append(t)
+        description = "\n".join(desc_parts)
+
+        # Key facts (rooms / baths / surface / land).
+        bedrooms = bathrooms = None
+        area_sqm = None
+        for kf in soup.select("div.ab-keyfact"):
+            label_el = kf.select_one("span.ab-keyfact-label")
+            value_el = kf.select_one("span.ab-keyfact-value")
+            if not label_el or not value_el:
+                continue
+            label = label_el.get_text(strip=True).lower()
+            value = value_el.get_text(strip=True)
+            if "chambre" in label or "bedroom" in label:
+                bedrooms = utils.parse_price(value, min_value=1)
+            elif ("douche" in label or "bath" in label or "salle de bain" in label
+                  or "sdb" in label or "wc" in label or "bains" in label
+                  or "sanitaire" in label):
+                bathrooms = utils.parse_price(value, min_value=1)
+            elif "surface" in label or "area" in label or "m²" in label or "m2" in label:
+                area_sqm = utils.parse_price(value, min_value=1)
+
+        # GPS from Leaflet inline script (Burp: var lat = ...; var lng = ...;).
+        lat = lng = None
+        for script in soup.find_all("script"):
+            txt = script.string or ""
+            m_lat = re.search(r"var\s+lat\s*=\s*(-?[\d.]+)", txt)
+            m_lng = re.search(r"var\s+lng\s*=\s*(-?[\d.]+)", txt)
+            if m_lat and m_lng:
+                lat = float(m_lat.group(1))
+                lng = float(m_lng.group(1))
+                break
+
+        # Amenities.
+        amenities = [a.get_text(strip=True) for a in soup.select("div.ab-amenity")
+                     if a.get_text(strip=True)]
+
+        # property_id (Burp: input[name="product_id"]).
+        property_id = None
+        pid_input = soup.select_one('input[name="product_id"]')
+        if pid_input:
+            property_id = pid_input.get("value")
+
+        # Images — original URLs from the gallery (canonical record).
+        images: list[str] = []
+        for img in soup.select(".ab-gallery img, .ab-gallery-grid img, .ab-gallery-banner img"):
+            src = img.get("src") or img.get("data-src")
             if src:
-                images.append(src)
+                full = src if src.startswith("http") else urljoin(self.base_url, src)
+                if utils.is_real_image(full):
+                    images.append(full)
 
-        valid_images = [img if img.startswith('http') else self.base_url + img for img in images]
-        
-        # Architecture Robuste: on télécharge l'image localement au lieu de juste garder le lien
-        urls_locales = []
-        for url in list(dict.fromkeys(valid_images))[:5]:
-            chemin_local = telecharger_image_localement(url, prefix="mapiole")
-            if chemin_local:
-                urls_locales.append(chemin_local)
-                
-        return ",".join(urls_locales)
+        return {
+            "url": url,
+            "title": title,
+            "price_raw": price_raw,
+            "location": loc,
+            "description": description,
+            "images": images,
+            "bedrooms": bedrooms,
+            "bathrooms": bathrooms,
+            "area_sqm": area_sqm,
+            "lat": lat,
+            "lng": lng,
+            "amenities": amenities,
+            "property_id": property_id,
+        }
 
-    def scrape(self) -> List[dict]:
-        print(f"[{self.platform_name}] Début de l'exploration...")
-        annonces_scrapees = []
-        
-        try:
-            reponse = requests.get(self.catalogue_url, timeout=15)
-            soup = BeautifulSoup(reponse.text, 'html.parser')
-            liens_annonces = soup.find_all('a', class_='prop-card__title')
-            
-            print(f"[{self.platform_name}] {len(liens_annonces)} annonces détectées.")
+    # ----- normalization -----
+    def normalize_data(self, raw: dict) -> RawListingDraft:
+        title = raw.get("title") or "Non renseigné"
+        price_raw = raw.get("price_raw") or ""
+        price_parsed = utils.parse_price(price_raw, min_value=1000,
+                                         reject_per_sqm=True)
+        images_raw = raw.get("images") or []
+        type_raw = utils.classify_property_type(
+            f"{title} {raw.get('url','')} {raw.get('description','')}"
+        )
+        return RawListingDraft(
+            url_source=raw.get("url", ""),
+            title_raw=title,
+            price_raw=price_raw or None,
+            price_parsed=price_parsed,
+            currency="XAF",
+            location_raw=raw.get("location") or None,
+            description_raw=raw.get("description") or None,
+            property_type_raw=type_raw,
+            images_raw=images_raw,
+            bedrooms=raw.get("bedrooms"),
+            bathrooms=raw.get("bathrooms"),
+            area_sqm=raw.get("area_sqm"),
+            latitude=raw.get("lat"),
+            longitude=raw.get("lng"),
+            amenities=raw.get("amenities") or [],
+            confidence=1.0,
+            payload={
+                **{k: v for k, v in raw.items() if k != "images"},
+                "nom_plateforme": "Mapiole",
+            },
+        )
 
-            # Pour le test, on limite à 5 résultats maximum dans un premier temps
-            for lien in liens_annonces[:5]:
-                url_detail = self.base_url + lien.get('href')
-                print(f"Extraction de : {url_detail}")
-                
-                try:
-                    resp_detail = requests.get(url_detail, timeout=10)
-                    soup_detail = BeautifulSoup(resp_detail.text, 'html.parser')
-                    
-                    titre_el = soup_detail.find('h1', class_='ab-title')
-                    prix_el = soup_detail.find('div', class_='ab-sidebar-price')
-                    loc_el = soup_detail.find('div', class_='ab-subtitle')
-                    
-                    desc_els = soup_detail.find_all('p') 
-                    
-                    titre = titre_el.text.strip() if titre_el else "Non renseigné"
-                    prix_brut = prix_el.text.strip() if prix_el else ""
-                    prix_entier = self.parse_prix(prix_brut)
-                    
-                    loc = "Non renseigné"
-                    if loc_el:
-                        loc_a = loc_el.find('a')
-                        loc = loc_a.text.strip() if loc_a else loc_el.text.strip()
-                    
-                    mots_interdits = [
-                        "Non spécifié", "FCFA / mensuel", 
-                        "Aucun avis pour le moment", "Vous ne serez pas encore facturé",
-                        "Total:", "Cameroon", "Suivez-nous sur les réseaux", 
-                        "Restez à jour", "Recherche populaire", "Liens rapides", 
-                        "© Mapiole.com", "en direct ?\nAssistance"
-                    ]
 
-                    paragraphes_propres = []
-                    for p in desc_els:
-                        texte = p.text.strip()
-                        if len(texte) > 10 and not any(interdit in texte for interdit in mots_interdits):
-                            paragraphes_propres.append(texte)
-                            
-                    description = "\n".join(paragraphes_propres)
-
-                    urls_images = self.extract_images(soup_detail)
-                    
-                    texte_analyse = (titre + " " + url_detail).lower()
-                    if "appartement" in texte_analyse or "studio" in texte_analyse or "apartment" in texte_analyse:
-                        type_bien_trouve = "Appartement"
-                    elif "terrain" in texte_analyse or "land" in texte_analyse:
-                        type_bien_trouve = "Terrain"
-                    elif "maison" in texte_analyse or "villa" in texte_analyse or "house" in texte_analyse:
-                        type_bien_trouve = "Maison"
-                    else:
-                        type_bien_trouve = "Autre"
-                    
-                    annonce = dict(
-                        titre=titre,
-                        type_de_bien=type_bien_trouve,
-                        prix_entier=prix_entier,
-                        localisation_brute=loc,
-                        description=description,
-                        url_source=url_detail,
-                        nom_plateforme=self.platform_name,
-                        urls_images=urls_images
-                    )
-                    annonces_scrapees.append(annonce)
-                    
-                    time.sleep(1)
-                    
-                except Exception as e:
-                    print(f"Erreur sur la page de détail : {e}")
-                    
-        except Exception as e:
-            print(f"Erreur d'accès au catalogue : {e}")
-            
-        print(f"[{self.platform_name}] Extraction finalisée. ({len(annonces_scrapees)} recensées).")
-        return annonces_scrapees
+# Backward-compatible alias for any legacy imports.
+MapioleScraper = MapioleAdapter

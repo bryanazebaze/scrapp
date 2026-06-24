@@ -1,0 +1,386 @@
+{
+  "@@locale": "fr",
+
+  "appTitle": "CentralImmo",
+  "@appTitle": {},
+
+  "navHome": "Accueil",
+  "@navHome": {},
+  "navSearch": "Rechercher",
+  "@navSearch": {},
+  "navFavorites": "Favoris",
+  "@navFavorites": {},
+  "navMap": "Carte",
+  "@navMap": {},
+
+  "commonBack": "Retour",
+  "@commonBack": {},
+  "commonSeeAll": "Voir tout",
+  "@commonSeeAll": {},
+  "commonView": "Voir",
+  "@commonView": {},
+  "commonCameroon": "Cameroun",
+  "@commonCameroon": {},
+
+  "greetingMorning": "Bonjour",
+  "@greetingMorning": {},
+  "greetingAfternoon": "Bon après-midi",
+  "@greetingAfternoon": {},
+  "greetingEvening": "Bonsoir",
+  "@greetingEvening": {},
+
+  "homeTagline": "L'immobilier camerounais, intelligemment",
+  "@homeTagline": {},
+  "homeSearchPlaceholder": "Rechercher un bien...",
+  "@homeSearchPlaceholder": {},
+
+  "homeCategoryAll": "Tout",
+  "@homeCategoryAll": {},
+  "homeCategoryRecent": "Récent",
+  "@homeCategoryRecent": {},
+  "homeCategoryApartment": "Appartement",
+  "@homeCategoryApartment": {},
+  "homeCategoryLand": "Terrain",
+  "@homeCategoryLand": {},
+  "homeCategoryStudio": "Studio",
+  "@homeCategoryStudio": {},
+  "homeCategoryVilla": "Villa",
+  "@homeCategoryVilla": {},
+  "homeCategoryOffice": "Bureau",
+  "@homeCategoryOffice": {},
+  "homeCategoryRoom": "Chambre",
+  "@homeCategoryRoom": {},
+
+  "homeSectionRecentTitle": "Annonces récentes",
+  "@homeSectionRecentTitle": {},
+  "homeSectionRecentSubtitle": "Nouveautés du marché",
+  "@homeSectionRecentSubtitle": {},
+  "homeSectionApartmentsTitle": "Appartements populaires",
+  "@homeSectionApartmentsTitle": {},
+  "homeSectionApartmentsSubtitle": "Les plus consultés",
+  "@homeSectionApartmentsSubtitle": {},
+  "homeSectionLandsTitle": "Terrains à découvrir",
+  "@homeSectionLandsTitle": {},
+  "homeSectionLandsSubtitle": "Pour vos projets",
+  "@homeSectionLandsSubtitle": {},
+
+  "homeMoreListingsTitle": "Plus d'annonces",
+  "@homeMoreListingsTitle": {},
+  "homeMoreListingsCount": "{count} biens disponibles",
+  "@homeMoreListingsCount": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "homeSeenAll": "Vous avez tout vu",
+  "@homeSeenAll": {},
+
+  "homeEmptyTitle": "Aucune annonce pour le moment",
+  "@homeEmptyTitle": {},
+  "homeEmptySubtitle": "Revenez bientôt pour de nouveaux biens",
+  "@homeEmptySubtitle": {},
+
+  "homeErrorTitle": "Connexion impossible",
+  "@homeErrorTitle": {},
+
+  "searchTitle": "Recherche",
+  "@searchTitle": {},
+  "searchHint": "Ex: 3 chambres à Bastos sous 120M",
+  "@searchHint": {},
+  "searchTryThese": "ESSAYEZ CES RECHERCHES",
+  "@searchTryThese": {},
+  "searchSuggestion1": "Villa à Bastos moins de 100M",
+  "@searchSuggestion1": {},
+  "searchSuggestion2": "Appartement 2 chambres à Douala",
+  "@searchSuggestion2": {},
+  "searchSuggestion3": "Studio à Yaoundé entre 15 et 30 millions",
+  "@searchSuggestion3": {},
+  "searchSuggestion4": "Terrain à Bafoussam",
+  "@searchSuggestion4": {},
+  "searchTip": "Astuce: vous pouvez aussi filtrer par prix, type de bien, nombre de chambres.",
+  "@searchTip": {},
+  "searchNoResults": "Aucun résultat",
+  "@searchNoResults": {},
+  "searchNoResultsHint": "Essayez avec d'autres mots-clés",
+  "@searchNoResultsHint": {},
+  "searchError": "Erreur: {error}",
+  "@searchError": {
+    "placeholders": {
+      "error": { "type": "String" }
+    }
+  },
+
+  "filterTitle": "Filtres",
+  "@filterTitle": {},
+  "filterCityLabel": "Ville ou Quartier",
+  "@filterCityLabel": {},
+  "filterCityHint": "Ex: Douala, Bonamoussadi...",
+  "@filterCityHint": {},
+  "filterMinPriceLabel": "Prix min",
+  "@filterMinPriceLabel": {},
+  "filterMaxPriceLabel": "Prix max",
+  "@filterMaxPriceLabel": {},
+  "filterReset": "Réinitialiser",
+  "@filterReset": {},
+  "filterApply": "Appliquer",
+  "@filterApply": {},
+
+  "detailLoadingError": "Impossible de charger",
+  "@detailLoadingError": {},
+  "detailVerifiedOffer": "Offre vérifiée",
+  "@detailVerifiedOffer": {},
+  "detailPriceHistory": "Historique des prix",
+  "@detailPriceHistory": {},
+  "detailAboutProperty": "À propos du bien",
+  "@detailAboutProperty": {},
+  "detailOtherOffers": "Autres offres",
+  "@detailOtherOffers": {},
+  "detailComparedOn": "Comparées sur {count} plateforme(s)",
+  "@detailComparedOn": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "detailMarketAnalysis": "Analyse du marché en cours...",
+  "@detailMarketAnalysis": {},
+  "detailMedianPrice": "Prix médian: {price}",
+  "@detailMedianPrice": {
+    "placeholders": {
+      "price": { "type": "String" }
+    }
+  },
+  "detailCheapestSource": "Le moins cher sur {count} sources",
+  "@detailCheapestSource": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "detailSpecBedrooms": "chambres",
+  "@detailSpecBedrooms": {},
+  "detailSpecBathrooms": "sdb",
+  "@detailSpecBathrooms": {},
+  "detailPriceLabel": "Prix",
+  "@detailPriceLabel": {},
+  "detailViewOffer": "Voir l'offre",
+  "@detailViewOffer": {},
+
+  "neighborhoodLabel": "Quartier",
+  "@neighborhoodLabel": {},
+  "neighborhoodListingsCount": "{count} annonces en cours",
+  "@neighborhoodListingsCount": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "neighborhoodDataUnavailable": "Données non disponibles",
+  "@neighborhoodDataUnavailable": {},
+  "neighborhoodScoresTitle": "Scores du quartier",
+  "@neighborhoodScoresTitle": {},
+  "neighborhoodScorePremium": "Premium",
+  "@neighborhoodScorePremium": {},
+  "neighborhoodScorePremiumDesc": "Niveau de prix vs la ville",
+  "@neighborhoodScorePremiumDesc": {},
+  "neighborhoodScoreDemand": "Demande",
+  "@neighborhoodScoreDemand": {},
+  "neighborhoodScoreDemandDesc": "Vitesse de vente des biens",
+  "@neighborhoodScoreDemandDesc": {},
+  "neighborhoodScoreGrowth": "Croissance",
+  "@neighborhoodScoreGrowth": {},
+  "neighborhoodScoreGrowthDesc": "Tendance des prix (90 jours)",
+  "@neighborhoodScoreGrowthDesc": {},
+  "neighborhoodScoreActivity": "Activité",
+  "@neighborhoodScoreActivity": {},
+  "neighborhoodScoreActivityDesc": "Volume de nouvelles annonces",
+  "@neighborhoodScoreActivityDesc": {},
+  "neighborhoodScoreLuxury": "Luxe",
+  "@neighborhoodScoreLuxury": {},
+  "neighborhoodScoreLuxuryDesc": "Indice premium + aménités",
+  "@neighborhoodScoreLuxuryDesc": {},
+
+  "neighborhoodSecurityTitle": "Sécurité & Quartier",
+  "@neighborhoodSecurityTitle": {},
+  "neighborhoodSecurityUnknown": "Sécurité inconnue",
+  "@neighborhoodSecurityUnknown": {},
+  "neighborhoodSecuritySection": "Sécurité",
+  "@neighborhoodSecuritySection": {},
+  "neighborhoodRiskFactors": "Facteurs de risque",
+  "@neighborhoodRiskFactors": {},
+  "neighborhoodAmenities": "Aménités",
+  "@neighborhoodAmenities": {},
+  "neighborhoodTransport": "Transport",
+  "@neighborhoodTransport": {},
+  "neighborhoodRealEstateContext": "Contexte immobilier",
+  "@neighborhoodRealEstateContext": {},
+  "neighborhoodDemographics": "Démographie",
+  "@neighborhoodDemographics": {},
+  "neighborhoodAbout": "À propos",
+  "@neighborhoodAbout": {},
+  "neighborhoodLandmarks": "Points de repère",
+  "@neighborhoodLandmarks": {},
+  "neighborhoodIntelligence": "Intelligence du quartier",
+  "@neighborhoodIntelligence": {},
+  "neighborhoodViewScores": "Voir les scores de {location}",
+  "@neighborhoodViewScores": {
+    "placeholders": {
+      "location": { "type": "String" }
+    }
+  },
+  "neighborhoodThisQuarter": "ce quartier",
+  "@neighborhoodThisQuarter": {},
+
+  "neighborhoodTrendTitle": "TENDANCE DU MARCHÉ",
+  "@neighborhoodTrendTitle": {},
+  "neighborhoodTrendStable": "Stable",
+  "@neighborhoodTrendStable": {},
+  "neighborhoodTrendPercent": "{sign}{percent}% sur 90 jours",
+  "@neighborhoodTrendPercent": {
+    "placeholders": {
+      "sign": { "type": "String" },
+      "percent": { "type": "String" }
+    }
+  },
+
+  "neighborhoodStatsMedian": "Médian",
+  "@neighborhoodStatsMedian": {},
+  "neighborhoodStatsAverage": "Moyen",
+  "@neighborhoodStatsAverage": {},
+  "neighborhoodStatsMin": "Min",
+  "@neighborhoodStatsMin": {},
+  "neighborhoodStatsMax": "Max",
+  "@neighborhoodStatsMax": {},
+  "neighborhoodStatsPricePerSqm": "Prix au m²",
+  "@neighborhoodStatsPricePerSqm": {},
+
+  "neighborhoodContextLocal": "Contexte local",
+  "@neighborhoodContextLocal": {},
+  "neighborhoodRealEstateMarket": "Marché immobilier",
+  "@neighborhoodRealEstateMarket": {},
+  "neighborhoodPointsOfInterest": "Points d'intérêt",
+  "@neighborhoodPointsOfInterest": {},
+
+  "cityInfoTitle": "Informations sur {city}",
+  "@cityInfoTitle": {
+    "placeholders": {
+      "city": { "type": "String" }
+    }
+  },
+  "citySafestZones": "Zones les plus sûres",
+  "@citySafestZones": {},
+  "cityEmergencyContacts": "Contacts d'urgence",
+  "@cityEmergencyContacts": {},
+  "cityTravelTips": "Conseils de voyage",
+  "@cityTravelTips": {},
+  "cityCurfew": "Couvre-feu",
+  "@cityCurfew": {},
+  "cityPopulation": "Population",
+  "@cityPopulation": {},
+
+  "favoritesTitle": "Mes favoris",
+  "@favoritesTitle": {},
+  "favoritesCount": "{count} bien(s) sauvegardé(s)",
+  "@favoritesCount": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "favoritesEmptyTitle": "Aucun favori",
+  "@favoritesEmptyTitle": {},
+  "favoritesEmptySubtitle": "Touchez le cœur sur une annonce pour la sauvegarder ici",
+  "@favoritesEmptySubtitle": {},
+  "favoritesExploreButton": "Explorer les annonces",
+  "@favoritesExploreButton": {},
+
+  "mapTitle": "Carte",
+  "@mapTitle": {},
+  "mapSubtitle": "Explorez par ville",
+  "@mapSubtitle": {},
+  "mapCityCount": "{count} villes",
+  "@mapCityCount": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "mapListingsCount": "{count} annonces",
+  "@mapListingsCount": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "mapCityListingsCount": "{city} • {count} annonces",
+  "@mapCityListingsCount": {
+    "placeholders": {
+      "city": { "type": "String" },
+      "count": { "type": "int" }
+    }
+  },
+  "mapLoadError": "Impossible de charger la carte",
+  "@mapLoadError": {},
+
+  "onboardingSkip": "Passer",
+  "@onboardingSkip": {},
+  "onboardingPage1Title": "CentralImmo",
+  "@onboardingPage1Title": {},
+  "onboardingPage1Subtitle": "Toutes les annonces\nimmobilières du Cameroun",
+  "@onboardingPage1Subtitle": {},
+  "onboardingPage1Description": "Nous agrégeons les listings de Mapiole, Kasastay et de nombreux autres sites pour vous éviter de chercher partout.",
+  "@onboardingPage1Description": {},
+  "onboardingPage2Title": "Intelligence de marché",
+  "@onboardingPage2Title": {},
+  "onboardingPage2Subtitle": "Comparez les quartiers\navec des scores en temps réel",
+  "@onboardingPage2Subtitle": {},
+  "onboardingPage2Description": "Premium, demande, croissance, activité, luxe — des scores 0-10 calculés à partir des données réelles du marché.",
+  "@onboardingPage2Description": {},
+  "onboardingPage3Title": "Recherche intelligente",
+  "@onboardingPage3Title": {},
+  "onboardingPage3Subtitle": "Trouvez votre bien\nen langage naturel",
+  "@onboardingPage3Subtitle": {},
+  "onboardingPage3Description": "\"3 chambres à Bastos sous 120M\" — tapez ce que vous cherchez, nous comprenons. Filtrez par type, prix, quartier, surface.",
+  "@onboardingPage3Description": {},
+
+  "analysisBelowMarket": "Ce bien est moins cher que le prix moyen à {area}.",
+  "@analysisBelowMarket": {
+    "placeholders": {
+      "area": { "type": "String" }
+    }
+  },
+  "analysisSavings": "Vous économisez {amount} FCFA par rapport au prix moyen.",
+  "@analysisSavings": {
+    "placeholders": {
+      "amount": { "type": "String" }
+    }
+  },
+  "analysisAboveMarket": "Ce bien est plus cher que le prix moyen à {area}.",
+  "@analysisAboveMarket": {
+    "placeholders": {
+      "area": { "type": "String" }
+    }
+  },
+  "analysisExtraCost": "Vous payez {amount} FCFA de plus que le prix moyen.",
+  "@analysisExtraCost": {
+    "placeholders": {
+      "amount": { "type": "String" }
+    }
+  },
+  "analysisAtMarket": "Ce bien est au prix moyen pour {area}.",
+  "@analysisAtMarket": {
+    "placeholders": {
+      "area": { "type": "String" }
+    }
+  },
+  "analysisAveragePrice": "Prix moyen dans le quartier : {amount} FCFA.",
+  "@analysisAveragePrice": {
+    "placeholders": {
+      "amount": { "type": "String" }
+    }
+  },
+  "analysisInsufficientData": "Pas assez de données pour comparer les prix dans {area}.",
+  "@analysisInsufficientData": {
+    "placeholders": {
+      "area": { "type": "String" }
+    }
+  },
+  "detailSimilarProperties": "Propriétés similaires dans ce quartier",
+  "@detailSimilarProperties": {},
+  "detailSourceFallback": "Source",
+  "@detailSourceFallback": {}
+}

@@ -1,31 +1,44 @@
 import 'package:flutter/material.dart';
-// Ce lien va être rouge pour l'instant car le fichierHomeScreen n'existe pas encore ! C'est normal.
-import 'screens/home_screen.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import 'l10n/app_localizations.dart';
+import 'theme/app_theme.dart';
+import 'router/app_router.dart';
+import 'providers/providers.dart';
+import 'services/api_client.dart';
 
 void main() {
-  runApp(const ImmoAggregatorApp());
+  runApp(const ProviderScope(child: CentralImmoApp()));
 }
 
-class ImmoAggregatorApp extends StatelessWidget {
-  const ImmoAggregatorApp({super.key});
+class CentralImmoApp extends ConsumerWidget {
+  const CentralImmoApp({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Trivago Immo',
-      debugShowCheckedModeBanner: false, // On enlève le vilain ruban rouge "DEBUG"
-
-      // Configuration d'un thème visuel moderne et très élégant
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: const Color(0xFF1E3A8A), // Un Bleu Marine très premium (Couleur Primaire)
-          background: const Color(0xFFF9FAFB), // Un gris ultra clair ("Off-white") idéal pour faire ressortir les images
-        ),
-        useMaterial3: true,
-      ),
-
-      // La page de démarrage de l'application
-      home: const HomeScreen(),
+  Widget build(BuildContext context, WidgetRef ref) {
+    final router = ref.watch(routerProvider);
+    final locale = ref.watch(localeProvider);
+    // Keep the API Accept-Language header in sync with the UI locale so
+    // profile/listing content is served in the user's chosen language.
+    // Runs on every rebuild (locale change triggers one).
+    ApiClient().setLocale(locale.languageCode);
+    return MaterialApp.router(
+      title: 'CentralImmo',
+      debugShowCheckedModeBanner: false,
+      theme: AppTheme.light,
+      routerConfig: router,
+      locale: locale,
+      localizationsDelegates: [
+        AppLocalizations.delegate,
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
+      supportedLocales: [
+        Locale('fr'),
+        Locale('en'),
+      ],
     );
   }
 }

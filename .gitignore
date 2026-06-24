@@ -6,6 +6,11 @@ __pycache__/
 *.pyc
 *.pyo
 
+# Secrets / local env (never commit)
+.env
+.env.*
+!.env.example
+
 # IDE
 .vscode/
 .idea/
@@ -18,6 +23,13 @@ __pycache__/
 
 # OS
 .DS_Store
+
+# Deployment artifacts
+# The pg_dump binary (deploy/immo_db_backup.dump) IS committed so the server
+# can restore data via git pull (no re-scraping needed). Plain SQL exports are
+# ignored — regenerate locally if needed.
+deploy/*.sql
+deploy/*.dump.tmp
 
 # Optional large files
 memoire.pdf

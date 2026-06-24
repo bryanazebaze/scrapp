@@ -1,16 +1,26 @@
+"""SQLAlchemy engine, session factory and declarative base.
+
+The connection string now comes from core.config.settings (env-driven) instead
+of being hardcoded. `get_db()` is the FastAPI dependency that yields a session.
+"""
+from __future__ import annotations
+
 from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
-from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import sessionmaker, declarative_base
 
-# Pour le développement, on utilise SQLite. En production, cela pourra être PostgreSQL.
-SQLALCHEMY_DATABASE_URL = "postgresql://immo_user:1234@localhost/immo_db"
+from .config import settings
 
 
-engine = create_engine(SQLALCHEMY_DATABASE_URL)
+engine = create_engine(
+    settings.database_url,
+    pool_pre_ping=True,
+    future=True,
+)
 
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+SessionLocal = sessionmaker(bind=engine, autocommit=False, autoflush=False, future=True)
 
 Base = declarative_base()
+
 
 def get_db():
     db = SessionLocal()
