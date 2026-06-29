@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:lottie/lottie.dart';
 
 import '../providers/providers.dart';
 import '../theme/colors.dart';
@@ -53,16 +54,7 @@ class _FloatingSearchButtonState extends ConsumerState<FloatingSearchButton>
   }
 
   void _openSearchOverlay() {
-    showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      barrierColor: Colors.black54,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      builder: (_) => const _SearchOverlay(),
-    );
+    context.push('/ai-search');
   }
 
   @override
@@ -100,10 +92,11 @@ class _FloatingSearchButtonState extends ConsumerState<FloatingSearchButton>
                 children: [
                   // Subtle pulsing ring behind the icon
                   PulseRing(color: AppColors.primary.withOpacity(0.3)),
-                  const Icon(
-                    Icons.search_rounded,
-                    color: Colors.white,
-                    size: 26,
+                  Lottie.asset(
+                    'assets/animations/timo_anim.json',
+                    width: 32,
+                    height: 32,
+                    fit: BoxFit.contain,
                   ),
                 ],
               ),

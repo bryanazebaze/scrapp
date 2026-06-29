@@ -151,5 +151,5 @@ class AppNavItems {
     labelBuilder: (l10n) => l10n.navMap,
   );
 
-  static final List<IOSNavItem> mainTabs = [home, search, favorites, map];
+  static final List<IOSNavItem> mainTabs = [home, favorites, map];
 }

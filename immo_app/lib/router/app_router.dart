@@ -9,6 +9,8 @@ import '../screens/property/property_detail_screen.dart';
 import '../screens/neighborhood/neighborhood_screen.dart';
 import '../screens/favorites/favorites_screen.dart';
 import '../screens/map/map_screen.dart';
+import '../screens/search/ai_chat_screen.dart';
+import '../screens/search/nearby_search_screen.dart';
 
 final routerProvider = Provider<GoRouter>((ref) {
   final onboardingDone = ref.watch(onboardingCompletedProvider);
@@ -23,6 +25,10 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/',
         builder: (context, state) => const HomeScreen(),
+      ),
+      GoRoute(
+        path: '/ai-search',
+        builder: (context, state) => const AiChatScreen(),
       ),
       GoRoute(
         path: '/search',
@@ -47,6 +53,10 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/map',
         builder: (context, state) => const MapScreen(),
+      ),
+      GoRoute(
+        path: '/nearby',
+        builder: (context, state) => const NearbySearchScreen(),
       ),
     ],
   );

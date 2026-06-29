@@ -141,19 +141,48 @@ class MapScreen extends ConsumerWidget {
                               MarkerLayer(markers: markers),
                             ],
                           ),
-                          // Overlay top-right glass button
+                          // Overlay top buttons
                           Positioned(
                             top: AppSpacing.md,
                             right: AppSpacing.md,
-                            child: GlassCard(
-                              padding: const EdgeInsets.all(10),
-                              borderRadius: AppRadius.md,
-                              opacity: 0.85,
-                              child: const Icon(
-                                Icons.layers_rounded,
-                                size: 18,
-                                color: AppColors.textPrimary,
-                              ),
+                            child: Row(
+                              children: [
+                                // Nearby search button
+                                GestureDetector(
+                                  onTap: () => context.push('/nearby'),
+                                  child: GlassCard(
+                                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                                    borderRadius: AppRadius.md,
+                                    opacity: 0.9,
+                                    child: Row(
+                                      children: [
+                                        const Icon(
+                                          Icons.directions_car,
+                                          size: 18,
+                                          color: AppColors.primary,
+                                        ),
+                                        const SizedBox(width: 8),
+                                        Text(
+                                          "Itinéraire",
+                                          style: AppTypography.caption.copyWith(fontWeight: FontWeight.bold),
+                                        )
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 10),
+                                // Layers button
+                                GlassCard(
+                                  padding: const EdgeInsets.all(10),
+                                  borderRadius: AppRadius.md,
+                                  opacity: 0.85,
+                                  child: const Icon(
+                                    Icons.layers_rounded,
+                                    size: 18,
+                                    color: AppColors.textPrimary,
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
                           // Bottom legend
@@ -235,14 +264,13 @@ class MapScreen extends ConsumerWidget {
       floatingActionButton: const FloatingSearchButton(),
       floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
       bottomNavigationBar: IOSBottomNav(
-        currentIndex: 3,
+        currentIndex: 2,
         items: AppNavItems.mainTabs,
         onTap: (i) {
           switch (i) {
             case 0: context.go('/'); break;
-            case 1: context.go('/search'); break;
-            case 2: context.go('/favorites'); break;
-            case 3: break;
+            case 1: context.go('/favorites'); break;
+            case 2: break;
           }
         },
       ),

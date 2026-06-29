@@ -183,12 +183,31 @@ final filteredSearchProvider = FutureProvider<List<Annonce>>((ref) async {
   final filters = ref.watch(filterStateProvider);
   if (query.trim().isEmpty && filters.isEmpty) return [];
   final api = ref.read(apiClientProvider);
-  return api.searchWithFilters(
+  
+  // We fetch without the city to avoid API accent-sensitivity (like yaoundé != yaounde)
+  var results = await api.searchWithFilters(
     query: query.trim().isEmpty ? null : query,
-    city: filters.city,
+    city: null, 
     minPrice: filters.minPrice,
     maxPrice: filters.maxPrice,
   );
+
+  // Apply location filter client-side with accent normalization
+  if (filters.city != null && filters.city!.isNotEmpty) {
+      String norm(String s) => s.toLowerCase()
+        .replaceAll(RegExp(r'[éèêë]'), 'e')
+        .replaceAll(RegExp(r'[àâä]'), 'a')
+        .replaceAll(RegExp(r'[îï]'), 'i')
+        .replaceAll(RegExp(r'[ôö]'), 'o')
+        .replaceAll(RegExp(r'[ùûü]'), 'u');
+
+      final cityq = norm(filters.city!);
+      results = results.where((a) {
+         return norm(a.shortLocation).contains(cityq) || norm(a.city ?? '').contains(cityq);
+      }).toList();
+  }
+
+  return results;
 });
 
 // --------------------------------------------------------------------------- //

@@ -97,14 +97,13 @@ class FavoritesScreen extends ConsumerWidget {
       floatingActionButton: const FloatingSearchButton(),
       floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
       bottomNavigationBar: IOSBottomNav(
-        currentIndex: 2,
+        currentIndex: 1,
         items: AppNavItems.mainTabs,
         onTap: (i) {
           switch (i) {
             case 0: context.go('/'); break;
-            case 1: context.go('/search'); break;
-            case 2: break;
-            case 3: context.go('/map'); break;
+            case 1: break;
+            case 2: context.go('/map'); break;
           }
         },
       ),

@@ -10,6 +10,8 @@ class Annonce {
   final String? city;
   final String? neighborhood;
   final String? locationSlug;
+  final double? lat;
+  final double? lng;
   final int? bedrooms;
   final int? bathrooms;
   final double? areaSqm;
@@ -35,6 +37,8 @@ class Annonce {
     this.city,
     this.neighborhood,
     this.locationSlug,
+    this.lat,
+    this.lng,
     this.bedrooms,
     this.bathrooms,
     this.areaSqm,
@@ -60,6 +64,8 @@ class Annonce {
       city: json['city'] as String?,
       neighborhood: json['neighborhood'] as String?,
       locationSlug: json['location_slug'] as String?,
+      lat: (json['lat'] as num?)?.toDouble(),
+      lng: (json['lng'] as num?)?.toDouble(),
       bedrooms: json['bedrooms'] as int?,
       bathrooms: json['bathrooms'] as int?,
       areaSqm: (json['area_sqm'] as num?)?.toDouble(),

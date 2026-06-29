@@ -63,6 +63,8 @@ def _canon_to_breve(c: CanonicalProperty, loc: Location | None,
         city=loc.city if loc else None,
         neighborhood=loc.neighborhood if loc else None,
         location_slug=loc.slug if loc else None,
+        lat=loc.lat if loc else None,
+        lng=loc.lng if loc else None,
         bedrooms=c.bedrooms,
         bathrooms=c.bathrooms,
         area_sqm=c.area_sqm,
@@ -149,6 +151,50 @@ def list_annonces(
             RawListing.price_parsed == c.current_best_price,
         ).first()
         results.append(_canon_to_breve(c, loc, best))
+    return results
+
+
+@router.get("/nearby", response_model=List[AnnonceBreve])
+def get_nearby_annonces(
+    lat: float = Query(...),
+    lng: float = Query(...),
+    radius_km: float = Query(5.0),
+    db: Session = Depends(get_db)
+):
+    import math
+    def haversine(lat1, lon1, lat2, lon2):
+        if lat1 is None or lon1 is None or lat2 is None or lon2 is None: return float('inf')
+        R = 6371.0
+        dlat = math.radians(lat2 - lat1)
+        dlon = math.radians(lon2 - lon1)
+        a = math.sin(dlat / 2)**2 + math.cos(math.radians(lat1)) * math.cos(math.radians(lat2)) * math.sin(dlon / 2)**2
+        c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
+        return R * c
+
+    query = db.query(CanonicalProperty).join(Location, CanonicalProperty.location_id == Location.id).filter(
+        CanonicalProperty.is_active == True,
+        CanonicalProperty.current_best_price.isnot(None),
+        Location.lat.isnot(None),
+        Location.lng.isnot(None)
+    ).all()
+
+    nearby_canons = []
+    for c in query:
+        dist = haversine(lat, lng, c.location.lat, c.location.lng)
+        if dist <= radius_km:
+            nearby_canons.append((dist, c))
+    
+    nearby_canons.sort(key=lambda x: x[0])
+    
+    results = []
+    for dist, c in nearby_canons[:50]:
+        best = db.query(RawListing).filter(
+            RawListing.canonical_property_id == c.id,
+            RawListing.price_parsed == c.current_best_price,
+        ).first()
+        breve = _canon_to_breve(c, c.location, best)
+        # Optional: could override location_slug or create a distance field, but distance will be calculated client side
+        results.append(breve)
     return results
 
 

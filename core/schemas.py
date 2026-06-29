@@ -63,6 +63,8 @@ class AnnonceBreve(BaseModel):
     city: Optional[str]
     neighborhood: Optional[str]
     location_slug: Optional[str]
+    lat: Optional[float] = None
+    lng: Optional[float] = None
     bedrooms: Optional[int]
     bathrooms: Optional[int]
     area_sqm: Optional[float]

@@ -33,6 +33,8 @@ dependencies:
   # Localization
   flutter_localizations:
     sdk: flutter
+  lottie: ^3.3.3
+  geolocator: ^14.0.2
 
 dev_dependencies:
   flutter_test:
@@ -44,3 +46,4 @@ flutter:
   generate: true
   assets:
     - assets/
+    - assets/animations/

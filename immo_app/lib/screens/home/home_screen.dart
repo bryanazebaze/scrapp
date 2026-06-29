@@ -19,11 +19,44 @@ import '../search/filter_sheet.dart';
 /// Selected category chip state — empty string means "All".
 final selectedCategoryProvider = StateProvider<String>((ref) => '');
 
-/// Category-filtered listings (client-side slice of annoncesPaginatorProvider).
+/// Normalized string helper for client-side search
+String _normalize(String s) {
+  return s.toLowerCase()
+    .replaceAll(RegExp(r'[éèêë]'), 'e')
+    .replaceAll(RegExp(r'[àâä]'), 'a')
+    .replaceAll(RegExp(r'[îï]'), 'i')
+    .replaceAll(RegExp(r'[ôö]'), 'o')
+    .replaceAll(RegExp(r'[ùûü]'), 'u');
+}
+
+/// Category, search, and filter-filtered listings (client-side slice of annoncesPaginatorProvider).
 final filteredAnnoncesProvider = Provider<List<Annonce>>((ref) {
   final cat = ref.watch(selectedCategoryProvider);
+  final query = _normalize(ref.watch(searchQueryProvider));
+  final filters = ref.watch(filterStateProvider);
   final paginatorState = ref.watch(annoncesPaginatorProvider);
-  final list = paginatorState.items;
+  var list = paginatorState.items;
+
+  if (query.isNotEmpty) {
+    list = list.where((a) {
+      final loc = _normalize(a.shortLocation);
+      final title = _normalize(a.title);
+      final desc = _normalize(a.description ?? '');
+      return loc.contains(query) || title.contains(query) || desc.contains(query);
+    }).toList();
+  }
+
+  if (filters.city != null && filters.city!.isNotEmpty) {
+    final cityq = _normalize(filters.city!);
+    list = list.where((a) => _normalize(a.shortLocation).contains(cityq) || _normalize(a.city ?? '').contains(cityq)).toList();
+  }
+  if (filters.minPrice != null) {
+    list = list.where((a) => a.price != null && a.price! >= filters.minPrice!).toList();
+  }
+  if (filters.maxPrice != null) {
+    list = list.where((a) => a.price != null && a.price! <= filters.maxPrice!).toList();
+  }
+
   if (cat.isEmpty || cat == 'all') return list;
   if (cat == 'recent') return list;
   return list
@@ -149,7 +182,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             // Hero header — greeting + glassy search bar
             SliverToBoxAdapter(
               child: _HomeHeader(
-                onSearchTap: () => context.go('/search'),
+                onSearchTap: () => context.push('/search'),
                 totalListings: paginatorState.items.length,
               ),
             ),
@@ -220,9 +253,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         onTap: (i) {
           switch (i) {
             case 0: context.go('/'); break;
-            case 1: context.go('/search'); break;
-            case 2: context.go('/favorites'); break;
-            case 3: context.go('/map'); break;
+            case 1: context.go('/favorites'); break;
+            case 2: context.go('/map'); break;
           }
         },
       ),
@@ -436,47 +468,49 @@ class _HomeHeader extends ConsumerWidget {
           // Glassy search bar — search area + separate filter icon
           Row(
             children: [
-              // Tappable search area (navigates to /search)
+              // Inline search area that filters the home screen
               Expanded(
-                child: PressableScale(
-                  onTap: onSearchTap,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: AppSpacing.lg, vertical: AppSpacing.md),
-                    decoration: BoxDecoration(
-                      color: AppColors.surface,
-                      borderRadius: BorderRadius.circular(AppRadius.lg),
-                      border: Border.all(color: AppColors.border, width: 0.5),
-                      boxShadow: AppColors.cardShadow,
-                    ),
-                    child: Row(
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.all(7),
-                          decoration: BoxDecoration(
-                            color: AppColors.primaryLight,
-                            borderRadius: BorderRadius.circular(AppRadius.sm),
-                          ),
-                          child: const Icon(
-                            Icons.search_rounded,
-                            size: 18,
-                            color: AppColors.primary,
-                          ),
-                        ),
-                        const SizedBox(width: AppSpacing.md),
-                        Expanded(
-                          child: Text(
-                            l10n.homeSearchPlaceholder,
-                            style: AppTypography.bodySecondary,
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: AppColors.surface,
+                    borderRadius: BorderRadius.circular(AppRadius.lg),
+                    border: Border.all(color: AppColors.border, width: 0.5),
+                    boxShadow: AppColors.cardShadow,
+                  ),
+                  child: Center(
+                    child: TextField(
+                      onChanged: (val) => ref.read(searchQueryProvider.notifier).state = val,
+                      style: AppTypography.body,
+                      decoration: InputDecoration(
+                        hintText: l10n.homeSearchPlaceholder,
+                        hintStyle: AppTypography.bodySecondary,
+                        prefixIcon: Padding(
+                          padding: const EdgeInsets.all(10.0),
+                          child: Container(
+                            padding: const EdgeInsets.all(7),
+                            decoration: BoxDecoration(
+                              color: AppColors.primaryLight,
+                              borderRadius: BorderRadius.circular(AppRadius.sm),
+                            ),
+                            child: const Icon(
+                              Icons.search_rounded,
+                              size: 18,
+                              color: AppColors.primary,
+                            ),
                           ),
                         ),
-                      ],
+                        border: InputBorder.none,
+                        enabledBorder: InputBorder.none,
+                        focusedBorder: InputBorder.none,
+                        isDense: true,
+                        contentPadding: const EdgeInsets.symmetric(vertical: 14),
+                      ),
                     ),
                   ),
                 ),
               ),
               const SizedBox(width: AppSpacing.sm),
-              // Filter icon — opens FilterSheet, then navigates to /search
+              // Filter icon — opens FilterSheet, applying filters in place
               PressableScale(
                 onTap: () async {
                   await showModalBottomSheet(
@@ -489,7 +523,6 @@ class _HomeHeader extends ConsumerWidget {
                     ),
                     builder: (_) => const FilterSheet(),
                   );
-                  if (context.mounted) onSearchTap();
                 },
                 child: Container(
                   padding: const EdgeInsets.all(AppSpacing.md),

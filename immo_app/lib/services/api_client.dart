@@ -98,6 +98,19 @@ class ApiClient {
   }
 
   // ---- Search ----
+  
+  Future<List<Annonce>> fetchNearbyAnnonces({
+    required double lat,
+    required double lng,
+    double radiusKm = 5.0,
+  }) async {
+    final res = await _dio.get('/annonces/nearby', queryParameters: {
+      'lat': lat,
+      'lng': lng,
+      'radius_km': radiusKm,
+    });
+    return (res.data as List).map((e) => Annonce.fromJson(e)).toList();
+  }
 
   Future<List<Annonce>> search(String query, {int skip = 0, int limit = 50}) async {
     final res = await _dio.get('/search', queryParameters: {
