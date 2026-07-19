@@ -1,7 +1,7 @@
-"""AI-assisted search query parsing using Qwen (DashScope API).
+"""AI-assisted search query parsing using DeepSeek API.
 
-Sends a natural-language search query to Qwen with a system prompt that
-explains the Cameroon real-estate context. Qwen returns structured JSON
+Sends a natural-language search query to DeepSeek with a system prompt that
+explains the Cameroon real-estate context. DeepSeek returns structured JSON
 with filter criteria (city, neighborhood, property_type, price range, etc).
 
 Falls back to the regex-based parser in api/search.py:parse_search_query
@@ -20,7 +20,7 @@ from core.config import settings
 logger = logging.getLogger(__name__)
 
 # --------------------------------------------------------------------------- #
-# System prompt — instructs Qwen to extract structured filters from NL queries
+# System prompt — instructs DeepSeek to extract structured filters from NL queries
 # --------------------------------------------------------------------------- #
 SYSTEM_PROMPT = """Tu es un assistant qui analyse des requêtes de recherche immobilière au Cameroun.
 
@@ -70,12 +70,14 @@ _client: AsyncOpenAI | None = None
 def _get_client() -> AsyncOpenAI | None:
     """Lazy-init the AsyncOpenAI client. Returns None if no API key configured."""
     global _client
-    if not settings.dashscope_api_key:
+    if not settings.deepseek_api_key:
         return None
     if _client is None:
         _client = AsyncOpenAI(
-            api_key=settings.dashscope_api_key,
-            base_url=settings.qwen_base_url,
+            api_key=settings.deepseek_api_key,
+            base_url=settings.deepseek_base_url,
+            timeout=120.0,
+            max_retries=3,
         )
     return _client
 
@@ -91,7 +93,7 @@ _ALLOWED_KEYS = {
 
 
 async def ai_parse_search_query(q: str) -> dict | None:
-    """Parse a natural-language query via Qwen.
+    """Parse a natural-language query via DeepSeek.
 
     Returns a dict with any of the _ALLOWED_KEYS, or None on any failure
     (missing API key, network error, invalid JSON, etc.) — the caller
@@ -99,11 +101,11 @@ async def ai_parse_search_query(q: str) -> dict | None:
     """
     client = _get_client()
     if client is None:
-        logger.debug("AI search skipped: no DASHSCOPE_API_KEY configured")
+        logger.debug("AI search skipped: no DEEPSEEK_API_KEY configured")
         return None
     try:
         resp = await client.chat.completions.create(
-            model=settings.qwen_model,
+            model=settings.deepseek_model,
             messages=[
                 {"role": "system", "content": SYSTEM_PROMPT},
                 {"role": "user", "content": q},
@@ -114,7 +116,7 @@ async def ai_parse_search_query(q: str) -> dict | None:
         content = resp.choices[0].message.content
         if not content:
             return None
-        # Strip markdown code fences if present (Qwen sometimes wraps JSON)
+        # Strip markdown code fences if present (DeepSeek sometimes wraps JSON)
         content = content.strip()
         if content.startswith("```"):
             content = content.split("\n", 1)[-1].rsplit("```", 1)[0].strip()
@@ -122,6 +124,10 @@ async def ai_parse_search_query(q: str) -> dict | None:
         # Validate and filter to only allowed keys with non-None values
         return {k: v for k, v in result.items()
                 if k in _ALLOWED_KEYS and v is not None}
-    except Exception as e:
-        logger.warning("AI search parse failed for %r: %s", q, e)
+    except Exception:
+        # Catch every exception (network, timeout, JSONDecodeError, KeyError,
+        # ValueError, etc.) so the regex fallback runs. Never log the raw
+        # API response, request payload, or tool-call-shaped content — a
+        # generic message keeps internals out of client-facing logs.
+        logger.warning("AI search parse failed; falling back to regex parser")
         return None

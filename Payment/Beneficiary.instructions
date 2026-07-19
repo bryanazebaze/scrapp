@@ -1,0 +1,510 @@
+# Beneficiaries API
+
+> Create, retrieve, and manage beneficiaries for money transfers with the Notch Pay API
+
+<Note>
+  The Beneficiaries API allows you to create and manage recipients for money transfers. Storing beneficiary information makes it easier to send recurring transfers to the same recipients.
+</Note>
+
+## The Beneficiary Object
+
+<CodeGroup>
+  ```json Beneficiary Object
+  {
+    "id": "ben_123456789",
+    "name": "John Doe",
+    "email": "john@example.com",
+    "phone": "+237600000000",
+    "account_number": "0123456789",
+    "bank_code": "SGCM",
+    "country": "CM",
+    "currency": "XAF",
+    "type": "mobile_money",
+    "metadata": {},
+    "created_at": "2023-01-01T12:00:00Z",
+    "updated_at": "2023-01-01T12:00:00Z"
+  }
+  ```
+</CodeGroup>
+
+### Beneficiary Object Properties
+
+<ResponseField name="id" type="string">
+  Unique identifier for the beneficiary
+</ResponseField>
+
+<ResponseField name="name" type="string">
+  Beneficiary's full name
+</ResponseField>
+
+<ResponseField name="email" type="string">
+  Beneficiary's email address
+</ResponseField>
+
+<ResponseField name="phone" type="string">
+  Beneficiary's phone number (required for mobile money transfers)
+</ResponseField>
+
+<ResponseField name="account_number" type="string">
+  Beneficiary's account number (required for bank transfers)
+</ResponseField>
+
+<ResponseField name="bank_code" type="string">
+  Bank code for bank transfers
+</ResponseField>
+
+<ResponseField name="country" type="string">
+  Two-letter ISO country code
+</ResponseField>
+
+<ResponseField name="currency" type="string">
+  Three-letter ISO currency code
+</ResponseField>
+
+<ResponseField name="type" type="string">
+  Type of beneficiary: `mobile_money`, `bank_account`, or `cash_pickup`
+</ResponseField>
+
+<ResponseField name="metadata" type="object">
+  Additional data attached to the beneficiary
+</ResponseField>
+
+<ResponseField name="created_at" type="string">
+  Timestamp when the beneficiary was created
+</ResponseField>
+
+<ResponseField name="updated_at" type="string">
+  Timestamp when the beneficiary was last updated
+</ResponseField>
+
+## API Endpoints
+
+<Card title="List All Beneficiaries" icon="list" color="#16A34A">
+  <Tabs>
+    <Tab title="Request">
+      ```bash
+      GET /beneficiaries
+      ```
+
+      Retrieve a list of beneficiaries with pagination.
+
+      ### Query Parameters
+
+      <ParamField query="limit" type="integer">
+        Number of items per page (default: 30, max: 100)
+      </ParamField>
+
+      <ParamField query="page" type="integer">
+        Page number (default: 1)
+      </ParamField>
+
+      <ParamField query="search" type="string">
+        Search by name, email, or phone
+      </ParamField>
+
+      <ParamField query="country" type="string">
+        Filter by country code
+      </ParamField>
+
+      <ParamField query="type" type="string">
+        Filter by beneficiary type
+      </ParamField>
+    </Tab>
+
+    <Tab title="Response">
+      ```json
+      {
+        "code": 200,
+        "status": "OK",
+        "message": "Beneficiaries retrieved",
+        "totals": 50,
+        "last_page": 2,
+        "current_page": 1,
+        "selected": 30,
+        "items": [
+          {
+            "id": "ben_123456789",
+            "name": "John Doe",
+            "email": "john@example.com",
+            "phone": "+237600000000",
+            "country": "CM",
+            "currency": "XAF",
+            "type": "mobile_money",
+            "created_at": "2023-01-01T12:00:00Z"
+          },
+          // More beneficiaries...
+        ]
+      }
+      ```
+    </Tab>
+  </Tabs>
+</Card>
+
+<Card title="Create a Beneficiary" icon="plus" color="#16A34A">
+  <Tabs>
+    <Tab title="Request">
+      ```bash
+      POST /beneficiaries
+      ```
+
+      Create a new beneficiary.
+
+      ### Request Parameters
+
+      <ParamField body="name" type="string" required>
+        Beneficiary's full name
+      </ParamField>
+
+      <ParamField body="email" type="string" required={false}>
+        Beneficiary's email address
+      </ParamField>
+
+      <ParamField body="phone" type="string" required={false}>
+        Beneficiary's phone number (required for mobile money transfers)
+      </ParamField>
+
+      <ParamField body="account_number" type="string" required={false}>
+        Beneficiary's account number (required for bank transfers)
+      </ParamField>
+
+      <ParamField body="bank_code" type="string" required={false}>
+        Bank code (required for bank transfers)
+      </ParamField>
+
+      <ParamField body="country" type="string" required>
+        Two-letter ISO country code
+      </ParamField>
+
+      <ParamField body="currency" type="string" required>
+        Three-letter ISO currency code
+      </ParamField>
+
+      <ParamField body="type" type="string" required>
+        Type of beneficiary: `mobile_money`, `bank_account`, or `cash_pickup`
+      </ParamField>
+
+      <ParamField body="metadata" type="object">
+        Additional data to attach to the beneficiary
+      </ParamField>
+
+      ### Example Request for Mobile Money Beneficiary
+
+      <CodeGroup>
+        ```json JSON
+        {
+          "name": "John Doe",
+          "email": "john@example.com",
+          "phone": "+237600000000",
+          "country": "CM",
+          "currency": "XAF",
+          "type": "mobile_money",
+          "metadata": {
+            "relationship": "employee",
+            "department": "engineering"
+          }
+        }
+        ```
+
+        ```javascript JavaScript
+        const beneficiary = {
+          name: "John Doe",
+          email: "john@example.com",
+          phone: "+237600000000",
+          country: "CM",
+          currency: "XAF",
+          type: "mobile_money",
+          metadata: {
+            relationship: "employee",
+            department: "engineering"
+          }
+        };
+
+        fetch('https://api.notchpay.co/beneficiaries', {
+          method: 'POST',
+          headers: {
+            'Authorization': 'YOUR_PUBLIC_KEY',
+            'X-Grant': 'YOUR_PRIVATE_KEY',
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(beneficiary)
+        });
+        ```
+      </CodeGroup>
+
+      ### Example Request for Bank Account Beneficiary
+
+      ```json
+      {
+        "name": "Jane Smith",
+        "email": "jane@example.com",
+        "account_number": "0123456789",
+        "bank_code": "SGCM",
+        "country": "CM",
+        "currency": "XAF",
+        "type": "bank_account"
+      }
+      ```
+    </Tab>
+
+    <Tab title="Response">
+      ```json
+      {
+        "status": "Created",
+        "message": "Beneficiary created",
+        "code": 201,
+        "beneficiary": {
+          "id": "ben_123456789",
+          "name": "John Doe",
+          "email": "john@example.com",
+          "phone": "+237600000000",
+          "country": "CM",
+          "currency": "XAF",
+          "type": "mobile_money",
+          "metadata": {
+            "relationship": "employee",
+            "department": "engineering"
+          },
+          "created_at": "2023-01-01T12:00:00Z",
+          "updated_at": "2023-01-01T12:00:00Z"
+        }
+      }
+      ```
+
+      <Callout type="info">
+        The required fields depend on the beneficiary type. For mobile money transfers, a phone number is required. For bank transfers, account number and bank code are required.
+      </Callout>
+    </Tab>
+  </Tabs>
+</Card>
+
+<Card title="Retrieve a Beneficiary" icon="magnifying-glass" color="#16A34A">
+  <Tabs>
+    <Tab title="Request">
+      ```bash
+      GET /beneficiaries/{id}
+      ```
+
+      Retrieve details of a specific beneficiary.
+
+      ### Path Parameters
+
+      <ParamField path="id" type="string" required>
+        ID of the beneficiary to retrieve
+      </ParamField>
+    </Tab>
+
+    <Tab title="Response">
+      ```json
+      {
+        "status": "OK",
+        "message": "Beneficiary retrieved",
+        "code": 200,
+        "beneficiary": {
+          "id": "ben_123456789",
+          "name": "John Doe",
+          "email": "john@example.com",
+          "phone": "+237600000000",
+          "country": "CM",
+          "currency": "XAF",
+          "type": "mobile_money",
+          "metadata": {
+            "relationship": "employee",
+            "department": "engineering"
+          },
+          "created_at": "2023-01-01T12:00:00Z",
+          "updated_at": "2023-01-01T12:00:00Z"
+        }
+      }
+      ```
+    </Tab>
+  </Tabs>
+</Card>
+
+<Card title="Update a Beneficiary" icon="pen-to-square" color="#16A34A">
+  <Tabs>
+    <Tab title="Request">
+      ```bash
+      PUT /beneficiaries/{id}
+      ```
+
+      Update an existing beneficiary.
+
+      ### Path Parameters
+
+      <ParamField path="id" type="string" required>
+        ID of the beneficiary to update
+      </ParamField>
+
+      ### Request Parameters
+
+      <ParamField body="name" type="string">
+        Beneficiary's full name
+      </ParamField>
+
+      <ParamField body="email" type="string">
+        Beneficiary's email address
+      </ParamField>
+
+      <ParamField body="phone" type="string">
+        Beneficiary's phone number
+      </ParamField>
+
+      <ParamField body="account_number" type="string">
+        Beneficiary's account number
+      </ParamField>
+
+      <ParamField body="bank_code" type="string">
+        Bank code
+      </ParamField>
+
+      <ParamField body="metadata" type="object">
+        Additional data to attach to the beneficiary
+      </ParamField>
+
+      ### Example Request
+
+      ```json
+      {
+        "name": "John Smith",
+        "phone": "+237600000001",
+        "metadata": {
+          "relationship": "contractor",
+          "department": "engineering"
+        }
+      }
+      ```
+    </Tab>
+
+    <Tab title="Response">
+      ```json
+      {
+        "status": "OK",
+        "message": "Beneficiary updated",
+        "code": 200,
+        "beneficiary": {
+          "id": "ben_123456789",
+          "name": "John Smith",
+          "email": "john@example.com",
+          "phone": "+237600000001",
+          "country": "CM",
+          "currency": "XAF",
+          "type": "mobile_money",
+          "metadata": {
+            "relationship": "contractor",
+            "department": "engineering"
+          },
+          "created_at": "2023-01-01T12:00:00Z",
+          "updated_at": "2023-01-02T10:00:00Z"
+        }
+      }
+      ```
+
+      <Callout type="warning">
+        You cannot change the `country`, `currency`, or `type` of an existing beneficiary. If you need to change these fields, create a new beneficiary instead.
+      </Callout>
+    </Tab>
+  </Tabs>
+</Card>
+
+<Card title="Delete a Beneficiary" icon="trash" color="#16A34A">
+  <Tabs>
+    <Tab title="Request">
+      ```bash
+      DELETE /beneficiaries/{id}
+      ```
+
+      Delete a beneficiary.
+
+      ### Path Parameters
+
+      <ParamField path="id" type="string" required>
+        ID of the beneficiary to delete
+      </ParamField>
+    </Tab>
+
+    <Tab title="Response">
+      ```json
+      {
+        "status": "OK",
+        "message": "Beneficiary deleted",
+        "code": 200
+      }
+      ```
+
+      <Callout type="warning">
+        Deleting a beneficiary will not delete any associated transfers. It only removes the beneficiary record itself.
+      </Callout>
+    </Tab>
+  </Tabs>
+</Card>
+
+## Beneficiary Types
+
+<CardGroup cols={3}>
+  <Card title="mobile_money" icon="mobile-screen" color="#16A34A">
+    For mobile money transfers to recipients' mobile wallets.
+
+    **Required fields**: `name`, `phone`, `country`, `currency`
+  </Card>
+
+  <Card title="bank_account" icon="building-columns" color="#16A34A">
+    For bank transfers to recipients' bank accounts.
+
+    **Required fields**: `name`, `account_number`, `bank_code`, `country`, `currency`
+  </Card>
+
+  <Card title="cash_pickup" icon="money-bill" color="#16A34A">
+    For transfers that can be collected as cash at pickup locations.
+
+    **Required fields**: `name`, `phone`, `country`, `currency`
+  </Card>
+</CardGroup>
+
+## Best Practices
+
+<CardGroup cols={2}>
+  <Card title="Validate Beneficiary Information" icon="check-double" color="#16A34A">
+    Validate phone numbers, account numbers, and bank codes before creating beneficiaries to ensure they're in the correct format.
+
+    This helps prevent transfer failures due to invalid recipient information.
+  </Card>
+
+  <Card title="Use Metadata Effectively" icon="tags" color="#16A34A">
+    Use the metadata field to store additional information about your beneficiaries that's relevant to your business.
+
+    This can include employee IDs, departments, or other custom data.
+  </Card>
+
+  <Card title="Implement Beneficiary Search" icon="search" color="#16A34A">
+    Use the search parameter when listing beneficiaries to quickly find existing recipients instead of creating duplicates.
+
+    Search by name, email, or phone to find matching beneficiaries.
+  </Card>
+
+  <Card title="Secure Beneficiary Data" icon="shield" color="#16A34A">
+    Implement proper access controls for beneficiary management to protect sensitive financial information.
+
+    Remember that all beneficiary endpoints require the `X-Grant` header for additional security.
+  </Card>
+</CardGroup>
+
+## Related Resources
+
+<CardGroup cols={3}>
+  <Card title="Transfers API" icon="money-bill-transfer" href="/api-reference/transfers">
+    Send money to beneficiaries
+  </Card>
+
+  <Card title="Resources API" icon="database" href="/api-reference/resources">
+    Get information about supported banks and countries
+  </Card>
+
+  <Card title="Webhooks API" icon="bell" href="/api-reference/webhooks">
+    Receive notifications about beneficiary events
+  </Card>
+</CardGroup>
+
+
+---
+
+> To find navigation and other pages in this documentation, fetch the llms.txt file at: https://developer.notchpay.co/llms.txt

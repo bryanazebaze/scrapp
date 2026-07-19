@@ -1,0 +1,304 @@
+
+Rapport analytique sur la solution CentralImmo
+Résumé exécutif
+
+CentralImmo est une plateforme d’agrégation immobilière destinée au marché camerounais. Elle consolide les annonces dispersées sur plusieurs sites locaux, élimine automatiquement les doublons, conserve l’historique complet des prix et disponibilités, et génère des indicateurs de marché locaux. L’architecture repose sur un backend FastAPI (Python) et une base PostgreSQL où un schéma multi-couches applique l’immutabilité (“append-only”) pour les données brutes et un modèle canonique pour les biens. Un sous-système de scraping modulable (adaptateurs dédiés + adaptateur universel générique) collecte les annonces, tandis qu’un algorithme de déduplication (score de confiance composite) regroupe les annonces similaires. Des scores de quartier (activité, demande, croissance, prestige, etc.) sont calculés hebdomadairement depuis le modèle relationnel, et un agent conversationnel IA (DeepSeek) interroge ces données. L’accès client se fait via une API REST (FastAPI) sécurisée par Firebase Auth, utilisée par une application mobile Flutter et une interface Web React bilingues. La solution est déployée sur AWS EC2 (Ubuntu) avec un script unique, sans CI/CD ni conteneurs. Cette analyse détaille la conception technique de CentralImmo, les raisons des choix d’architecture, les alternatives possibles, ainsi que des recommandations d’amélioration (scalabilité, sécurité, qualité des données) avec évaluation d’effort. Les données scientifiques sur l’immobilier en ligne montrent que les annonces web fournissent des informations granulaires et récentes, utiles pour piloter le marché. Dédoublonner ces annonces est essentiel pour une image réelle du parc immobilier.
+Introduction générale
+
+Le marché immobilier camerounais est marqué par de nombreuses plateformes locales – Mapiole, Kasastay, etc. – chacune diffusant des annonces propres. Cette fragmentation oblige les chercheurs de biens à consulter plusieurs sources. De plus, un même bien peut être multi-diffusé (plusieurs agences ou sites publient la même offre), générant des doublons qui faussent l’analyse du nombre réel de logements disponibles. Les plateformes actuelles manquent de visibilité historique (prix au fil du temps) et d’indicateurs agrégés (tendances locales), contrairement aux besoins des professionnels et porteurs de décision. Les recherches récentes confirment que les données publiées sur les sites d’annonces (Craigslist, Leboncoin, etc.) offrent des informations plus « live » que les statistiques officielles, avec une couverture locale fine des prix et de la demande. Par exemple, Boeing & Waddell (2017) montrent que le scraping de 11 millions d’annonces Craigslist révèle des schémas spatiaux/ temporels fins absents des données de recensement.
+
+Face à ces lacunes, CentralImmo propose de regrouper les annonces camerounaises de tous les portails, d’y appliquer un modèle multi-couches (données brutes immutables vs entités canoniques), et de fournir une couche analytique avancée et un assistant IA. L’idée est d’offrir une vue unique du marché en continu, avec historique complet des évolutions, outils de recherche bilingues, et scores de quartier pour informer utilisateurs et décideurs. Ce rapport étudie en profondeur ce système : architecture logicielle, modèle de données, scraping, analyse et scoring, interface API, sécurité et déploiement. Pour chaque composant, on examine pourquoi ce choix a été fait, quelles alternatives existaient, les compromis, risques et leur mitigation. Enfin, des recommandations d’amélioration (robustesse, montée en charge, qualité données) sont proposées.
+Problématique
+
+La question-clé est : comment extraire et unifier automatiquement l’information issue de sources multiples pour fournir aux utilisateurs un point d’accès complet et à jour au marché immobilier local ? En l’état, les problèmes concrets sont :
+
+    Dispersion des annonces : chaque site (Mapiole, Kasastay, etc.) a sa propre base. Les recherches doivent être multi-sources, ce qui est lourd pour l’utilisateur. Les études sur les APIs immobilières montrent que l’absence de schéma public unifié complexifie la consolidation.
+    Doublons (Multi-diffusion) : un même bien peut être listé plusieurs fois (plusieurs agences ont souvent le même mandat). Sans filtrage, on surestime l’offre et fausse les indicateurs de stock et vitesse de vente. Les plateformes modernes intègrent un algorithme de dédoublonnage afin d’afficher une seule annonce consolidée par bien.
+    Absence d’historique : les sites sources remplacent souvent une annonce plutôt que de la mettre à jour, perdant ainsi la trace des anciens prix ou statuts. Un suivi append-only est nécessaire pour reconstruire l’historique de chaque bien (première publication, changement de prix, vente, etc.).
+    Manque de veille de marché : aucune source ne fournit en standard d’analyse agrégée (tendances de prix par quartier, niveau de demande, segment premium/luxe). CentralImmo calcule cinq scores (demande, activité, croissance, premium, luxe) par quartier pour combler ce besoin (algorithmes détaillés ci‑après).
+    Contextualisation de sécurité locale : les données de sécurité par quartier (éclairage public, délinquance, etc.) manquent sur les portails. CentralImmo intègre des profils de sécurité (zones sûres, menaces) par quartier pour répondre à cette attente.
+    Infrastructure de collecte peu résiliente : les anciens scrapers étaient monolithiques et fragiles (code dur, sans gestion de cookies/robots, sans journalisation). CentralImmo opte pour un framework extensible (adaptateurs modulaires, anti-bot, audit).
+    Monétisation adaptée au contexte : au Cameroun, les abonnements B2C sont peu efficaces. CentralImmo choisit un paiement ponctuel Mobile Money pour débloquer plus de résultats (100 gratuits vs 500 payants), plutôt qu’un forfait traditionnel.
+
+Ces constats justifient un système dédié réunissant agrégation, normalisation, déduplication, historisation et analyse des annonces immobilières dans un seul flux de données cohérent. Le reste du rapport décrit l’architecture et le design retenus pour CentralImmo, en évaluant chaque choix technique.
+Architecture générale du système
+
+L’architecture de CentralImmo suit un découpage en couches API – Collecte – Stockage – Analyse. Le schéma ci-dessous résume les composants principaux et leurs interactions :
+
+mermaid
+
+flowchart TB
+  subgraph Clients
+    FlutterApp[Flutter mobile app] 
+    ReactWeb[React Webfront]
+  end
+
+  subgraph "Backend (FastAPI)"
+    API[FastAPI (main_api.py)\n- routes : annonces, search, neighborhoods, etc.\n- Auth: Firebase JWT\n- APScheduler intégré (crawl, refresh, analytics)"]
+  end
+
+  subgraph ScraperProc["Scraping / Ingestion"]
+    Scheduler["APScheduler in-process\n- 02:00 daily crawl\n- 03:00 weekly analytics\n- 6h crawl refresh"]
+    Orch["Scraper Orchestrator (main.py)\n- Threads pour chaque Source active"]
+    Adapters["Adapters (dedicated & universal)\n- Extraient RawListingDraft"]
+    Ingest["Ingestion pipeline (ingest.py)\n- Historisation + déduplication + promotion"]
+  end
+
+  subgraph Base{"Base de données PostgreSQL (immo_db)"}
+    RawListings["raw_listings (verbatim captures)"]
+    ListingHistory["listing_history (événements append-only)"]
+    Canonicals["canonical_properties (biens dédupliqués)"]
+    Locations["locations (villes/quartiers normalisés)"]
+    NeighborhoodAnalytics["neighborhood_analytics (scores hebdo)"]
+    Profiles["city_profiles, neighborhood_profiles"]
+  end
+
+  FlutterApp -->|HTTPS/Bearer| API
+  ReactWeb -->|HTTPS/Bearer| API
+  API --> Auth{Firebase\nverif. token}
+  Auth --> API
+  API -- Database queries --> Base
+  API -->|triggers| Scheduler
+
+  Scheduler -->|exec cron| Orch
+  Orch --> Adapters
+  Adapters --> Ingest
+  Ingest --> RawListings
+  Ingest --> ListingHistory
+  Ingest --> Canonicals
+  Ingest --> LocationId(("FK\n")) 
+  Canonicals --> Locations
+  Scheduler -->|weekly| NeighborhoodAnalytics
+  NeighborhoodAnalytics --> Base
+
+Figure 1. Architecture globale de CentralImmo. L’API FastAPI reçoit les requêtes client, authentifie l’utilisateur via Firebase et accède à la DB. Un planificateur intégré (APScheduler) déclenche périodiquement le processus de scraping (Ordonnanceur → Ingestion) et le calcul des scores. Les annonces brutes (RawListingDraft) transitent par un pipeline idempotent (insert vs update historique) vers les tables raw_listings et listing_history, puis sont reliées à une entité canonique dans canonical_properties (liée à locations). Enfin, les scores de quartiers sont pré-calculés et stockés (neighborhood_analytics). Cette architecture modulaire permet de séparer la collecte des données (scraping) de leur exploitation (API/analytics), améliorant la maintenabilité et la résilience. Les tâches lourdes (scraping) sont lancées dans des threads parallèles, permettant une bonne utilisation des ressources CPU/IO pour la collecte. En cas de crash, APScheduler et les tables d’audit (crawler_sessions, listing_history) permettent de reprendre proprement le travail.
+Routage et tâches planifiées
+
+L’API FastAPI expose plusieurs routeurs (/annonces, /search, /neighborhoods, /chat, etc.) qui gèrent la logique métier. Le routage est schématisé ci-dessous :
+Routeur	Préfixe	Endpoints clés	Authentification
+annonces	/annonces	GET /annonces (liste, limit≤500), GET /annonces/{id}, GET /annonces/nearby, GET /annonces/{id}/history, GET /annonces/{id}/analyse (verdict prix)	Ouverte (public)
+search	/search	GET /search?q=... (recherche NL via DeepSeek ou fallback regex), GET /search/ai (debug)	Ouverte
+neighborhoods	/neighborhoods	GET /neighborhoods (liste), GET /neighborhoods/{slug}, GET /neighborhoods/{slug}/analytics, GET /neighborhoods/trending/list	Ouverte
+profiles	/profiles	profils de sécurité : GET /profiles/cities, /profiles/cities/{city}, /profiles/neighborhoods/{slug}	Ouverte
+chat	/chat	Chatbot IA (DeepSeek) utilisant des outils DB (search_properties, get_property_detail, etc.)	Ouverte
+admin	/admin	CRUD sources, review annonces en attente, force recrawl, recompute analytics, visualisation jobs	Non authentifié (jetons absents)
+health	(racine /)	GET /health (statut DB + scheduler)	Ouverte (no auth)
+
+Tableau 1. Routes principales de l’API FastAPI (sécurité incluses). Note : les endpoints admin sont volontairement non protégés pour simplifier l’accès interne (cette décision peut mériter une révision de sécurité).
+
+APScheduler tourne in-process dans FastAPI (via l’événement lifespan), lançant les tâches suivantes périodiques : crawl_all quotidien à 02h00 (collecte complète), refresh_active toutes les 6 h (mise à jour des annonces récemment vues), recompute_all hebdomadaire (scoring). Après chaque collecte, on marque les annonces non vues comme “removed” dans le log.
+Modèle de données
+
+CentralImmo repose sur un schéma relationnel multi-couches où chaque table a un rôle précis. Les règles de mutabilité sont strictes : on n’écrase jamais un enregistrement existant, sauf exceptions clairement définies. Les principales tables (voir figure 2) sont :
+
+    raw_listings (immuable) : stocke l’extraction brute depuis chaque site source. Chaque entrée contient l’URL hashée (url_hash unique), le texte original du titre/descriptions (*_raw), le prix brut (price_raw) et le prix nettoyé (price_parsed), la localisation texte, les URLs images, et un JSON payload de logs d’extraction. On y ajoute aussi un score de confiance d’extraction et un statut de révision (auto-promu, pending, approuvé, rejeté). Si le statut est « auto_promoted », le champ canonical_property_id est automatiquement renseigné (fusion ou création).
+    listing_history (append-only) : journal des événements pour chaque annonce. Chaque ligne (FK→raw_listings.id) indique event_type (first_seen, price_change, availability_change, removed), price_observed, nouvel état (available/unavailable/sold/rented), horodatage observed_at, et éventuellement un JSON diff. On n’UPDATE ou supprime jamais ces lignes, garantissant un historique complet (concept d’event sourcing).
+    canonical_properties (mutables) : l’entité « bien » dédupliqué. Chaque bien a un ID, une clé de correspondance grossière (match_key = sha1(type|city|neighborhood)) et un prix courant minimal (current_best_price), ainsi que la période first_seen_at et last_seen_at. On lie ici les raw_listings promus à ce bien. Cette table évolue (mise à jour du prix, dates).
+    locations (mutables) : villes/quartiers normalisés. Une ligne par (ville, quartier) unique, avec coordonnées GPS et slug unique. Permet d’homogénéiser les lieux et de calculer les scores par zone.
+    neighborhood_analytics : cache les scores et statistiques calculés par quartier et type de bien chaque semaine (moyennes de prix, nombre d’annonces, score de croissance, etc.). C’est une table de cache (recalculée par core.analytics.recompute_all()) pour accélérer les requêtes de l’API /neighborhoods.
+    sources : configuration des sites scrappés (slug, classe d’adaptateur, configuration de crawl). Gère la liste des portails actifs.
+    scheduler_jobs : journal d’exécution des tâches planifiées (dernier run, statut, erreurs).
+    listing_translations : stocke les traductions FR/EN des annonces brutes (pour conserver l’original non modifié tout en permettant l’interface bilingue).
+    city_profiles et neighborhood_profiles : données de sécurité/amenités par zone (ratings, menaces, contacts urgents, facteurs de risque).
+    payment_records : logs des paiements (pour mémoire, mais sera ignoré ici).
+
+mermaid
+
+erDiagram
+    RAW_LISTINGS {
+        UUID id PK
+        text url_hash UNIQUE
+        text title_raw
+        float price_parsed
+        text location_raw
+        text review_status
+        real confidence
+        UUID canonical_property_id FK
+    }
+    LISTING_HISTORY {
+        UUID id PK
+        UUID raw_listing_id FK
+        text event_type
+        float price_observed
+        text availability
+        datetime observed_at
+    }
+    CANONICAL_PROPERTIES {
+        UUID id PK
+        text match_key
+        float current_best_price
+        datetime first_seen_at
+        datetime last_seen_at
+        UUID location_id FK
+    }
+    LOCATIONS {
+        UUID id PK
+        text city
+        text neighborhood
+        text slug UNIQUE
+        float lat
+        float lon
+    }
+    SOURCES {
+        UUID id PK
+        text slug
+        bool is_active
+        text adapter_kind
+    }
+    RAW_LISTINGS ||--o{ LISTING_HISTORY : "has history events"
+    CANONICAL_PROPERTIES ||--o{ RAW_LISTINGS : "aggregates"
+    CANONICAL_PROPERTIES }o--|| LOCATIONS : "located in"
+    RAW_LISTINGS }o--|| SOURCES : "sourced from"
+
+Figure 2. Aperçu du modèle de données principal (ERD). Les relations cardinales indiquent que chaque canonical recouvre plusieurs raw_listings, et chaque raw_listing génère plusieurs événements dans listing_history. canonical_property_id est NULL tant que l’annonce n’est pas promue. Le modèle garantit l’immutabilité des données brutes, facilitant l’audit et l’historisation.
+
+Les décisions clés du modèle :
+
+    Immutabilité (« append-only ») : les raw_listings ne sont jamais modifiées une fois insérées. Tout changement (nouveau prix, statut) est ajouté dans listing_history. Ce schéma de journal (log) simplifie les audits et évite la perte d’information historique. Les avantages : cohérence temporelle des données, possibilité de reconstituer l’état passé, et meilleure tolérance aux erreurs (rollback partiels). Inconvénient : croissance constante de la DB (nécessite plan de purge éventuel ou partitionnement).
+    Données normalisées vs brutes : conserver les champs _raw (bruts) parallèlement aux champs nettoyés (price_parsed, localisation normalisée) permet de tracer l’origine exacte de chaque valeur. Cette double approche améliore la qualité : on peut toujours vérifier l’extraction initiale.
+    Hiérarchie des entités : séparer raw_listings, canonical_properties et locations permet de découpler l’agrégation (dédoublonnage) de la géolocalisation et de l’historisation. Cela suit le pattern de “bounded contexts” : les annonces brutes d’un côté, les biens dédupliqués de l’autre. Un concept similaire est utilisé dans d’autres systèmes immobiliers (ex. Fluximmo en Europe) qui maintiennent des entités canoniques liées à des localisations normalisées.
+    Contraintes d’unicité : on indexe le SHA256 de l’URL pour assurer l’idempotence de l’ingestion (éviter les doublons exacts). Les clés de correspondance (match_key) ne sont pas uniques, car plusieurs biens peuvent partager type+quartier. Le traitement déduit le lien fin (canonical_property_id) via notre matcher.
+
+La chaîne de migrations (Alembic) montre l’évolution : du schéma initial (annonces, canonicals, historique) aux ajouts de tables de profils de sécurité (migration 0004), de traduction (0005) et paiements (0006). Chaque migration a été nécessaire pour étendre les fonctionnalités (p. ex. bilinguisme ou profils de risques).
+Sous-système de scraping
+
+La collecte des annonces est confiée à un orchestrateur de scrapers modulaire. L’idée est de supporter n’importe quel site par plug-in (adapter), avec un maximum de robustesse face aux protections anti-bot. Les étapes principales sont :
+
+    Contrat d’adaptateur (scrapers/base.py) : chaque source est représentée par une classe SourceAdapter (pattern Strategy). Cette couche abstraite définit l’interface commune :
+        fetch_listings(max_pages) -> list[RawListingDraft] : récupérer les annonces (squelette sans persistance).
+        fetch_details(url) -> RawListingDraft? : optionnel, pour obtenir des détails d’une annonce spécifique.
+        normalize_data(dict) -> RawListingDraft : transformer un JSON/HTML brut en objet RawListingDraft (voir ci-dessous).
+        Avantages : découple le scraping de la DB. Chaque scraper ne connaît que le modèle intermédiaire (RawListingDraft). Le reste du pipeline (persist) gère l’injection en base. On peut tester les adaptateurs indépendamment (logs, comparisons, fallback).
+        Alternatives : On aurait pu coder le scraping directement dans la couche ingestion, mais cela aurait couplé l’extraction et la persistance, rendant les tests et la maintenance plus difficiles. L’approche choisie (DTO + pipeline) suit les bonnes pratiques de CQRS.
+
+    RawListingDraft (scrapers/drafts.py) : classe intermédiaire (DTO) utilisée entre l’adaptateur et l’ingestion. Elle contient à la fois les champs bruts (title_raw, description_raw, price_raw, location_raw, images_raw) et les valeurs extraites/parsed (price_parsed, bedrooms, etc.), ainsi que le confidence (score 0–1).
+        Rôle : conserver tout le texte source sans écraser la DB, tout en préparant les valeurs analytiques.
+        Champs clés :
+            url_source: URL de l’annonce.
+            title_raw, location_raw, etc.: données d’origine (ignorées si absentes).
+            price_raw, currency, price_parsed (float ou 0 si absent).
+            images_raw: liste d’URLs de photos.
+            description_raw, property_type_raw.
+            latitude, longitude si détectés sur la page.
+            confidence: score d’extraction (1.0 pour adaptateurs dédiés, 0–1 pour adaptateurs universels, cf. ci-dessous).
+            payload: trace JSON complète des extractions (pour audit en cas de doute).
+        Garder autant d’info que possible permet de réutiliser le draft pour le log d’audit, ou de corriger un champ via l’interface admin sans retélécharger le site.
+
+    Mixin anti-bot (scrapers/http_mixin.py) : toutes les requêtes HTTP utilisent ce mixin pour minimiser les blocages. Les stratégies appliquées incluent :
+        Rotation d’User-Agent (Chrome, Firefox, Safari récents), en simulant de vrais navigateurs.
+        Configuration complète des en-têtes de sécurité (Sec-Fetch-*, Accept-Language: fr-FR,en, Referer, etc.).
+        Délais aléatoires entre requêtes (par exemple 1–3 s, configurable) pour simuler l’humain.
+        Réessais automatiques sur échecs (429, 50x) avec un petit backoff exponentiel.
+        Session HTTP persistante (cookies conservés entre requêtes).
+        Lecture du robots.txt (via urllib.robotparser) : si le site interdit de crawler les pages listées, l’adaptateur abandonne proprement.
+        Option de proxy configurable (via crawl_config["proxy_url"]) pour redistribuer le trafic.
+        Avantage : cette approche proactive (« user behavior ») suit les recommandations actuelles de l’industrie pour réduire la détection anti-bot. Elle évite de recourir systématiquement à des outils tiers coûteux.
+        Risque : certains sites très protégés (Cloudflare agressif, CAPTCHA) peuvent toujours bloquer ; des stratégies avancées (headless browsers, OCR) n’ont pas été implémentées par souci de simplicité. On a préféré un compromis entre robustesse et complexité.
+
+    Adaptateurs dédiés (scrapers/mapiole.py, kasastay.py, etc.) : chaque site majeur a son propre code d’extraction, optimisé pour sa structure (HTML ou JSON). Par exemple :
+        MapioleAdapter : page PHP classique. Pagine par paramètre ?page=N. Pour chaque carte d’annonce, on parcourt les pages détails (parallélisme 8 threads). Extraction des éléments (titre <h1>, prix, localisation, équipements). GPS extrait des scripts Leaflet. Ce scraper fixe remplit tous les champs avec confidence=1.0 (promu automatiquement).
+        KasastayAdapter : site Next.js. Il récupère d’abord le buildId pour charger le fichier JSON du serveur (via route /_next/data/.../xyz.json). S’il échoue, le parsing HTML de secours est appliqué. Les descriptions intègrent du texte pollué (co-branding), nettoyé via regex. Les images sont décodées depuis les URLs /next/image?.... Notion importante : ne jamais laisser « Cameroun » (pays) comme localisation par défaut, car 82% des annonces risqueraient de perdre la référence à la ville (pire, « Cameroun » n’est pas un slug valide).
+        Avantage : ces adaptateurs sont tailored pour chaque site, garantissant un parsing précis (fidélité supérieure, confidence=1). On limite ainsi les faux négatifs/positifs. Inconvénient : chaque code est spécifique et demande maintenance dès que le site change (risque de “rôtissage” si modification HTML). Pour contrer cela, ces adaptateurs utilisent requests + lxml plutôt que Selenium ou API complexe, offrant un bon équilibre performance/fiabilité.
+
+    Adaptateur universel (scrapers/universal.py) : pour intégrer rapidement un site non prévu, on dispose d’un scraper générique. Il suit quatre étapes :
+        Découverte d’URLs : récupère sitemap.xml puis explore des liens contenant des mots-clés d’annonces (listing, annonce, location, etc.). Limite de ~20 pages pour éviter l’explosion.
+        Détection de cartes d’annonces : le code regroupe les ancres <a> par structure parent. Un container répété (>3 fois) avec images réelles et prix est considéré comme une grille d’annonces.
+        Extraction de champs : trois stratégies en cascade sont testées pour chaque champ :
+            JSON-LD (schema.org) : s’il existe une structure « Product/Offer/Residence », on en prend les valeurs (titre, description, prix, image, adresse, géo).
+            OpenGraph/Twitter : balises og:title, og:description, og:image si présentes.
+            Heuristique DOM : tag <h1> pour titre, regex sur prix (monnaie XAF), recherche de mot-clé ville, filtrage des <img> pour écarter logos/pixels.
+            On garde la source de chaque champ pour établir la fiabilité.
+        Scoring de confiance : chaque annonce extraite reçoit un score composite (0–1) selon plusieurs facteurs (voir détails ci-dessous). Seul un score >=0.75 est auto-promu, entre 0.40 et 0.74 reste en revue, en dessous est rejeté.
+        Avantage : il permet d’ajouter rapidement de nouveaux sites sans développer un code sur mesure. Cela accélère l’extension de la couverture. Le désavantage est la fiabilité moindre (score variable) et la charge CPU/traçage plus élevée pour analyser plusieurs heuristiques par champ.
+
+    Scoring de confiance et flow de validation : chaque RawListingDraft issu de l’adaptateur universel reçoit un score 0–1 sur la base pondérée :
+
+    makefile
+
+    confidence = 0.40·f_schema + 0.20·f_struct + 0.15·f_price
+                 + 0.10·f_images + 0.10·f_location + 0.05·f_source
+
+    où, par exemple, f_schema=1 si JSON-LD trouvé, 0.5 si OpenGraph seulement, 0 sinon; f_price=1 si un prix>0 est extrait; f_images=1 si au moins une image renvoie un code 200; etc.
+    Ces facteurs 0/0.5/1 expliquent facilement pourquoi un score est atteint. Les annonces universelles avec score>=0.75 sont auto-promues : liées à un bien canonique dès l’ingestion (événement first_seen créé). Les scores [0.40,0.74] passent en pending pour revue manuelle ultérieure. En dessous, elles sont rejetées (non stockées). Pour les adaptateurs dédiés, on fixe confidence=1.0 (auto-promu systématique) car ils sont faits sur mesure. Cette triple porte (auto, review, rejet) garantit la qualité : on n’intègre automatiquement que les annonces fiables. Des modèles modernes de scraper incluent également de telles métriques de confiance pour la qualité des données.
+
+    Ingestion idempotente (core/ingest.py) : pour chaque annonce collectée (RawListingDraft), on calcule un url_hash = sha256(normalize_url(url)). Si c’est une nouvelle URL, on la traite comme première vue : géolocalisation via la table locations, puis on la fait matcher (voir point suivant) et inscrire en raw_listings. Sinon, si l’annonce existait, on compare (prix, dispo) au dernier événement listing_history connu : on n’insère un nouvel événement qu’en cas de changement réel (prix différent ou nouvel état). Cela évite d’encombrer l’historique avec des scans vains. À la fin de chaque session de crawl, on marque les annonces plus vues depuis la date de début (append removed) dans l’historique.
+
+    Matcher et score de doublon (core/matcher.py) : pour lier ou créer un bien canonique, on utilise d’abord la clé grossière match_key = sha1(type|city|neighborhood) (indexée, non-unique). Puis on calcule un Duplicate Confidence Score (DCS) combinant : similarité de titre (RapidFuzz token_sort_ratio), proximité de prix relative, et correspondance de localisation (exacte ou partielle). Formellement, DCS = 0.5·(titre_sim) + 0.3·(score_prix) + 0.2·(score_loc) par exemple. Si DCS≥0.85 (ou titre_sim≥80) on regroupe automatiquement. Sinon on reste en pendings et attend la revue. Ce procédé a l’avantage d’être rapide (recherche dans un seau grossier O(1) + DCS) plutôt qu’une comparaison de tous les biens existants. L’inconvénient est que la clé match_key est approximative (plusieurs biens peuvent partager type et quartier) et le score n’est pas infaillible (ex. deux agences listant le même immeuble peuvent avoir titres très différents). On mitige cela avec la revue manuelle (“promote_raw_listing”) : un opérateur humain valide ou corrige les doublons, ce qui à terme enrichit les règles (apprentissage par la pratique).
+
+Raisons du design scraping : les choix ci-dessus visent à maximiser la couverture (multi-sources), la qualité (auto-revue, audits, score de confiance) et la robustesse (retries, timeout). Une alternative aurait été d’utiliser exclusivement des API partenaires (p. ex. importation de flux XML/JSON comme le propose Agentiz). Ce modèle flux standardisé est très fiable (données formatées, mise à jour régulière), mais impose que chaque source fournisse un tel flux. Agentiz, par exemple, propose des intégrations via XML/JSON/CSV pour certains pays. CentralImmo a choisi le scraping car les principaux sites locaux n’offraient pas d’API publique, et l’objectif était de couvrir tous les portails existants, même sans coopération. Le compromis est une ingénierie plus lourde (gestions des blocages, de la maintenance), en échange d’une plus grande indépendance vis-à-vis des portails cibles. Les risques (blocs HTTP, changements imprévus de structure) sont atténués par le design modulaire et des journaux d’erreur complets (mixin, payload JSON). En cas de crawler down ou de blocage répété, le système peut déclencher des alertes (via le tableau de bord jobs) pour intervention.
+Analyse & Scoring
+
+CentralImmo calcule chaque semaine divers indicateurs agrégés pour chaque quartier afin d’éclairer le marché. Ces scores (0–10) sont fondés uniquement sur les données internes (pas d’open data externe). Les cinq scores sont :
+
+    premium_score : rapport du prix du bien moyen vs médiane de la ville. Plus ce ratio est élevé, plus le quartier est considéré « premium ».
+    demand_score : inverse du délai de vente moyen (vitesse de rotation). Plus les annonces partent vite (plus de ventes rapides), plus la demande est forte. On calcule la médiane des durées de mise en ligne, puis on transforme en score.
+    growth_score : tendance des prix sur 90 jours (linéaire). Un mix entre la pente absolue et la variation relative.
+    activity_score : nombre d’annonces par semaine (par rapport à la moyenne historique de la ville).
+    luxury_score : pondère le prix + la surface + présence d’équipements haut de gamme (piscine, etc.). Cet indicateur mesure la présence de biens de standing.
+
+Chaque score est renormalisé 0–10 pour affichage (10 = top du pays). On stocke aussi d’autres métriques : listing_count, avg_price, med_price, price_per_sqm, etc. L’endpoint /annonces/{id}/analyse compare un bien contre ses comparables (même type, même ville) : si son prix est 10% en dessous ou au-dessus de la médiane, on renvoie verdict « below_market » ou « above_market ». Avec <3 comparables on signale « insufficient_data ».
+
+Les calculs sont lancés par la tâche hebdomadaire APScheduler (recompute_all) et écrivent dans neighborhood_analytics. Le fait de pré-calculer ces agrégats améliore les performances de l’API. Les méthodes utilisées s’inspirent d’analyses immobilières classiques : on pourrait comparer à des moteurs AVM (Automatic Valuation Model), bien que CentralImmo se limite ici à des indicateurs descriptifs. Aucune source académique directe n’a été citée pour ces scores, mais la démarche suit les bonnes pratiques du secteur : de nombreux agrégateurs (ex. Yanport, Casafari) proposent des analyses de marché basées sur les annonces. Un projet récent (Abella et al. 2024) étudie même la segmentation spatiale des marchés à partir d’annonces, ce qui conforte l’idée que l’analyse fine par quartier est pertinente.
+
+Raisons du design analytique : en calculant ces scores uniquement à partir des données internes, on évite la dépendance à d’autres jeux de données (plus difficiles à obtenir ou mis à jour). Les résultats sont facilement interprétables (0–10, descriptif). L’alternative aurait été d’utiliser des sources statistiques officielles (cadastrales, recensement) : mais ces données sont souvent retardées et moins granulaires (voir Boeing & Waddell ou Loberto et al. sur l’intérêt des données web). Le compromis est que la robustesse des scores dépend de la qualité de nos données capturées (un quartier mal couvert donnera un score peu fiable). On mitige ce risque en filtrant les quartiers avec peu de données et en affichant « insufficient » lorsque pertinent. Un risque métier est aussi l’interprétation : un score élevé de « premium » peut choquer en l’absence de contexte. Il pourrait être intéressant d’ajouter des indicateurs complémentaires (ex. revenus moyens) en futur.
+Couche API et recherche
+
+L’API FastAPI intègre plusieurs endpoints notables : listage d’annonces (pagination, filtres par type, quartier, etc.), détails d’une annonce, historique (prix/état), comparables (simulateur de prix). La recherche langage naturel est implémentée dans le routeur /search : si une clé DeepSeek est configurée, la requête est envoyée au service DeepSeek (un agent basé sur Claude/GPT) qui retourne un JSON de filtres (nombre de chambres, budget, quartier, etc.). Sinon, on utilise un parsing regex de requête (extraction chiffre, mots-clés) pour construire une requête SQL. Les mots-clés généraux font un ILIKE sur titre/description. Ce pipeline permet de gérer à la fois les requêtes textuelles et la recherche pilotée par IA.
+
+L’agent conversationnel IA (/chat) fait appel à DeepSeek en mode function-calling : on définit un persona bilingue (“CentralBot”) avec jusqu’à 8 outils (recherche propriété, détail, profil de quartier, trending, comparateur de prix, liste de villes/quartiers). L’appel /chat transmet l’historique client, et DeepSeek appelle nos fonctions back-end pour chercher en base (requêtes SQL) puis renvoie la réponse formulée plus les résultats structurés. Cette approche de chat via des outils DB assure que le chatbot ne « hallucine » pas les données : tout provient directement de la DB. Les cartes (neighborhoods, trending, sécurité, etc.) sont servies sous forme de blocs spéciaux interprétés par le client Flutter/React. Cette intégration d’IA pour la recherche s’inscrit dans les tendances actuelles de la PropTech (ex : l’API Stream Estate propose aussi un protocole MCP pour agent IA dédié). DeepSeek offre des réponses contextualisées (ex. « Quels quartiers sont sûrs à Douala ? »).
+
+Concernant la sécurité de l’API, la plupart des endpoints sont publiques (pas d’authentification). Seuls les endpoints /payments (non détaillés ici) exigent un token d’utilisateur connecté et email vérifié. L’endpoint /admin n’est pas protégé (faute de temps). C’est un risque clair : en production, il faudrait rajouter au moins une vérification d’un header secret ou un login admin pour éviter que n’importe qui ne modifie les sources ou approuve des annonces. On recommande de corriger cela en priorité (effort faible).
+Authentification Firebase
+
+CentralImmo utilise Firebase Authentication pour identifier l’utilisateur (sans gestion de compte spécifique). Le client Flutter/React s’authentifie via Google Sign-In ou numéro de téléphone OTP, puis envoie un ID Token JWT dans l’en-tête Authorization: Bearer. Le backend vérifie ce token en local, sans la librairie firebase-admin, selon le processus suivant (conforme à la documentation Google) :
+
+    Extraction du JWT et de son kid (clé de signature).
+    Récupération (cache 1h) des certificats x509 publics de Google (URL fournie) et vérification RS256 du JWT.
+    Contrôle du champ aud et iss pour s’assurer que le token est bien destiné à notre projet (aud=centralimo-71b0d, iss=https://securetoken.google.com/centralimo-71b0d).
+    Si valide, extraire le {uid, email, email_verified} du payload.
+    En cas d’échec (sig, aud, exp), on renvoie 401. Si l’email n’est pas vérifié (email_verified=false), on renvoie 403 pour certains endpoints.
+
+Cette approche « maison » (PyJWT + recouvrement auto de la clé) réduit les dépendances et suit les bonnes pratiques de Firebase (client envoie, serveur vérifie). Un compromis ici est que nous ne gérons pas les tokens « custom » créés par admin SDK (c’est inutile pour notre cas). Le risque est faible : la bibliothèque PyJWT est mature et les clés Google sont publiques. Un autre risque lié à Firebase est de ne pas vérifier assez finement les droits, mais ici on ne propose pas encore de rôles complexes.
+Déploiement & infrastructure
+
+CentralImmo est déployé sans Docker ni CI/CD, directement sur une VM AWS EC2 (Ubuntu 22.04/24.04). Le script de déploiement (deploy/setup.sh) réalise en environ 8 étapes : installation des paquets système, création d’un utilisateur système centralimmo, copie du code avec rsync vers /opt/centralimmo, installation Python (venv), configuration de PostgreSQL (création de l’utilisateur/DB immo_user/immo_db), restauration d’un dump de test, génération du fichier .env (clés, URL), et création d’un service systemd. Le service centralimmo.service lance le backend FastAPI (via Uvicorn) et l’ordonnanceur (APScheduler). Les protections systemd activées sont strictes (PrivateTmp, NoNewPrivileges, etc.), limitant la surface d’attaque. Aucune conteneurisation n’est utilisée, ce qui simplifie la mise en route, mais constitue un frein potentiel à la scalabilité et à la fiabilité : en l’absence de CI/CD, chaque mise à jour nécessite une intervention manuelle. De plus, si la VM tombe en panne, il faut savoir que les backups du DB sont automatisés (dump quotidien). Un script anodin (restore_db.sh) permet de recharger l’état du DB.
+
+Ce choix d’infrastructure brute (script + systemd) offre l’avantage d’être simple et économique (pas de coûts de conteneur ou de plateforme PaaS). L’inconvénient est la maintenabilité : pas de pipeline de tests/déploiement, pas de rollback automatisé, pas de monitoring avancé (pas d’outils Prometheus/Sentry configurés). Les données critiques sont la DB Postgres (backup régulier) et le certificat SSL (via Traefik ou Nginx non mentionnés ici). Il n’y a pas de réplication DB ni de haute disponibilité : en cas de forte charge ou de panne, le système pourrait souffrir. Ces risques sont tolérables vu l’usage limité actuel (nombre d’utilisateurs inconnu) ; cependant, pour la production, il conviendrait à moyen terme de migrer vers un setup plus robuste (voir recommandations).
+Recommandations d’amélioration
+
+Voici une liste de recommandations classées par priorité pour améliorer la robustesse, l’évolutivité, la sécurité et la qualité des données de CentralImmo. L’effort estimé (faible/moyen/élevé) indique le coût de mise en œuvre relatif.
+Recommandation	Description / Justification	Effort
+1. Sécuriser l’accès Admin	Protéger le routeur /admin (login admin ou token secret). Réduire ainsi le risque d’attaques internes.	Faible
+2. Ajouter tests unitaires/CI	Mettre en place un jeu de tests automatisés (pytest) et un pipeline CI (par ex. GitHub Actions) pour valider les builds et éviter les régressions.	Moyen
+3. Conteneurisation / CI-CD	Dockeriser l’application et configurer une CI/CD pour déploiement (test → staging → production). Facilite les rollback et montées en charge (scaling par replicas).	Élevé
+4. Externaliser APScheduler	Extraire le scheduler APScheduler dans un service dédié (ou utiliser Cron/Lambda) pour qu’une défaillance du backend n’arrête pas la planif.	Moyen
+5. Monitoring & logging centralisés	Intégrer un outil de monitoring (Prometheus/Grafana ou Datadog) et capturer les logs (Sentry/ELK). Détecter proactivement les pannes ou erreurs de scraping.	Moyen
+6. Cache / performance	Ajouter un cache Redis pour les réponses fréquentes (/annonces?limit par ex.) et indexer finement la BD (titres pour recherche, géolocalisation). Cela réduira la charge DB et améliorera la rapidité.	Faible
+7. Tests d’intégration API	Couvrir les endpoints clés par des tests d’intégration (back-end) pour assurer le bon fonctionnement end-to-end.	Faible
+8. Gouvernance des données	Mettre en place une politique de rétention ou d’archivage (purger anciens logs, ou partitionner la table historique). Permet de maîtriser la taille de la DB à long terme.	Faible
+9. Scalabilité du scraping	Si la couverture sources augmente, envisager des workers distincts ou un orchestrateur distribuable (ex. Kubernetes, AWS ECS) pour le scraping.	Élevé
+10. Amélioration du matching	Explorer des algorithmes de ML ou de vision pour le matching (à l’image de Yanport). Permettrait de mieux détecter les doublons complexes (ex. images différentes).	Moyen
+11. Mise à l’échelle DB	Si le trafic grandit, passer PostgreSQL en mode cluster (ou instance managée RDS) pour performance et backups managés.	Moyen
+12. Recherche plein texte	Utiliser la recherche textuelle PostgreSQL (tsvector) pour améliorer les performances de /search sur grands volumes de texte.	Faible
+13. Renforcement anti-bot	Éventuellement intégrer des proxys résidentiels (BrightData…) pour les sites très protégés, ou basculer certains scrapers sur des navigateurs (Playwright) en mode « furtif ».	Moyen
+14. Internationalisation Frontend	Compléter la traduction de l’interface (actuellement seules les données changent de langue via Accept-Language). Permettre l’I18n complet.	Faible
+15. Notifications / Webhooks	Ajouter des webhooks (ou sockets) pour notifier clients (app/React) lors de mises à jour importantes (ex. nouvelle alerte immobilière trouvée).	Moyen
+
+Tableau 2. Principales améliorations suggérées, classées par priorité. Les efforts faible indiquent des changements simple (ajout de configurations, optimisation DB), moyen pour des composants ou refactoring, élevé pour réarchitecturation (conteneurs, scaling).
+
+Ces améliorations permettront d’accroître la fiabilité et l’évolutivité du système. Par exemple, sécuriser l’admin et ajouter des tests sont des priorités faibles (changement rapide) qui améliorent directement la robustesse. En revanche, la conteneurisation et l’orchestration distribuée sont plus coûteuses mais seraient pertinentes en cas de forte montée en charge (scénario futur). L’important est de limiter dès maintenant les failles de sécurité (authentification/admin), et de mettre en place un suivi des erreurs et performances (monitoring). Par ailleurs, l’algorithme de déduplication pourrait être amélioré par apprentissage (vision par ordinateur, NLP), comme le font des acteurs du secteur.
+Références
+
+    Barzin, F., Yernaux, G. & Vanhoof, W. (2023). ScrImmo: A Real-time Web Scraper Monitoring the Belgian Real Estate Market. Proc. IEEE/WIC WI-IAT 2023.
+    Boeing, G. & Waddell, P. (2017). New Insights into Rental Housing Markets across the United States: Web Scraping and Analyzing Craigslist Rental Listings. Journal of Planning Education and Research, 37(4), 457–476.
+    Loberto, M., Luciani, A. & Pangallo, M. (2022). What Do Online Listings Tell Us about the Housing Market? Int. Journal of Central Banking, 18(4).
+    Abella, D. et al. (2024). Exploring the Spatial Segmentation of Housing Markets from Online Listings. arXiv:2405.08398.
+    Yanport Blog (10 Juin 2026). Dédoublonnage des annonces: un traitement rigoureux pour une prise de décision éclairée. https://www.yanport.com/blog/posts/dedoublonnage-annonces.
+    MoteurImmo Blog (19 Déc. 2025). Dédoublonnage des annonces: ne perdez plus de temps avec les doublons. https://blog.moteurimmo.fr/dedoublonnage-des-annonces-ne-perdez-plus-de-temps-avec-les-doublons.
+    Import.io (2026). Web Scraping Techniques & Data Quality. (Blog).
+    Apify Academy (2024). Anti-scraping Protections. Documentation en ligne.
+    Agentiz (s.d.). Importation d'annonces immobilières au Tchad. https://www.agentiz.com/fr/partnership/aggregation/td.
+    API-Immobilier (2026). Comparatif des meilleures API immobilières. https://www.api-immobilier.org/.
+    Google Firebase (2024). Verify ID Tokens. https://firebase.google.com/docs/auth/admin/verify-id-tokens.
+    « Append-only ». Wikipédia (consulté 2026). https://en.wikipedia.org/wiki/Append-only.
+

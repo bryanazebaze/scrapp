@@ -1,0 +1,262 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ============================================================
+   CentralImmo — Dual theme (light + dark), warm-cohesive.
+   All colors swap via CSS variables under :root / .dark.
+   Light = warm off-white + warm ink. Dark = original deep ink.
+   The white/<opacity> utilities auto-remap via the --wi var:
+     light → warm ink (for text/borders on cream)
+     dark  → pure white (original dark-theme behavior)
+   ============================================================ */
+
+@layer base {
+  :root {
+    color-scheme: light;
+
+    /* Ink text scale */
+    --ink-900: 26 26 23;       /* #1A1A17 warm ink */
+    --ink-800: 43 42 38;
+    --ink-700: 61 59 53;
+
+    /* Prism accents — muted, warm-leaning with subtle variety (light mode) */
+    --prism-violet:  122 74 142;   /* #7A4A8E muted mauve */
+    --prism-cyan:    196 96 64;    /* #C46040 dusty terracotta */
+    --prism-fuchsia: 138 58 92;    /* #8A3A5C dusty plum */
+    --prism-amber:   197 142 64;   /* #C58E40 muted ochre */
+    --prism-emerald:  88 122 84;   /* #587A54 sage */
+
+    /* White-ink swap channel (used by text-white/<n>, bg-white/<n>, border-white/<n>) */
+    --wi: 26 26 23;              /* light: warm ink */
+
+    /* Page + surfaces */
+    --page-bg: #FAFAF7;
+    --page-text: #1A1A17;
+    --glass-bg: rgba(255,255,255,0.85);
+    --glass-border: rgba(26,26,23,0.08);
+    --glass-strong-bg: rgba(255,255,255,0.95);
+    --glass-strong-border: rgba(26,26,23,0.10);
+    --input-bg: rgba(26,26,23,0.04);
+    --input-border: rgba(26,26,23,0.10);
+    --input-focus-border: #E94E1B;
+    --input-focus-bg: #FFFFFF;
+
+    /* Shadows (warm-tinted) */
+    --shadow-glass: rgba(26,26,23,0.08);
+    --shadow-glass-lg: rgba(26,26,23,0.12);
+    --shadow-card: rgba(26,26,23,0.06);
+    --shadow-card-hover: rgba(26,26,23,0.10);
+
+    /* Scrollbar */
+    --scroll-track: #F5F3EE;
+    --scroll-thumb: #D6D2C9;
+    --scroll-thumb-hover: #9A948C;
+
+    /* Aurora blob colors (PrismBackground) — pastel, low-saturation for light mode */
+    --blob-1: #E8B89A;
+    --blob-2: #D9C9B0;
+    --blob-3: #E5D5B8;
+    --blob-4: #C9B8C4;
+    --grid-line: rgba(26,26,23,0.5);
+    --grid-opacity: 0.018;
+    --noise-opacity: 0.008;
+
+    /* Mesh overlay tints — very faint */
+    --mesh-1: rgba(196,96,64,0.045);
+    --mesh-2: rgba(197,142,64,0.045);
+    --mesh-3: rgba(232,184,154,0.04);
+    --mesh-4: rgba(201,184,196,0.04);
+
+    /* Aurora blob opacity (lower in light mode for subtlety) */
+    --blob-opacity: 0.22;
+  }
+
+  .dark {
+    color-scheme: dark;
+
+    --ink-900: 7 7 26;          /* #07071a deep ink (original dark) */
+    --ink-800: 12 12 36;
+    --ink-700: 20 20 58;
+
+    /* Prism accents (original cool dark palette) */
+    --prism-violet:  167 139 250;  /* #a78bfa */
+    --prism-cyan:    34 211 238;   /* #22d3ee */
+    --prism-fuchsia: 232 121 249;  /* #e879f9 */
+    --prism-amber:   251 191 36;   /* #fbbf24 */
+    --prism-emerald: 52 211 153;   /* #34d399 */
+
+    /* White-ink swap → pure white in dark mode (restores original behavior) */
+    --wi: 255 255 255;
+
+    --page-bg: #07071a;
+    --page-text: rgba(255,255,255,0.92);
+    --glass-bg: rgba(255,255,255,0.04);
+    --glass-border: rgba(255,255,255,0.10);
+    --glass-strong-bg: rgba(255,255,255,0.07);
+    --glass-strong-border: rgba(255,255,255,0.15);
+    --input-bg: rgba(255,255,255,0.05);
+    --input-border: rgba(255,255,255,0.10);
+    --input-focus-border: rgba(255,255,255,0.30);
+    --input-focus-bg: rgba(255,255,255,0.08);
+
+    --shadow-glass: rgba(0,0,0,0.4);
+    --shadow-glass-lg: rgba(0,0,0,0.55);
+    --shadow-card: rgba(0,0,0,0.3);
+    --shadow-card-hover: rgba(0,0,0,0.4);
+
+    --scroll-track: rgba(255,255,255,0.02);
+    --scroll-thumb: rgba(255,255,255,0.12);
+    --scroll-thumb-hover: rgba(255,255,255,0.22);
+
+    --blob-1: #a78bfa;
+    --blob-2: #e879f9;
+    --blob-3: #22d3ee;
+    --blob-4: #E94E1B;
+    --grid-line: rgba(255,255,255,0.4);
+    --grid-opacity: 0.03;
+    --noise-opacity: 0.015;
+
+    --mesh-1: rgba(167,139,250,0.30);
+    --mesh-2: rgba(232,121,249,0.25);
+    --mesh-3: rgba(34,211,238,0.22);
+    --mesh-4: rgba(233,78,27,0.22);
+
+    --blob-opacity: 0.50;
+  }
+
+  html, body, #root { min-height: 100vh; }
+  body {
+    font-family: 'Inter', system-ui, sans-serif;
+    background-color: var(--page-bg);
+    color: var(--page-text);
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+    transition: background-color 0.3s ease, color 0.3s ease;
+  }
+  ::selection { background: rgba(233,78,27,0.30); color: inherit; }
+
+  ::-webkit-scrollbar { width: 10px; height: 10px; }
+  ::-webkit-scrollbar-track { background: var(--scroll-track); }
+  ::-webkit-scrollbar-thumb { background: var(--scroll-thumb); border-radius: 999px; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--scroll-thumb-hover); }
+}
+
+/* ----------------------------------------------------------------
+   white/<opacity> utilities → swap channel via --wi.
+   Light: warm ink (text/borders on cream). Dark: pure white.
+   Bare text-white/bg-white stay literal (used on brand buttons).
+   ---------------------------------------------------------------- */
+@layer utilities {
+  .text-white\/20  { color: rgb(var(--wi) / 0.20); }
+  .text-white\/30  { color: rgb(var(--wi) / 0.30); }
+  .text-white\/40  { color: rgb(var(--wi) / 0.45); }
+  .text-white\/50  { color: rgb(var(--wi) / 0.55); }
+  .text-white\/60  { color: rgb(var(--wi) / 0.68); }
+  .text-white\/70  { color: rgb(var(--wi) / 0.78); }
+  .text-white\/80  { color: rgb(var(--wi) / 0.88); }
+  .text-white\/90  { color: rgb(var(--wi) / 0.95); }
+
+  .bg-white\/5       { background-color: rgb(var(--wi) / 0.04); }
+  .bg-white\/\[0\.03\] { background-color: rgb(var(--wi) / 0.03); }
+  .bg-white\/\[0\.04\] { background-color: rgb(var(--wi) / 0.035); }
+  .bg-white\/\[0\.05\] { background-color: rgb(var(--wi) / 0.04); }
+  .bg-white\/\[0\.07\] { background-color: rgb(var(--wi) / 0.05); }
+  .bg-white\/\[0\.08\] { background-color: rgb(var(--wi) / 0.06); }
+  .bg-white\/10      { background-color: rgb(var(--wi) / 0.06); }
+
+  .border-white\/5  { border-color: rgb(var(--wi) / 0.08); }
+  .border-white\/10 { border-color: rgb(var(--wi) / 0.10); }
+  .border-white\/15 { border-color: rgb(var(--wi) / 0.12); }
+  .border-white\/20 { border-color: rgb(var(--wi) / 0.16); }
+  .border-white\/30 { border-color: rgb(var(--wi) / 0.24); }
+
+  .placeholder-white\/40::placeholder { color: rgb(var(--wi) / 0.40); }
+
+  /* text-fg / text-fg-muted — primary page text that swaps with theme.
+     Use this (NOT bare text-white) for prominent text on cards/glass. */
+  .text-fg       { color: var(--page-text); }
+  .text-fg\/60   { color: rgb(var(--wi) / 0.68); }
+  .text-fg\/40   { color: rgb(var(--wi) / 0.45); }
+  .text-fg\/30   { color: rgb(var(--wi) / 0.30); }
+  .text-fg\/20   { color: rgb(var(--wi) / 0.20); }
+
+  /* ink-900 stays literal (deep surface for select options, badge contrast text) */
+  .bg-ink-900     { background-color: rgb(var(--ink-900)); }
+  .bg-ink-900\/60 { background-color: rgb(var(--ink-900) / 0.60); }
+  .bg-ink-900\/70 { background-color: rgb(var(--ink-900) / 0.70); }
+  .bg-ink-900\/80 { background-color: rgb(var(--ink-900) / 0.78); }
+}
+
+@layer components {
+  .glass {
+    background-color: var(--glass-bg);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid var(--glass-border);
+    box-shadow: 0 2px 12px var(--shadow-card);
+    border-radius: 1rem;
+  }
+  .glass-strong {
+    background-color: var(--glass-strong-bg);
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+    border: 1px solid var(--glass-strong-border);
+    box-shadow: 0 12px 48px var(--shadow-glass-lg);
+    border-radius: 1.5rem;
+  }
+  .glass-input {
+    background-color: var(--input-bg);
+    border: 1px solid var(--input-border);
+    border-radius: 0.75rem;
+    padding: 0.625rem 1rem;
+    font-size: 0.875rem;
+    color: var(--page-text);
+    transition: all 0.2s;
+    outline: none;
+  }
+  .glass-input::placeholder { color: rgb(var(--wi) / 0.40); }
+  .glass-input:focus {
+    border-color: var(--input-focus-border);
+    background-color: var(--input-focus-bg);
+  }
+
+  .prism-text {
+    background: linear-gradient(90deg, rgb(var(--prism-violet)) 0%, rgb(var(--prism-cyan)) 50%, rgb(var(--prism-fuchsia)) 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+  .brand-text {
+    background: linear-gradient(90deg, #F18B3A 0%, #E94E1B 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+  .shimmer {
+    background: linear-gradient(110deg, rgb(var(--wi)/0.02) 8%, rgb(var(--wi)/0.08) 18%, rgb(var(--wi)/0.02) 33%);
+    background-size: 200% 100%;
+    @apply animate-shimmer;
+  }
+}
+
+@layer utilities {
+  .text-balance { text-wrap: balance; }
+  .no-scrollbar::-webkit-scrollbar { display: none; }
+  .no-scrollbar { scrollbar-width: none; }
+  .spinner {
+    width: 32px; height: 32px;
+    border: 3px solid rgb(var(--wi) / 0.10);
+    border-top-color: #E94E1B;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .gradient-mesh {
+    background:
+      radial-gradient(at 12% 18%, var(--mesh-1) 0px, transparent 50%),
+      radial-gradient(at 88% 22%, var(--mesh-2) 0px, transparent 50%),
+      radial-gradient(at 75% 80%, var(--mesh-3) 0px, transparent 50%),
+      radial-gradient(at 25% 85%, var(--mesh-4) 0px, transparent 50%);
+  }
+}

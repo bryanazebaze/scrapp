@@ -1,0 +1,97 @@
+%% beamerthemeCentralImmo.sty
+%% Theme for CentralImmo defense — UY1 purple, clean French presentation.
+\ProvidesPackage{beamerthemeCentralImmo}
+
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta, positioning, shapes.geometric, fit, calc,
+  backgrounds, shadows, patterns, fadings, shapes.multipart, trees}
+\usepackage{xcolor}
+\usepackage{fontawesome5}
+
+% ── UY1 / CentralImmo palette ──────────────────────────────────────────────
+\definecolor{UY1Purple}{HTML}{4A148C}
+\definecolor{UY1Light}{HTML}{F3E5F5}
+\definecolor{UY1Accent}{HTML}{E65100}
+
+% ── CentralImmo diagram palette (from report main.tex) ─────────────────────
+\definecolor{ciGreen}{HTML}{00695C}
+\definecolor{ciGreenLight}{HTML}{E0F2F1}
+\definecolor{ciGold}{HTML}{D4AF37}
+\definecolor{ciGoldLight}{HTML}{FCF8E3}
+\definecolor{ciDark}{HTML}{212121}
+\definecolor{ciLightGray}{HTML}{F5F5F5}
+\definecolor{ciBorder}{HTML}{757575}
+\definecolor{ciRed}{HTML}{C62828}
+\definecolor{ciBlue}{HTML}{1976D2}
+
+\setbeamercolor{structure}{fg=UY1Purple}
+\setbeamercolor{frametitle}{bg=UY1Purple,fg=white}
+\setbeamercolor{title}{fg=UY1Purple}
+\setbeamercolor{footline}{bg=white, fg=black}
+\setbeamercolor{block title}{bg=UY1Purple!15,fg=UY1Purple}
+\setbeamercolor{block body}{bg=UY1Purple!5}
+\setbeamercolor{itemize item}{fg=UY1Purple}
+\setbeamercolor{itemize subitem}{fg=UY1Purple}
+\setbeamercolor{alertblock title}{bg=UY1Accent!20,fg=UY1Accent}
+\setbeamercolor{alertblock body}{bg=UY1Accent!8}
+
+\usetheme{default}
+\useinnertheme{rectangles}
+\setbeamertemplate{navigation symbols}{}
+\setbeamertemplate{itemize item}{\small\raisebox{1pt}{$\blacktriangleright$}}
+\setbeamertemplate{itemize subitem}{\small\raisebox{1pt}{$\triangleright$}}
+
+% ── En-tête des slides (Frametitle) ────────────────────────────────────────
+\setbeamertemplate{frametitle}{%
+  \nointerlineskip
+  \begin{beamercolorbox}[wd=\paperwidth,ht=0.8cm,dp=0.3cm,leftskip=0.5cm]{frametitle}
+    \usebeamerfont{frametitle}\insertframetitle
+    \ifx\insertframesubtitle\empty\else
+      \hfill\textcolor{white!80!UY1Purple}{\small\insertframesubtitle}\hspace{0.3cm}
+    \fi
+  \end{beamercolorbox}%
+}
+
+% ── Pied de page (Footline) ────────────────────────────────────────────────
+\setbeamertemplate{footline}{%
+  \leavevmode%
+  \hbox{%
+  \begin{beamercolorbox}[wd=.333333\paperwidth,ht=2.25ex,dp=1ex,center]{}%
+    \tiny\color{black}AZEBAZE, AZEFACK, MANGOUO (UY1)
+  \end{beamercolorbox}%
+  \begin{beamercolorbox}[wd=.333333\paperwidth,ht=2.25ex,dp=1ex,center]{}%
+    \tiny\color{black}Soutenance de Fin d'Études — ICT4D
+  \end{beamercolorbox}%
+  \begin{beamercolorbox}[wd=.333333\paperwidth,ht=2.25ex,dp=1ex,right]{}%
+    \tiny\color{black}Juin 2026 \hspace{0.2cm} | \hspace{0.2cm} \insertframenumber/\inserttotalframenumber \hspace{0.5cm}
+  \end{beamercolorbox}}%
+  \vskip0pt%
+}
+
+% ── TikZ styles mirrored from report main.tex (so diagrams compile) ────────
+\tikzset{
+  font=\sffamily,
+  >=Stealth,
+  base-node/.style={
+    draw=ciDark, line width=0.8pt, rounded corners=4px,
+    font=\small\sffamily, align=center, fill=white,
+    inner sep=6pt, drop shadow={opacity=0.12, shadow xshift=1pt, shadow yshift=-1.2pt}
+  },
+  node-green/.style={base-node, draw=ciGreen, fill=ciGreenLight, text=ciDark},
+  node-gold/.style={base-node, draw=ciGold!80!black, fill=ciGoldLight, text=ciDark},
+  node-white/.style={base-node, draw=ciBorder, fill=white, text=ciDark},
+  node-red/.style={base-node, draw=ciRed, fill=ciRed!8, text=ciDark},
+  node-blue/.style={base-node, draw=ciBlue, fill=ciBlue!10, text=ciDark},
+  flow-arrow/.style={-Stealth, line width=0.9pt, draw=ciDark},
+  flow-arrow-dashed/.style={-Stealth, line width=0.9pt, draw=ciGreen, dashed},
+  flow-arrow-gold/.style={-Stealth, line width=1.1pt, draw=ciGold!80!black},
+  label-style/.style={font=\scriptsize\sffamily, fill=white, inner sep=1.5pt, text=ciDark},
+  group-box/.style={
+    draw=ciBorder, dotted, line width=0.8pt, rounded corners=6px,
+    fill=none, inner sep=8pt
+  },
+  group-box-green/.style={
+    draw=ciGreen, dashed, line width=0.8pt, rounded corners=6px,
+    fill=none, inner sep=8pt
+  }
+}

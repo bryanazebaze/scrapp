@@ -1,3 +1,4 @@
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -8,7 +9,15 @@ import 'router/app_router.dart';
 import 'providers/providers.dart';
 import 'services/api_client.dart';
 
-void main() {
+// NOTE: Before running this app you must download `google-services.json`
+// (Android) and `GoogleService-Info.plist` (iOS) from the Firebase Console
+// for the project `centralimo-71b0d` and place them in the standard
+// locations (android/app/ and ios/Runner/ respectively). Firebase will pick
+// them up automatically.
+
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await Firebase.initializeApp();
   runApp(const ProviderScope(child: CentralImmoApp()));
 }
 

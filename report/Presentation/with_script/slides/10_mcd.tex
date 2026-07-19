@@ -1,0 +1,70 @@
+%% slides/10_mcd.tex
+\begin{frame}{Travaux Réalisés}{Modèle Conceptuel des Données (MCD)}
+  \begin{center}
+    \begin{tikzpicture}[node distance=1cm and 1.4cm, scale=0.78, every node/.style={scale=0.78}]
+      % Sources
+      \node[node-gold, text width=4cm] (src) {
+        \textbf{Sources}\\
+        \color{ciGreen}\scriptsize PK: id\\
+        \color{ciDark}\tiny
+        $\bullet$ slug (unique)\\
+        $\bullet$ display\_name\\
+        $\bullet$ adapter\_kind
+      };
+      % RawListings
+      \node[node-green, below=of src, text width=4cm] (raw) {
+        \textbf{RawListings}\\
+        \color{ciGreen}\scriptsize PK: id\\
+        \color{ciDark}\tiny
+        $\bullet$ url\_source, url\_hash\\
+        $\bullet$ title\_raw, price\_parsed\\
+        \color{ciBlue}FK: source\_id\\
+        \color{ciBlue}FK: canonical\_property\_id
+      };
+      % CanonicalProperties
+      \node[node-green, right=of raw, text width=4.3cm] (canon) {
+        \textbf{CanonicalProperties}\\
+        \color{ciGreen}\scriptsize PK: id\\
+        \color{ciDark}\tiny
+        $\bullet$ match\_key\\
+        $\bullet$ title\_canonical\\
+        $\bullet$ current\_best\_price\\
+        \color{ciBlue}FK: location\_id
+      };
+      % Locations
+      \node[node-white, above=of canon, text width=4cm] (loc) {
+        \textbf{Locations}\\
+        \color{ciGreen}\scriptsize PK: id\\
+        \color{ciDark}\tiny
+        $\bullet$ city\\
+        $\bullet$ neighborhood\\
+        $\bullet$ slug
+      };
+      % ListingHistory
+      \node[node-red, right=of canon, text width=4cm] (hist) {
+        \textbf{ListingHistory}\\
+        \color{ciGreen}\scriptsize PK: id\\
+        \color{ciDark}\tiny
+        $\bullet$ event\_type\\
+        $\bullet$ price\_observed\\
+        $\bullet$ observed\_at
+      };
+      % Relations
+      \draw[flow-arrow, draw=ciGold] (src.south) -- node[label-style, left] {1..N} (raw.north);
+      \draw[flow-arrow, draw=ciGreen] (raw.east) -- node[label-style, above] {N..0-1} (canon.west);
+      \draw[flow-arrow, draw=ciGreen] (loc.south) -- node[label-style, right] {1..N} (canon.north);
+      \draw[flow-arrow, draw=ciRed] (canon.east) -- node[label-style, above] {1..N} (hist.west);
+      \draw[flow-arrow, draw=ciRed, bend right=20] (raw.south) -- ++(0,-0.5cm) -| node[label-style, pos=0.3, below] {1..N} (hist.south);
+    \end{tikzpicture}
+  \end{center}
+
+  \begin{center}
+    \footnotesize \faLightbulb\ \textbf{Principe :} trois niveaux — annonces brutes (immuables), fiches unifiées, historique des prix (append-only).
+  \end{center}
+\note{
+\textbf{\textcolor{speakerKelcy}{[EN] AZEFACK K.}}\\
+``The database is organized in three layers — a design choice central to everything we do.''\\[6pt]
+\textbf{\textcolor{speakerAzebaze}{[FR] AZEBAZE B. — détaille le MCD}}\\
+``Trois niveaux. \textbf{RawListings} : tout est stocké brut, \textbf{immuable}, pour garder la trace d'origine. \textbf{CanonicalProperties} : la « Super-Annonce » qui regroupe les annonces d'une même maison. \textbf{ListingHistory} : chaque changement de prix est \textbf{ajouté, jamais écrasé} — append-only. Principe fondamental : \textbf{on n'écrase jamais un prix, on l'archive}.'' ~|~ \textbf{$\approx$1 min 30}
+}
+\end{frame}

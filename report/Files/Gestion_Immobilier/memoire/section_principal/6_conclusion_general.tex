@@ -1,0 +1,14 @@
+% ═══════════════════════════════════════════════════════════════
+%  CONCLUSION GÉNÉRALE
+% ═══════════════════════════════════════════════════════════════
+
+\chapter*{Conclusion Générale}
+\addcontentsline{toc}{chapter}{Conclusion Générale}
+
+Ce stage avait pour objectif de concevoir et développer CentralImmo, une plateforme d'agrégation et de déduplication d'annonces immobilières pour le marché camerounais. Au terme de ce travail, plusieurs des objectifs fixés en introduction ont été atteints. Le pipeline de collecte fonctionne sur trois sources dédiées (Mapiole, Kasastay et Ny\`e Ta Piole) et a permis d'agréger 265 annonces au moment de la r\'edaction. L'algorithme de d\'eduplication DCS a identifi\'e environ 14\,\% de doublons parmi ces annonces, tous intra-source \`a ce stade. L'API REST FastAPI est op\'erationnelle ; un test de charge de 100 requ\^etes a atteint un taux de r\'eussite de 100\,\%, avec un temps de r\'eponse moyen d'environ 0{,}77 seconde sur l'endpoint principal. Enfin, une application mobile Flutter a \'et\'e livr\'ee et est fonctionnelle, bien que certaines optimisations restent n\'ecessaires.
+
+La solution pr\'esente toutefois des limites qu'il convient de reconna\^itre. L'objectif initial de couvrir au moins trois sources a \'et\'e atteint, mais la troisi\`eme source (Ny\`e Ta Piole) n'a \'et\'e int\'egr\'ee qu'apr\`es la fin officielle du stage, le 16 juillet 2026, dans le cadre du prolongement du projet ; l'algorithme de d\'eduplication n'a pas encore pu \^etre valid\'e sur un volume important de doublons inter-sources. Le temps de r\'eponse de l'endpoint principal se situe au-dessus de l'objectif de 500\,ms fix\'e initialement, principalement en raison de l'absence de pagination. La couverture de tests automatis\'es reste partielle, limit\'ee aux endpoints API sans tests unitaires sur les modules de collecte et de d\'eduplication. Enfin, le seuil de fusion du DCS a \'et\'e fix\'e empiriquement, sans apprentissage supervis\'e sur un corpus \'etiquet\'e.
+
+Les perspectives sont claires : étendre la collecte à de nouvelles plateformes et aux réseaux sociaux informels (Facebook, WhatsApp), mettre en place une pagination côté serveur pour améliorer les temps de réponse, calibrer le seuil DCS par apprentissage supervisé sur un corpus étiqueté, et constituer une suite de tests automatisés complète.
+
+Ce stage confirme notre projet professionnel. La transformation de données brutes en information structurée, l'immersion en méthode agile chez SSH et notre contribution, encore modeste, à la centralisation de l'information immobilière camerounaise ont renforcé notre engagement dans la voie du développement logiciel appliqué au contexte local, et notre souhait de continuer dans cette direction après l'obtention de notre licence.

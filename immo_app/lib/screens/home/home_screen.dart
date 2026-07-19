@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shimmer/shimmer.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 
 import '../../l10n/app_localizations.dart';
 import '../../providers/providers.dart';
@@ -220,9 +221,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         onTap: (i) {
           switch (i) {
             case 0: context.go('/'); break;
-            case 1: context.go('/search'); break;
-            case 2: context.go('/favorites'); break;
-            case 3: context.go('/map'); break;
+            case 1: context.go('/favorites'); break;
+            case 2: context.go('/map'); break;
           }
         },
       ),
@@ -351,7 +351,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 },
               ),
             ),
-          // Loading / end indicator at the bottom
+          // Loading indicator at the bottom
           if (paginatorState.isLoadingMore)
             const Padding(
               padding: EdgeInsets.all(AppSpacing.xl),
@@ -361,13 +361,44 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 ),
               ),
             )
-          else if (!paginatorState.hasMore && remainingItems.isNotEmpty)
+          else if (paginatorState.hasMore)
             Padding(
               padding: const EdgeInsets.all(AppSpacing.xl),
               child: Center(
-                child: Text(
-                  l10n.homeSeenAll,
-                  style: AppTypography.bodySecondary,
+                child: PressableScale(
+                  onTap: () =>
+                      ref.read(annoncesPaginatorProvider.notifier).loadMore(),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: AppSpacing.xl,
+                      vertical: AppSpacing.md,
+                    ),
+                    decoration: BoxDecoration(
+                      color: AppColors.primaryLight,
+                      borderRadius: BorderRadius.circular(AppRadius.lg),
+                      border: Border.all(
+                        color: AppColors.primary.withOpacity(0.3),
+                        width: 0.5,
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(
+                          Icons.lock_open_rounded,
+                          size: 18,
+                          color: AppColors.primary,
+                        ),
+                        const SizedBox(width: AppSpacing.sm),
+                        Text(
+                          l10n.homeUnlockMore,
+                          style: AppTypography.titleSmall.copyWith(
+                            color: AppColors.primary,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
               ),
             ),
@@ -425,6 +456,8 @@ class _HomeHeader extends ConsumerWidget {
                 ),
               ),
               _ProfileButton(),
+              const SizedBox(width: AppSpacing.sm),
+              const _AuthAvatarButton(),
             ],
           ),
           const SizedBox(height: AppSpacing.xs),
@@ -648,7 +681,6 @@ class _CarouselSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context)!;
     return FadeInSlide(
       delay: Duration(milliseconds: delayMs),
       child: Column(
@@ -658,8 +690,6 @@ class _CarouselSection extends StatelessWidget {
             title: title,
             subtitle: subtitle,
             icon: icon,
-            actionLabel: l10n.commonSeeAll,
-            onAction: () => context.go('/search'),
           ),
           SizedBox(
             height: 240,
@@ -800,5 +830,126 @@ class _CarouselShimmer extends StatelessWidget {
         ),
       ),
     );
+  }
+}
+
+/// Auth-aware avatar button — shows user photo or a person icon.
+/// Navigates to /profile if signed in, /login if not.
+/// Shows a red badge if there are unread alerts.
+class _AuthAvatarButton extends ConsumerWidget {
+  const _AuthAvatarButton();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final user = ref.watch(authProvider);
+
+    return PressableScale(
+      onTap: () => context.go(user != null ? '/profile' : '/login'),
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          Container(
+            width: 44,
+            height: 44,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              gradient: user != null ? AppColors.primaryGradient : null,
+              color: user == null ? AppColors.surface : null,
+              border: user == null
+                  ? Border.all(color: AppColors.border, width: 0.5)
+                  : null,
+              boxShadow: AppColors.cardShadow,
+            ),
+            child: user != null
+                ? (user.photoUrl != null && user.photoUrl!.isNotEmpty
+                    ? ClipOval(
+                        child: CachedNetworkImage(
+                          imageUrl: user.photoUrl!,
+                          fit: BoxFit.cover,
+                          placeholder: (_, __) => Center(
+                            child: Text(
+                              (user.displayName?.isNotEmpty ?? false)
+                                  ? user.displayName![0].toUpperCase()
+                                  : (user.email?.isNotEmpty ?? false)
+                                      ? user.email![0].toUpperCase()
+                                      : '?',
+                              style: AppTypography.title
+                                  .copyWith(color: Colors.white),
+                            ),
+                          ),
+                          errorWidget: (_, __, ___) => Center(
+                            child: Text(
+                              (user.displayName?.isNotEmpty ?? false)
+                                  ? user.displayName![0].toUpperCase()
+                                  : (user.email?.isNotEmpty ?? false)
+                                      ? user.email![0].toUpperCase()
+                                      : '?',
+                              style: AppTypography.title
+                                  .copyWith(color: Colors.white),
+                            ),
+                          ),
+                        ),
+                      )
+                    : Center(
+                        child: Text(
+                          (user.displayName?.isNotEmpty ?? false)
+                              ? user.displayName![0].toUpperCase()
+                              : (user.email?.isNotEmpty ?? false)
+                                  ? user.email![0].toUpperCase()
+                                  : '?',
+                          style: AppTypography.title
+                              .copyWith(color: Colors.white),
+                        ),
+                      ))
+                : const Icon(Icons.person_outline_rounded,
+                    size: 22, color: AppColors.textSecondary),
+          ),
+          // Notification badge (best-effort)
+          Consumer(builder: (context, ref, _) {
+            final hasUnread = _hasUnreadAlerts(ref);
+            if (!hasUnread) return const SizedBox.shrink();
+            return Positioned(
+              right: -2,
+              top: -2,
+              child: Container(
+                width: 16,
+                height: 16,
+                decoration: const BoxDecoration(
+                  color: AppColors.error,
+                  shape: BoxShape.circle,
+                ),
+                child: const Center(
+                  child: Text('!',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 10,
+                        fontWeight: FontWeight.w700,
+                      )),
+                ),
+              ),
+            );
+          }),
+        ],
+      ),
+    );
+  }
+
+  bool _hasUnreadAlerts(WidgetRef ref) {
+    try {
+      final alerts = ref.watch(alertsProvider);
+      if (alerts.isEmpty) return false;
+      final prefs = ref.watch(prefsProvider).maybeWhen(
+            data: (p) => p,
+            orElse: () => null,
+          );
+      if (prefs == null) return false;
+      for (final alert in alerts) {
+        final lastCount = prefs.getInt('centralimmo:alert:${alert.id}:lastCount') ?? 0;
+        if (lastCount > 0) return true;
+      }
+      return false;
+    } catch (_) {
+      return false;
+    }
   }
 }

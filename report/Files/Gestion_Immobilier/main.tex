@@ -1,0 +1,340 @@
+% ═══════════════════════════════════════════════════════════════
+%  MÉMOIRE DE LICENCE PROFESSIONNELLE — CENTRAL-IMMO
+%  Université de Yaoundé I — Faculté des Sciences — ICT4D
+%  Année Académique 2025–2026
+%
+%  Compiler avec : pdfLaTeX (Overleaf recommandé)
+% ═══════════════════════════════════════════════════════════════
+
+\documentclass[12pt, a4paper]{report}
+
+% ─── Encodage et Langue ────────────────────────────────────
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[french]{babel}
+
+% ─── Polices ──────────────────────────────────────────────
+% Aucune police explicite n'est chargée : on conserve les polices
+% LaTeX par défaut (Computer Modern) avec encodage T1.
+
+% ─── Mise en page ──────────────────────────────────────────
+\usepackage{geometry}
+\geometry{
+ a4paper,
+ left=25mm,
+ right=25mm,
+ top=30mm,
+ bottom=25mm,
+ headheight=25pt,
+}
+\usepackage{setspace}
+\onehalfspacing
+
+% ─── Graphiques et Tableaux ────────────────────────────────
+\usepackage{graphicx}
+\graphicspath{ {./memoire/ressources/images/} {./images/} }
+\usepackage{float}
+\usepackage{caption}
+\usepackage{subcaption}
+\usepackage{pifont}
+\usepackage{booktabs}
+\usepackage{tabularx}
+\usepackage{multirow}
+\usepackage{array}
+
+% ─── TikZ (Moteur graphique) ──────────────────────────────
+\usepackage{tikz}
+\usetikzlibrary{
+  shapes.geometric, calc, positioning, arrows.meta,
+  trees, shadows, backgrounds, fit, patterns, fadings
+}
+
+% ─── Ornements décoratifs (page de garde uniquement) ──────
+\usepackage{pgfornament}
+
+% ─── Liens et Références ──────────────────────────────────
+\usepackage[hidelinks]{hyperref}
+\usepackage{csquotes}
+
+% ─── Code et Algorithmes ──────────────────────────────────
+\usepackage{listings}
+\usepackage[table]{xcolor}
+
+% ─── Styling Framework ────────────────────────────────────
+\usepackage{fancyhdr}
+\usepackage{tcolorbox}
+\tcbuselibrary{skins,breakable,theorems}
+
+% ─── Paquets supplémentaires ──────────────────────────────
+\usepackage{acronym}
+\usepackage{enumitem}
+\usepackage{amsmath,amssymb}
+\usepackage{etoolbox}
+\usepackage{url}
+
+% ═══════════════════════════════════════════════════════════════
+%  PALETTE DE COULEURS
+% ═══════════════════════════════════════════════════════════════
+
+% --- Couleur principale (vert) ---
+\definecolor{primaryGreen}{RGB}{0, 100, 60}
+
+% --- Couleurs neutres ---
+\definecolor{darkCharcoal}{RGB}{35, 31, 32}
+\definecolor{elegantGray}{RGB}{100, 100, 105}
+\definecolor{lightSilver}{RGB}{220, 218, 215}
+
+% --- Couleur tableaux (gris pour en-têtes) ---
+\definecolor{headergray}{gray}{0.85}
+
+% --- Couleurs CentralImmo (diagrammes main2.tex) ---
+\definecolor{ciGreen}{HTML}{00695C}
+\definecolor{ciGreenLight}{HTML}{E0F2F1}
+\definecolor{ciGold}{HTML}{D4AF37}
+\definecolor{ciGoldLight}{HTML}{FCF8E3}
+\definecolor{ciDark}{HTML}{212121}
+\definecolor{ciLightGray}{HTML}{F5F5F5}
+\definecolor{ciBorder}{HTML}{757575}
+\definecolor{ciRed}{HTML}{C62828}
+\definecolor{ciBlue}{HTML}{1976D2}
+
+% ═══════════════════════════════════════════════════════════════
+%  DÉCORATEUR DE CHAPITRE — fncychap style Glenn
+% ═══════════════════════════════════════════════════════════════
+\usepackage[Glenn]{fncychap}
+\ChNameVar{\bfseries\Large\color{black}}
+\ChNumVar{\bfseries\Huge\color{black}}
+\ChTitleVar{\centering\bfseries\Large\color{black}}
+
+% Réduction de l'espace haut des chapitres (Glenn fncychap)
+\makeatletter
+\patchcmd{\@makechapterhead}{\vspace*{50\p@}}{\vspace*{-30\p@}}{}{}
+\patchcmd{\@makeschapterhead}{\vspace*{50\p@}}{\vspace*{-30\p@}}{}{}
+\makeatother
+
+% ─── Sections & subsections — titlesec (titres en NOIR) ─────
+\usepackage{titlesec}
+\titleformat{\section}
+  {\normalfont\large\bfseries\color{black}}
+  {\thesection}{0.8em}
+  {}
+\titleformat{\subsection}
+  {\normalfont\normalsize\bfseries\color{black}}
+  {\thesubsection}{0.8em}
+  {}
+\titleformat{\subsubsection}
+  {\normalfont\normalsize\bfseries\itshape\color{black}}
+  {\thesubsubsection}{0.8em}
+  {}
+\titleformat{\paragraph}
+  {\normalfont\normalsize\bfseries\color{black}}
+  {}{0em}
+  {}
+\titlespacing*{\paragraph}{0pt}{2.5ex plus 1ex minus .2ex}{1ex plus .2ex}
+
+% ─── En-tête / Pied de page ───────────────────────────────
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{\small\textit{\nouppercase{\leftmark}}}
+\fancyhead[R]{\small\textbf{\thepage}}
+\renewcommand{\headrulewidth}{0pt}
+
+\fancypagestyle{plain}{
+  \fancyhf{}
+  \fancyfoot[C]{\small\thepage}
+  \renewcommand{\headrulewidth}{0pt}
+}
+
+% ═══════════════════════════════════════════════════════════════
+%  TCOLORBOX — ENCADRÉS
+% ═══════════════════════════════════════════════════════════════
+\newtcolorbox{defbox}[1][]{%
+  enhanced,
+  colback=white,
+  colframe=primaryGreen,
+  coltitle=white,
+  fonttitle=\bfseries,
+  title=#1,
+  attach boxed title to top left={yshift=-2mm, xshift=4mm},
+  boxed title style={colback=primaryGreen, rounded corners},
+  rounded corners,
+  boxrule=0.6pt,
+  breakable
+}
+
+\newtcolorbox{importbox}{%
+  enhanced,
+  colback=white,
+  colframe=primaryGreen,
+  left=12pt,
+  right=12pt,
+  top=8pt,
+  bottom=8pt,
+  boxrule=0pt,
+  borderline west={2pt}{0pt}{primaryGreen},
+  fontupper=\small,
+  breakable
+}
+
+% ═══════════════════════════════════════════════════════════════
+%  TIKZ STYLES — diagrammes (clean_tikz + main2.tex)
+% ═══════════════════════════════════════════════════════════════
+\tikzset{
+  font=\sffamily,
+  >=Stealth,
+  % --- Styles clean_tikz ---
+  compBlue/.style={draw=blue!80!black, fill=blue!5},
+  compOrange/.style={draw=orange!80!black, fill=orange!5},
+  compGreen/.style={draw=primaryGreen, fill=primaryGreen!5},
+  compPurple/.style={draw=purple!80!black, fill=purple!5},
+  comp/.style={rectangle, thick, rounded corners=4pt,
+               minimum width=3cm, minimum height=1.2cm, align=center, compBlue},
+  db/.style={cylinder, thick, aspect=0.25,
+             minimum width=2.5cm, minimum height=3cm, align=center,
+             shape border rotate=90, compBlue},
+  diamondShape/.style={diamond, aspect=2, thick, align=center,
+                       inner sep=2pt, compOrange},
+  group/.style={rectangle, draw=gray!40, fill=gray!5, dashed,
+                rounded corners=8pt, inner sep=15pt},
+  flow/.style={->, thick, gray!80!black},
+  lbl/.style={fill=white, font=\scriptsize\sffamily, inner sep=2pt,
+              text=gray!80!black, align=center},
+  % --- Styles main2.tex (architecture) ---
+  base-node/.style={
+    draw=ciDark, line width=0.8pt, rounded corners=4px,
+    font=\small\sffamily, align=center, fill=white,
+    inner sep=6pt, drop shadow={opacity=0.12, shadow xshift=1pt, shadow yshift=-1.2pt}
+  },
+  node-green/.style={base-node, draw=ciGreen, fill=ciGreenLight, text=ciDark},
+  node-gold/.style={base-node, draw=ciGold!80!black, fill=ciGoldLight, text=ciDark},
+  node-white/.style={base-node, draw=ciBorder, fill=white, text=ciDark},
+  node-red/.style={base-node, draw=ciRed, fill=ciRed!8, text=ciDark},
+  node-blue/.style={base-node, draw=ciBlue, fill=ciBlue!10, text=ciDark},
+  flow-arrow/.style={-Stealth, line width=0.9pt, draw=ciDark},
+  flow-arrow-dashed/.style={-Stealth, line width=0.9pt, draw=ciGreen, dashed},
+  flow-arrow-gold/.style={-Stealth, line width=1.1pt, draw=ciGold!80!black},
+  label-style/.style={font=\scriptsize\sffamily, fill=white, inner sep=1.5pt, text=ciDark},
+  group-box/.style={
+    draw=ciBorder, dotted, line width=0.8pt, rounded corners=6px,
+    fill=none, inner sep=8pt
+  },
+  group-box-green/.style={
+    draw=ciGreen, dashed, line width=0.8pt, rounded corners=6px,
+    fill=none, inner sep=8pt
+  }
+}
+
+% ═══════════════════════════════════════════════════════════════
+%  LISTINGS — CODE
+% ═══════════════════════════════════════════════════════════════
+\lstdefinestyle{premiumcode}{
+  backgroundcolor=\color{white},
+  basicstyle=\ttfamily\small,
+  keywordstyle=\color{primaryGreen}\bfseries,
+  commentstyle=\color{elegantGray}\itshape,
+  stringstyle=\color{elegantGray},
+  numbers=left,
+  numberstyle=\tiny\color{lightSilver},
+  numbersep=8pt,
+  frame=l,
+  framerule=1.5pt,
+  rulecolor=\color{primaryGreen},
+  breaklines=true,
+  showstringspaces=false,
+  tabsize=2
+}
+\lstset{style=premiumcode}
+
+% ═══════════════════════════════════════════════════════════════
+%  CAPTION STYLING — figures en dessous, tableaux au-dessus
+% ═══════════════════════════════════════════════════════════════
+\captionsetup{
+  font={small},
+  labelfont={bf,color=black},
+  textfont={color=black},
+  format=hang,
+  margin=15pt
+}
+
+% ═══════════════════════════════════════════════════════════════
+%  CONFIGURATION DES LISTES
+% ═══════════════════════════════════════════════════════════════
+\setlist[itemize]{
+  label=\textbullet,
+  leftmargin=1.2cm,
+  itemsep=2pt
+}
+\setlist[enumerate]{
+  label=\arabic*.,
+  leftmargin=1.2cm,
+  itemsep=2pt
+}
+
+% ═══════════════════════════════════════════════════════════════
+%  HYPERREF CONFIG
+% ═══════════════════════════════════════════════════════════════
+\hypersetup{
+  colorlinks=true,
+  linkcolor=primaryGreen,
+  citecolor=primaryGreen,
+  urlcolor=primaryGreen,
+  pdftitle={CENTRAL-IMMO --- Mémoire de Licence Professionnelle},
+  pdfauthor={Azebaze B. Aurel Bryan, Azefack F. Kelcy, Mangouo Jacky Victoire},
+  pdfsubject={Plateforme d'Agrégation de Données Immobilières},
+}
+
+% ═══════════════════════════════════════════════════════════════
+%  GUILLEMETS FRANÇAIS (compatibilité)
+% ═══════════════════════════════════════════════════════════════
+\providecommand{\og}{\guillemotleft\nobreak\hspace{0.1em}}
+\providecommand{\fg}{\nobreak\hspace{0.1em}\guillemotright}
+
+% ═══════════════════════════════════════════════════════════════
+%  DÉBUT DU DOCUMENT
+% ═══════════════════════════════════════════════════════════════
+
+\begin{document}
+
+% ─────────────────────────────────────────────────────────────
+%  PARTIE I : PAGES LIMINAIRES — numérotation romaine minuscule
+% ─────────────────────────────────────────────────────────────
+\pagenumbering{roman}
+
+\input{memoire/page_de_garde}
+
+\input{frontmatter/remerciements}
+\input{frontmatter/resume}
+\input{frontmatter/abreviations}
+
+\tableofcontents
+\cleardoublepage
+
+% ─── Liste des figures ─────────────────────────────────────
+\listoffigures
+\addcontentsline{toc}{chapter}{Liste des figures}
+\cleardoublepage
+
+% ─── Liste des tableaux ────────────────────────────────────
+\listoftables
+\addcontentsline{toc}{chapter}{Liste des tableaux}
+\cleardoublepage
+
+% ─────────────────────────────────────────────────────────────
+%  PARTIE II : CORPS DU TEXTE — numérotation arabe
+% ─────────────────────────────────────────────────────────────
+\pagenumbering{arabic}
+
+\input{memoire/section_principal/0_introduction}
+
+\input{memoire/section_principal/1_structure_de_stage}
+\input{memoire/section_principal/2_travaux_realises}
+\input{memoire/section_principal/3_bilan_et_apports}
+\input{memoire/section_principal/6_conclusion_general}
+
+% ─────────────────────────────────────────────────────────────
+%  ANNEXES & BIBLIOGRAPHIE
+% ─────────────────────────────────────────────────────────────
+\input{memoire/annexes}
+\input{biblio/bibliography}
+
+\end{document}

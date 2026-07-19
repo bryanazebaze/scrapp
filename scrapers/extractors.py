@@ -43,6 +43,9 @@ def _extract_jsonld_node(node: dict) -> dict:
     else:
         node_types = set()
 
+    if node_types and not node_types & _SCHEMA_TYPES:
+        return out
+
     if node.get("name"):
         out["title"] = str(node["name"])
     if node.get("description"):

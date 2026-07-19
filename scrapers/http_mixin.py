@@ -151,6 +151,7 @@ class BaseFetchMixin:
         if not self._robots_allows(url):
             print(f"[fetch] robots.txt disallows {url} — skipping")
             return None
+        self._polite_sleep()
         headers = {}
         if referer:
             headers["Referer"] = referer

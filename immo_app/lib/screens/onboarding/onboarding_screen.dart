@@ -35,14 +35,14 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
         title: l10n.onboardingPage2Title,
         subtitle: l10n.onboardingPage2Subtitle,
         description: l10n.onboardingPage2Description,
-        gradient: [const Color(0xFF6366F1), const Color(0xFF8B5CF6)],
+        gradient: [const Color(0xFFD97706), const Color(0xFFE8A53A)],
       ),
       _OnboardingPage(
         icon: Icons.search_rounded,
         title: l10n.onboardingPage3Title,
         subtitle: l10n.onboardingPage3Subtitle,
         description: l10n.onboardingPage3Description,
-        gradient: [const Color(0xFF10B981), const Color(0xFF14B8A6)],
+        gradient: [const Color(0xFF1F8A4C), const Color(0xFF3FA866)],
       ),
     ];
   }

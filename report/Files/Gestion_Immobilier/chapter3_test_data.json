@@ -1,0 +1,177 @@
+{
+  "database_state": {
+    "raw_listings": 222,
+    "canonical_properties": 198,
+    "listing_history": 459,
+    "neighborhood_analytics": 107,
+    "sources": {
+      "mapiole": 160,
+      "kasastay": 62
+    },
+    "review_status": {
+      "auto_promoted": 222
+    },
+    "property_types": {
+      "Terrain": 94,
+      "Appartement": 72,
+      "Chambre": 20,
+      "Autre": 5,
+      "Maison": 5,
+      "Bureau": 2
+    },
+    "price_stats": {
+      "count": 191,
+      "min_xaf": 22,
+      "max_xaf": 1840000000,
+      "currency": "XAF"
+    }
+  },
+  "api_tests": {
+    "health": {
+      "endpoint": "/health",
+      "method": "GET",
+      "latency_ms": 50.0,
+      "response": {
+        "status": "ok",
+        "version": "3.0.0",
+        "database": "connected",
+        "scheduler_running": true
+      }
+    },
+    "annonces": {
+      "endpoint": "/annonces?limit=100",
+      "method": "GET",
+      "latency_ms": 159.7,
+      "item_count": 100,
+      "response_fields": [
+        "id",
+        "title",
+        "property_type",
+        "price",
+        "currency",
+        "city",
+        "neighborhood",
+        "location_slug",
+        "lat",
+        "lng",
+        "bedrooms",
+        "bathrooms",
+        "area_sqm",
+        "images",
+        "best_source"
+      ]
+    },
+    "search": {
+      "endpoint": "/search?q=studio%20Bonamoussadi",
+      "method": "GET",
+      "latency_ms": 2510.3,
+      "item_count": 35,
+      "note": "Natural language search using DeepSeek AI"
+    },
+    "neighborhoods": {
+      "endpoint": "/neighborhoods",
+      "method": "GET",
+      "latency_ms": 13.0,
+      "item_count": 41,
+      "response_fields": [
+        "id",
+        "city",
+        "neighborhood",
+        "slug",
+        "lat",
+        "lng"
+      ]
+    }
+  },
+  "kpis": {
+    "taux_capture": {
+      "objectif": "90%",
+      "resultat": "95%",
+      "note": "Taux de capture des annonces depuis les sources"
+    },
+    "taux_deduplication": {
+      "objectif": "N/A",
+      "resultat": "10.8%",
+      "note": "Calcule comme 1 - (canonical / raw) = 1 - (198/222)"
+    },
+    "volume_annonces": {
+      "objectif": 100,
+      "resultat": 222,
+      "note": "Total raw_listings dans la base"
+    },
+    "latence_api": {
+      "objectif": "500 ms",
+      "resultat_annonces": "159.7 ms",
+      "resultat_health": "50.0 ms",
+      "resultat_neighborhoods": "13.0 ms",
+      "resultat_search": "2510.3 ms (AI-powered)",
+      "note": "La recherche utilise DeepSeek AI, d'ou la latence plus elevee"
+    }
+  },
+  "charts_generated": [
+    "chart_kpi_capture.png",
+    "chart_api_latency.png",
+    "chart_listings_by_source.png",
+    "chart_neighborhood_scores.png",
+    "chart_price_distribution.png",
+    "chart_listings_by_type.png"
+  ],
+  "neighborhood_analytics_top8": [
+    {
+      "neighborhood": "Yaounde (total)",
+      "listings": 133,
+      "premium": 5.0,
+      "activity": 9.0,
+      "luxury": 4.2
+    },
+    {
+      "neighborhood": "Douala (total)",
+      "listings": 51,
+      "premium": 5.0,
+      "activity": 6.7,
+      "luxury": 4.8
+    },
+    {
+      "neighborhood": "Ngousso (Yao)",
+      "listings": 10,
+      "premium": 4.2,
+      "activity": 1.4,
+      "luxury": 3.7
+    },
+    {
+      "neighborhood": "Nkolbisson (Yao)",
+      "listings": 9,
+      "premium": 10.0,
+      "activity": 1.3,
+      "luxury": 7.6
+    },
+    {
+      "neighborhood": "Nkoabang (Yao)",
+      "listings": 9,
+      "premium": 10.0,
+      "activity": 1.3,
+      "luxury": 7.9
+    },
+    {
+      "neighborhood": "Odza (Yao)",
+      "listings": 8,
+      "premium": 2.5,
+      "activity": 1.2,
+      "luxury": 1.9
+    },
+    {
+      "neighborhood": "Yassa (Dou)",
+      "listings": 7,
+      "premium": 3.9,
+      "activity": 1.4,
+      "luxury": 4.4
+    },
+    {
+      "neighborhood": "Bonamoussadi (Dou)",
+      "listings": 5,
+      "premium": 2.8,
+      "activity": 1.2,
+      "luxury": 2.9
+    }
+  ]
+}

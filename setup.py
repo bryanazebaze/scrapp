@@ -336,7 +336,7 @@ def cmd_info(args: argparse.Namespace) -> None:
             print(f"  API_PORT:      {settings.api_port}")
             print(f"  CORS_ORIGINS:  {settings.cors_origins}")
             print(f"  LOG_LEVEL:     {settings.log_level}")
-            print(f"  DASHSCOPE_KEY: {'configured' if settings.dashscope_api_key else 'not set'}")
+            print(f"  DEEPSEEK_KEY:  {'configured' if settings.deepseek_api_key else 'not set'}")
         except Exception as e:
             print(f"  [Error reading settings: {e}]")
 

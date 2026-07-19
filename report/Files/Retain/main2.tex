@@ -1,0 +1,866 @@
+% --------------------------------------------------------------------- %
+%  CentralImmo -- Fichier de diagrammes TikZ autonomes pour le mémoire
+%  Spécialement configuré pour compiler sur Overleaf en pdflatex
+%  Couleurs thématiques : Vert Émeraude (#00695C) et Or Premium (#D4AF37)
+% --------------------------------------------------------------------- %
+
+\documentclass[11pt,a4paper]{report}
+
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[french]{babel} % Gère les accents français nativement
+\usepackage[margin=1.8cm,top=2cm,bottom=2cm]{geometry}
+\usepackage{xcolor}
+\usepackage{tikz}
+\usepackage{caption}
+\usepackage{float}
+\usepackage{enumitem}
+
+% Bibliothèques TikZ standard complètes
+\usetikzlibrary{positioning, arrows.meta, shapes.geometric, fit, calc, shadows, decorations.pathreplacing, backgrounds}
+
+% --- Palette de Couleurs CentralImmo ---
+\definecolor{ciGreen}{HTML}{00695C}       % Vert Émeraude (Principal)
+\definecolor{ciGreenLight}{HTML}{E0F2F1}  % Vert très clair pour les fonds
+\definecolor{ciGold}{HTML}{D4AF37}        % Or Premium (Secondaire)
+\definecolor{ciGoldLight}{HTML}{FCF8E3}   % Or très clair pour les alertes
+\definecolor{ciDark}{HTML}{212121}        % Gris très foncé (presque noir) pour le texte
+\definecolor{ciLightGray}{HTML}{F5F5F5}   % Gris clair pour les conteneurs généraux
+\definecolor{ciBorder}{HTML}{757575}      % Gris pour les bordures secondaires
+\definecolor{ciRed}{HTML}{C62828}         % Rouge discret pour le rejet
+\definecolor{ciBlue}{HTML}{1976D2}        % Bleu discret pour la recherche
+
+% Styles TikZ globaux réutilisables (Optimisés pour éviter les masquages et chevauchements)
+\tikzset{
+  % Noeuds de base
+  base-node/.style={
+    draw=ciDark, line width=0.8pt, rounded corners=4px,
+    font=\small\sffamily, align=center, fill=white,
+    inner sep=6pt, drop shadow={opacity=0.12, shadow xshift=1pt, shadow yshift=-1.2pt}
+  },
+  % Noeuds colorés par rôle
+  node-green/.style={base-node, draw=ciGreen, fill=ciGreenLight, text=ciDark},
+  node-gold/.style={base-node, draw=ciGold!80!black, fill=ciGoldLight, text=ciDark},
+  node-white/.style={base-node, draw=ciBorder, fill=white, text=ciDark},
+  node-red/.style={base-node, draw=ciRed, fill=ciRed!8, text=ciDark},
+  node-blue/.style={base-node, draw=ciBlue, fill=ciBlue!10, text=ciDark},
+  % Flèches de flux
+  flow-arrow/.style={-Stealth, line width=0.9pt, draw=ciDark},
+  flow-arrow-dashed/.style={-Stealth, line width=0.9pt, draw=ciGreen, dashed},
+  flow-arrow-gold/.style={-Stealth, line width=1.1pt, draw=ciGold!80!black},
+  % Textes sur les flèches
+  label-style/.style={font=\scriptsize\sffamily, fill=white, inner sep=1.5pt, text=ciDark},
+  % Conteneurs en fond (Remplissage retiré pour éviter de cacher le texte sous Overleaf)
+  group-box/.style={
+    draw=ciBorder, dotted, line width=0.8pt, rounded corners=6px,
+    fill=none, inner sep=8pt
+  },
+  group-box-green/.style={
+    draw=ciGreen, dashed, line width=0.8pt, rounded corners=6px,
+    fill=none, inner sep=8pt
+  }
+}
+
+\begin{document}
+
+\title{\bfseries Recueil de Diagrammes Conceptuels et Techniques \\ \large Projet CentralImmo (Agrégateur Immobilier)}
+\author{Bryan Azebaze}
+\date{Soutenance de Licence Professionnelle -- Génie Logiciel}
+\maketitle
+
+\thispagestyle{empty}
+\newpage
+
+\chapter*{Introduction et Guide d'intégration}
+Ce document propose **quinze diagrammes** représentatifs de la plateforme **CentralImmo** codés entièrement en TikZ. 
+Tous les diagrammes ont été optimisés pour tenir dans la largeur d'une page A4 classique et éviter les chevauchements ou les boîtes opaques vides constatés lors de compilations LaTeX basiques.
+
+\paragraph{Recommandation essentielle :} 
+Pour que les fonds transparents et les regroupements s'affichent correctement, ajoutez bien \texttt{backgrounds} dans vos librairies TikZ de votre document principal :
+\begin{verbatim}
+\usetikzlibrary{positioning, arrows.meta, shapes.geometric, fit, calc, shadows, backgrounds}
+\end{verbatim}
+
+\newpage
+
+% ================================================================== %
+% DIAGRAMME 1 : ARCHITECTURE DU SYSTEME (CORRIGÉ & LINÉAIRE)
+% ================================================================== %
+\section*{Diagramme 1 : Architecture globale du système (Flux vertical)}
+\label{diag:architecture}
+Ce schéma montre le flux logique vertical : de la collecte à la diffusion finale.
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}[node distance=8mm and 8mm, scale=0.95, every node/.style={scale=0.95}]
+
+  % --- Plan Collecte (Scrapers) ---
+  \node[node-gold] (mapiole) {Scraper Dédié\\Mapiole (Python)};
+  \node[node-gold, right=8mm of mapiole] (kasastay) {Scraper Dédié\\Kasastay (Python)};
+  \node[node-gold, right=8mm of kasastay] (universal) {Scraper Universel\\(Heuristiques)};
+
+  % --- Plan Application (API - FastAPI) ---
+  \node[node-green, below=15mm of kasastay, text width=6cm] (fastapi) {
+    \textbf{Serveur Backend (FastAPI)}\\
+    \footnotesize
+    $\bullet$ Ingestion \& déduplication (DCS)\\
+    $\bullet$ API de recherche naturelle \& isochrone
+  };
+
+  % --- Plan Persistance (Base de données) ---
+  \node[node-white, right=12mm of fastapi, text width=4.5cm] (db) {
+    \textbf{Base PostgreSQL}\\
+    \color{ciDark}\scriptsize
+    $\bullet$ \texttt{raw\_listings}\\
+    $\bullet$ \texttt{canonical\_properties}\\
+    $\bullet$ \texttt{listing\_history}\\
+    $\bullet$ \texttt{locations}
+  };
+
+  % --- Plan Présentation (Client Mobile Flutter) ---
+  \node[node-blue, below=15mm of fastapi, text width=5cm] (client) {
+    \textbf{Application Mobile (Flutter)}\\
+    \footnotesize Interface unifiée sans logo de source en page d'accueil (Modèle Trivago)
+  };
+
+  % --- Groupes (Fonds transparents dessinés sur le calque de fond) ---
+  \begin{scope}[on background layer]
+    \node[group-box, fit=(mapiole) (kasastay) (universal), label={[font=\footnotesize\bfseries\sffamily, text=ciGold!80!black]above:1. PHASE DE COLLECTE ET EXTRACTION}] (box-collecte) {};
+  \end{scope}
+
+  % --- Liaisons ---
+  \draw[flow-arrow] (mapiole.south) -- ++(0,-4mm) -| ([xshift=-1.5cm]fastapi.north);
+  \draw[flow-arrow] (kasastay.south) -- (fastapi.north);
+  \draw[flow-arrow] (universal.south) -- ++(0,-4mm) -| ([xshift=1.5cm]fastapi.north);
+
+  \draw[flow-arrow, draw=ciGreen, line width=1.1pt] (fastapi) -- node[label-style, above] {SQL} (db);
+  \draw[flow-arrow, draw=ciBlue, line width=1.1pt] (client) -- node[label-style, right] {HTTP Get / Search} (fastapi);
+  \draw[flow-arrow-dashed, draw=ciBlue] (fastapi.south west) -- node[label-style, left] {JSON Response} (client.north west);
+
+\end{tikzpicture}
+\caption{Architecture globale de récupération, de stockage et de distribution.}
+\end{figure}
+
+\newpage
+
+% ================================================================== %
+% DIAGRAMME 2 : CAS D'UTILISATION (RÉSOLU - SANS FOND BLANC MASQUANT)
+% ================================================================== %
+\section*{Diagramme 2 : Cas d'utilisation global et Acteurs}
+\label{diag:usecase}
+Représentation simplifiée des interactions des acteurs clés avec la plateforme.
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}[node distance=8mm and 15mm, scale=0.9, every node/.style={scale=0.9}]
+
+  % --- Acteurs ---
+  \node[align=center] (user) {
+    \begin{tikzpicture}[scale=0.5]
+      \draw[fill=white, line width=0.8pt] (0,1) circle (0.25);
+      \draw[line width=0.8pt] (0,0.75) -- (0,0);
+      \draw[line width=0.8pt] (-0.35,0.45) -- (0.35,0.45);
+      \draw[line width=0.8pt] (0,0) -- (-0.25,-0.5);
+      \draw[line width=0.8pt] (0,0) -- (0.25,-0.5);
+    \end{tikzpicture}\\
+    \small Utilisateur Final\\(Chercheur de logement)
+  };
+
+  \node[align=center, right=8cm of user] (admin) {
+    \begin{tikzpicture}[scale=0.5]
+      \draw[fill=white, line width=0.8pt] (0,1) circle (0.25);
+      \draw[line width=0.8pt] (0,0.75) -- (0,0);
+      \draw[line width=0.8pt] (-0.35,0.45) -- (0.35,0.45);
+      \draw[line width=0.8pt] (0,0) -- (-0.25,-0.5);
+      \draw[line width=0.8pt] (0,0) -- (0.25,-0.5);
+    \end{tikzpicture}\\
+    \small Administrateur SSH\\(Modérateur technique)
+  };
+
+  % --- Cas d'utilisation ---
+  \node[node-green, right=1.6cm of user, yshift=2.2cm, text width=3.5cm] (uc1) {Rechercher par critères};
+  \node[node-green, right=1.6cm of user, yshift=0.7cm, text width=3.5cm] (uc2) {Comparer les offres (Trivago)};
+  \node[node-green, right=1.6cm of user, yshift=-0.7cm, text width=3.5cm] (uc3) {Recherche par temps de trajet};
+  \node[node-green, right=1.6cm of user, yshift=-2.2cm, text width=3.5cm] (uc4) {Consulter les tendances prix};
+
+  \node[node-gold, left=1.6cm of admin, yshift=1cm, text width=3.5cm] (uc5) {Valider/Modérer les annonces};
+  \node[node-gold, left=1.6cm of admin, yshift=-1cm, text width=3.5cm] (uc6) {Superviser les scrapers};
+
+  % Frontière de l'Application (fill=none pour ne pas masquer les ellipses)
+  \begin{scope}[on background layer]
+    \node[group-box, fit=(uc1) (uc2) (uc3) (uc4) (uc5) (uc6), label={[font=\small\bfseries\sffamily, text=ciGreen]above:SERVICES DE L'APPLICATION CENTRALIMMO}] (system-boundary) {};
+  \end{scope}
+
+  % Connecteurs
+  \draw[flow-arrow] (user) -- (uc1);
+  \draw[flow-arrow] (user) -- (uc2);
+  \draw[flow-arrow] (user) -- (uc3);
+  \draw[flow-arrow] (user) -- (uc4);
+
+  \draw[flow-arrow-gold] (admin) -- (uc5);
+  \draw[flow-arrow-gold] (admin) -- (uc6);
+
+\end{tikzpicture}
+\caption{Diagramme de cas d'utilisation (Limite du système en pointillés transparents).}
+\end{figure}
+
+\newpage
+
+% ================================================================== %
+% DIAGRAMME 3 : MODELE TRIVAGO STYLE (EDITIONS ET COMPRESSIONS)
+% ================================================================== %
+\section*{Diagramme 3 : Modèle de Déduplication Comparatif (Modèle Trivago)}
+\label{diag:trivago}
+Ce schéma illustre la fusion de plusieurs annonces vers une unique super-annonce référente.
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}[node distance=8mm, scale=0.9, every node/.style={scale=0.9}]
+
+  % --- Annonces Sources Originales ---
+  \node[node-white, text width=4cm] (src1) {
+    \textbf{Kasastay (Source 1)}\\
+    \scriptsize
+    $\bullet$ Titre: "Studio meublé Akwa"\\
+    $\bullet$ Prix: \textbf{45 000 FCFA/nuit}
+  };
+
+  \node[node-white, below=4mm of src1, text width=4cm] (src2) {
+    \textbf{Mapiole (Source 2)}\\
+    \scriptsize
+    $\bullet$ Titre: "Studio Moderne Akwa"\\
+    $\bullet$ Prix: \textbf{50 000 FCFA/nuit}
+  };
+
+  \node[node-white, below=4mm of src2, text width=4cm] (src3) {
+    \textbf{Universal (Source 3)}\\
+    \scriptsize
+    $\bullet$ Titre: "Superbe Studio Akwa"\\
+    $\bullet$ Prix: \textbf{43 000 FCFA/nuit}
+  };
+
+  % --- Étape Déduplication / Ingestion (FastAPI) ---
+  \node[node-gold, right=1.6cm of src2, text width=3cm] (fusion) {
+    \textbf{Pipeline de Fusion}\\
+    \footnotesize
+    Calcul DCS $\approx$ 91\%\\
+    (Lieu et Titre similaires)
+  };
+
+  % --- Super Annonce Canonique ---
+  \node[node-green, right=1.6cm of fusion, text width=5cm] (canonical) {
+    \textbf{SUPER-ANNONCE (Unique)}\\
+    \small
+    \textbf{Studio meublé moderne à Akwa}\\
+    \color{ciGreen}\textbf{Meilleur Prix : 43 000 FCFA / nuit}\\
+    \color{ciDark}\scriptsize
+    $\bullet$ Photos agrégées sans doublon\\
+    \color{ciBorder}\rule{\linewidth}{0.3pt}\\
+    \color{ciDark}\textbf{Autres Offres liées :}\\
+    - Kasastay : 45 000 FCFA\\
+    - Mapiole : 50 000 FCFA
+  };
+
+  % --- Connecteurs ---
+  \draw[flow-arrow] (src1.east) -- (fusion.west);
+  \draw[flow-arrow] (src2.east) -- (fusion.west);
+  \draw[flow-arrow] (src3.east) -- (fusion.west);
+
+  \draw[flow-arrow, draw=ciGreen, line width=1.3pt] (fusion.east) -- node[label-style, above] {Génère} (canonical.west);
+
+  % Représentation visuelle des liens
+  \draw[flow-arrow-dashed, draw=ciGreen, bend right=20] (canonical.south west) to  (src1.south east);
+  \draw[flow-arrow-dashed, draw=ciGreen] (canonical.west) to (src2.east);
+  \draw[flow-arrow-dashed, draw=ciGreen, bend left=20] (canonical.north west) to (src3.north east);
+
+\end{tikzpicture}
+\caption{Processus Trivago de regroupement d'offres immobilières équivalentes.}
+\end{figure}
+
+\newpage
+
+% ================================================================== %
+% DIAGRAMME 4 : DCS WEIGHTS / PONDÉRATIONS
+% ================================================================== %
+\section*{Diagramme 4 : Algorithme DCS (Duplicate Confidence Score)}
+\label{diag:dcs}
+Pondérations intégrées dans l'évaluation d'un doublon entre un brouillon et une annonce référente.
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}[scale=0.9, every node/.style={scale=0.9}]
+
+  % --- Facteurs de Scoring ---
+  \node[node-white, font=\scriptsize\sffamily, text width=4.2cm] (f1)  {Similitude du Titre (Token ratio)};
+  \node[node-white, font=\scriptsize\sffamily, text width=4.2cm, below=3mm of f1] (f2)  {Proximité du Prix ($\pm15$\%)};
+  \node[node-white, font=\scriptsize\sffamily, text width=4.2cm, below=3mm of f2] (f3)  {Type de bien (Villa, Studio...)};
+  \node[node-white, font=\scriptsize\sffamily, text width=4.2cm, below=3mm of f3] (f4)  {Surface en m² (Tolérance 15\%)};
+  \node[node-white, font=\scriptsize\sffamily, text width=4.2cm, below=3mm of f4] (f5)  {Nb Chambres (Comparaison exacte)};
+  \node[node-white, font=\scriptsize\sffamily, text width=4.2cm, below=3mm of f5] (f6)  {Géolocalisation résolue};
+  \node[node-white, font=\scriptsize\sffamily, text width=4.2cm, below=3mm of f6] (f7)  {Image overlap (MD5)};
+
+  % --- Poids des coefficients ---
+  \node[node-gold, right=1.5cm of f1] (p1) {Poids : 30\%};
+  \node[node-gold, right=1.5cm of f2] (p2) {Poids : 20\%};
+  \node[node-gold, right=1.5cm of f3] (p3) {Poids : 15\%};
+  \node[node-gold, right=1.5cm of f4] (p4) {Poids : 15\%};
+  \node[node-gold, right=1.5cm of f5] (p5) {Poids : 10\%};
+  \node[node-gold, right=1.5cm of f6] (p6) {Poids : 5\%};
+  \node[node-gold, right=1.5cm of f7] (p7) {Poids : 5\%};
+
+  % --- Bloc Sommateur ---
+  \node[node-green, shape=circle, right=1.5cm of p4, inner sep=4pt] (sum) {\textbf{Somme \\ Pondérée}};
+
+  % --- Verdict final ---
+  \node[node-green, right=1.5cm of sum, xshift=10pt, yshift=1.2cm, text width=2.6cm] (conf) {\textbf{Match Confirmé}\\Score $\ge 85\%$};
+  \node[node-gold, right=1.5cm of sum, xshift=10pt, text width=2.6cm] (prob) {\textbf{Match Probable}\\ $65\% \le$ Score $< 85\%$};
+  \node[node-red, right=1.5cm of sum, xshift=10pt, yshift=-1.2cm, text width=2.6cm] (newp) {\textbf{Nouvelle Fiche}\\Score $< 65\%$};
+
+  % --- Liaisons ---
+  \foreach \i in {1,...,7} {
+    \draw[flow-arrow] (f\i) -- (p\i);
+    \draw[flow-arrow, draw=ciGold] (p\i.east) -- (sum.west);
+  }
+  
+  \draw[flow-arrow, draw=ciGreen] (sum.east) -- (conf.west);
+  \draw[flow-arrow, draw=ciGold] (sum.east) -- (prob.west);
+  \draw[flow-arrow, draw=ciRed] (sum.east) -- (newp.west);
+
+\end{tikzpicture}
+\caption{Algorithme de calcul du coefficient de similitude DCS.}
+\end{figure}
+
+\newpage
+
+% ================================================================== %
+% DIAGRAMME 5 : STRUCTURE DE DONNEES (COMPRIS PAR LE JURY)
+% ================================================================== %
+\section*{Diagramme 5 : Structure des données SQL (MCD Simplifié)}
+\label{diag:mcd}
+Ce diagramme montre comment la base PostgreSQL stocke l'historique d'une annonce.
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}[node distance=1.2cm and 1.8cm, scale=0.85, every node/.style={scale=0.85}]
+
+  % Entité Source
+  \node[node-gold, text width=4.2cm] (src) {
+    \textbf{Entity: Sources}\\
+    \color{ciGreen}\scriptsize PK: id (integer)\\
+    \color{ciDark}\tiny
+    $\bullet$ slug (unique string)\\
+    $\bullet$ display\_name (string)\\
+    $\bullet$ adapter\_kind (string)
+  };
+
+  % Entité RawListing
+  \node[node-green, below=of src, text width=4.2cm] (raw) {
+    \textbf{Entity: RawListings}\\
+    \color{ciGreen}\scriptsize PK: id (bigint)\\
+    \color{ciDark}\tiny
+    $\bullet$ url\_source (text)\\
+    $\bullet$ url\_hash (unique)\\
+    $\bullet$ title\_raw (string)\\
+    $\bullet$ price\_parsed (bigint)\\
+    \color{ciBlue}FK: source\_id\\
+    \color{ciBlue}FK: canonical\_property\_id
+  };
+
+  % Entité CanonicalProperty
+  \node[node-green, right=of raw, text width=4.5cm] (canon) {
+    \textbf{Entity: CanonicalProperties}\\
+    \color{ciGreen}\scriptsize PK: id (bigint)\\
+    \color{ciDark}\tiny
+    $\bullet$ match\_key (string)\\
+    $\bullet$ title\_canonical (string)\\
+    $\bullet$ current\_best\_price (bigint)\\
+    \color{ciBlue}FK: location\_id
+  };
+
+  % Entité Location
+  \node[node-white, above=of canon, text width=4.2cm] (loc) {
+    \textbf{Entity: Locations}\\
+    \color{ciGreen}\scriptsize PK: id (bigint)\\
+    \color{ciDark}\tiny
+    $\bullet$ city (string)\\
+    $\bullet$ neighborhood (string)\\
+    $\bullet$ slug (string)
+  };
+
+  % Entité ListingHistory
+  \node[node-red, right=of canon, text width=4.2cm] (hist) {
+    \textbf{Entity: ListingHistory}\\
+    \color{ciGreen}\scriptsize PK: id (bigint)\\
+    \color{ciDark}\tiny
+    $\bullet$ event\_type (string)\\
+    $\bullet$ price\_observed (bigint)\\
+    $\bullet$ observed\_at (datetime)
+  };
+
+  % Relations
+  \draw[flow-arrow, draw=ciGold] (src.south) -- node[label-style, left] {1..N} (raw.north);
+  \draw[flow-arrow, draw=ciGreen] (raw.east) -- node[label-style, above] {N..0-1} (canon.west);
+  \draw[flow-arrow, draw=ciGreen] (loc.south) -- node[label-style, right] {1..N} (canon.north);
+  \draw[flow-arrow, draw=ciRed] (canon.east) -- node[label-style, above] {1..N} (hist.west);
+  \draw[flow-arrow, draw=ciRed, bend right=20] (raw.south) -- ++(0,-0.5cm) -| node[label-style, pos=0.3, below] {1..N} (hist.south);
+
+\end{tikzpicture}
+\caption{Modèle Conceptuel de Données (MCD).}
+\end{figure}
+
+\newpage
+
+% ================================================================== %
+% DIAGRAMME 6 : DIAGRAMME DE SEQUENCE DE L'INGESTION
+% ================================================================== %
+\section*{Diagramme 6 : Séquence d'extraction et intégration des données}
+\label{diag:sequence}
+Cycle de vie temporel d'un crawl d'annonces jusqu'à leur mise à disposition.
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}[scale=0.85, every node/.style={scale=0.85}]
+
+  % --- Acteurs du flux ---
+  \draw[line width=1pt] (0,0) -- (0,-7.5);
+  \node[node-gold] at (0,0.3) {Sites Web};
+
+  \draw[line width=1pt] (3.2,0) -- (3.2,-7.5);
+  \node[node-gold] at (3.2,0.3) {Scrapers};
+
+  \draw[line width=1pt] (7.2,0) -- (7.2,-7.5);
+  \node[node-green] at (7.2,0.3) {FastAPI Ingest};
+
+  \draw[line width=1pt] (11.2,0) -- (11.2,-7.5);
+  \node[node-white] at (11.2,0.3) {PostgreSQL};
+
+  \draw[line width=1pt] (14.2,0) -- (14.2,-7.5);
+  \node[node-blue] at (14.2,0.3) {App Flutter};
+
+  % --- Les Messages ---
+  \draw[flow-arrow] (3.2,-1) -- node[label-style, above] {Requêtes HTTP (Jitter)} (0,-1);
+  \draw[flow-arrow, dashed] (0,-1.7) -- node[label-style, above] {HTML brut} (3.2,-1.7);
+
+  \draw[flow-arrow] (3.2,-2.4) -- node[label-style, above] {RawListingDraft} (7.2,-2.4);
+  \draw[flow-arrow] (7.2,-3.2) -- node[label-style, above] {Rechercher clé unique} (11.2,-3.2);
+  \draw[flow-arrow, dashed] (11.2,-3.8) -- node[label-style, above] {Retour clé existante / vide} (7.2,-3.8);
+
+  \draw[flow-arrow] (7.2,-4.6) -- node[label-style, above] {Calcul DCS et liaison} (11.2,-4.6);
+  \draw[flow-arrow] (7.2,-5.4) -- node[label-style, above] {INSERT/UPDATE Historique} (11.2,-5.4);
+
+  \draw[flow-arrow, draw=ciBlue] (14.2,-6.2) -- node[label-style, above] {Appel GET /annonces} (7.2,-6.2);
+  \draw[flow-arrow, draw=ciBlue, dashed] (7.2,-6.8) -- node[label-style, above] {Réponse JSON (Dédupliquée)} (14.2,-6.8);
+
+\end{tikzpicture}
+\caption{Flux de synchronisation asynchrone des données.}
+\end{figure}
+
+\newpage
+
+% ================================================================== %
+% DIAGRAMME 7 : DECISION D'INGESTION / COMPRESSE & COMPACTE
+% ================================================================== %
+\section*{Diagramme 7 : Organigramme d'Ingestion et Idempotence}
+\label{diag:organigramme}
+Optimisation du flux décisionnel pour éviter les écritures en doublon (cette version est compactée pour tenir sur une seule page).
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}[node distance=8mm, scale=0.88, every node/.style={scale=0.88}]
+
+  % --- Points d'entrée ---
+  \node[node-gold] (start) {Donnée extraite brute\\(\texttt{RawListingDraft})};
+  \node[base-node, draw=ciDark, shape=diamond, aspect=2.2, below=6mm of start] (dec1) {L'URL existe en base ?};
+
+  % --- Chemin RE-CRAWL (Gauche) ---
+  \node[node-white, left=1.2cm of dec1, text width=3.8cm] (recrawl) {\textbf{Déjà vu}\\Mise à jour \texttt{last\_seen\_at}};
+  \node[base-node, draw=ciDark, shape=diamond, aspect=2.2, below=6mm of recrawl] (dec2) {Le prix a changé ?};
+  \node[node-green, below=6mm of dec2, text width=3.8cm] (hist-price) {Ajout événement\\dans \texttt{listing\_history}};
+
+  % --- Chemin NOUVELLE ANNONCE (Droite) ---
+  \node[node-white, right=1.2cm of dec1, text width=3.8cm] (new) {\textbf{Inconnu}\\Résolution localisation};
+  \node[node-green, below=8mm of new, text width=3.8cm] (match) {Calcul DCS du doublon};
+  \node[node-blue, below=8mm of match, text width=3.8cm] (insert) {Insertion \& Liaison parent};
+
+  % --- Connecteurs ---
+  \draw[flow-arrow] (start) -- (dec1);
+  \draw[flow-arrow] (dec1.west) -- node[label-style, above] {Oui} (recrawl.east);
+  \draw[flow-arrow] (dec1.east) -- node[label-style, above] {Non} (new.west);
+
+  \draw[flow-arrow] (recrawl) -- (dec2);
+  \draw[flow-arrow] (dec2.south) -- node[label-style, right] {Oui} (hist-price.north);
+  \draw[flow-arrow] (dec2.west) -- node[label-style, above] {Non} ++(-1.2cm, 0) |- (hist-price.west);
+
+  \draw[flow-arrow] (new) -- (match);
+  \draw[flow-arrow] (match) -- (insert);
+
+\end{tikzpicture}
+\caption{Logique décisionnelle assurant l'idempotence des enregistrements.}
+\end{figure}
+
+\newpage
+
+% ================================================================== %
+% DIAGRAMME 8 : RECHERCHE IA CONVERSATIONNELLE
+% ================================================================== %
+\section*{Diagramme 8 : Fonctionnement de la Recherche IA Intégrée}
+\label{diag:searchia}
+Comment une requête rédigée en langage naturel est traduite en filtres de base de données.
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}[node distance=8mm]
+
+  \node[node-blue] (query) {Saisie libre utilisateur :\\ \emph{"Appartement à Douala Akwa entre 30 et 50 millions"}};
+  
+  \node[node-white, below=6mm of query, text width=6cm] (api) {FastAPI Router (\texttt{api/search.py})\\Analyse de la clef DashScope};
+
+  % AI
+  \node[node-green, below left=10mm and 2mm of api, text width=4.5cm] (ai) {
+    \textbf{Traitement IA (Qwen)}\\
+    Extraction structurée :\\
+    \footnotesize\color{ciGreen}
+    \texttt{\{type: "Appartement",\\ price\_min: 30000000,\\ price\_max: 50000000,\\ city: "Douala",\\ neighborhood: "Akwa"\}}
+  };
+
+  % Regex
+  \node[node-red, below right=10mm and 2mm of api, text width=4.5cm] (regex) {
+    \textbf{Fallback Expressions régulières}\\
+    Décomposition par mots-clés :\\
+    \footnotesize\color{ciRed}
+    Extraction basique des chiffres,\\ villes et types de biens
+  };
+
+  % Query SQL
+  \node[node-white, below=4.2cm of api, text width=7.2cm] (sql) {
+    \textbf{Exécution ORM (SQLAlchemy)}\\
+    Génération et exécution de la requête SQL correspondante
+  };
+
+  \node[node-blue, below=6mm of sql] (results) {Affichage des fiches correspondantes};
+
+  % --- Connecteurs ---
+  \draw[flow-arrow] (query) -- (api);
+  \draw[flow-arrow] (api.south west) -- node[label-style, left] {Jetons valides} (ai.north);
+  \draw[flow-arrow] (api.south east) -- node[label-style, right] {Mode hors-ligne} (regex.north);
+  
+  \draw[flow-arrow, draw=ciGreen] (ai.south) -- ++(0,-4mm) -| ([xshift=-1.5cm]sql.north);
+  \draw[flow-arrow, draw=ciRed] (regex.south) -- ++(0,-4mm) -| ([xshift=1.5cm]sql.north);
+  \draw[flow-arrow] (sql) -- (results);
+
+\end{tikzpicture}
+\caption{Fonctionnement de la recherche naturelle intelligente.}
+\end{figure}
+
+\newpage
+
+% ================================================================== %
+% DIAGRAMME 9 : ISOCHRONE PIPELINE
+% ================================================================== %
+\section*{Diagramme 9 : Pipeline du calcul de déplacement par temps de trajet (Isochrone)}
+\label{diag:isochrone}
+Processus gérant la conversion d'un objectif de transport en résultats géolocalisés.
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}[node distance=8mm]
+
+  \node[node-blue, text width=6cm] (user) {Saisie du point d'intérêt par l'utilisateur :\\ \emph{"Mon bureau" + "15 min de trajet"}};
+
+  \node[node-white, below=5mm of user, text width=6cm] (nominatim) {
+    \textbf{Géocodage (Nominatim API)}\\
+    Résolution des coordonnées :\\
+    $\to$ Lat / Lng du point de départ
+  };
+
+  \node[node-green, below=5mm of nominatim, text width=6cm] (osrm) {
+    \textbf{Calculateur d'itinéraire (OSRM API)}\\
+    Calcul de l'isochrone routier :\\
+    $\to$ Polygone limite GeoJSON
+  };
+
+  \node[node-white, below=5mm of osrm, text width=6cm] (geom) {Détermination de la surface limite};
+
+  \node[node-white, right=1.6cm of osrm, text width=4.5cm] (db) {
+    \textbf{Requête SQL Géographique}\\
+    Filtre les coordonnées des annonces à l'intérieur du polygone
+  };
+
+  \node[node-blue, below=12mm of geom, text width=5cm] (map) {Affichage des logements sur la carte de l'application (Flutter Map)};
+
+  % --- Connecteurs ---
+  \draw[flow-arrow] (user) -- (nominatim);
+  \draw[flow-arrow] (nominatim) -- (osrm);
+  \draw[flow-arrow] (osrm) -- (geom);
+  \draw[flow-arrow, draw=ciGreen] (geom.east) -- (db.west);
+  \draw[flow-arrow] (db.south) -- ++(0,-8mm) -| (map.east);
+  \draw[flow-arrow] (geom.south) -- (map.north);
+
+\end{tikzpicture}
+\caption{Génération logicielle de l'affichage isochrone du territoire.}
+\end{figure}
+
+\newpage
+
+% ================================================================== %
+% DIAGRAMME 10 : SCREENFLOW NAVIGATION FLUTTER
+% ================================================================== %
+\section*{Diagramme 10 : Parcours utilisateur dans l'application mobile (Screenflow)}
+\label{diag:screenflow}
+Architecture globale de navigation ergonomique au sein de l'application cliente.
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}[node distance=6mm and 8mm, scale=0.88, every node/.style={scale=0.88}]
+
+  \node[node-white, text width=3.2cm, minimum height=1.8cm] (onboarding) {
+    \textbf{Écran d'Onboarding}\\
+    \scriptsize Choisir la ville
+  };
+
+  \node[node-blue, right=of onboarding, text width=3.8cm, minimum height=2cm] (home) {
+    \textbf{Écran d'Accueil}\\
+    \scriptsize
+    $\bullet$ Liste dédupliquée\\
+    $\bullet$ \color{ciRed}Sans logos des sources\\
+    $\bullet$ \color{ciDark}Bouton assistant IA
+  };
+
+  \node[node-green, right=of home, text width=4.2cm, minimum height=2.2cm] (detail) {
+    \textbf{Détail de Logement}\\
+    \scriptsize
+    $\bullet$ Carousel Photos\\
+    $\bullet$ \color{ciGreen}Meilleur tarif en gros\\
+    $\bullet$ \color{ciDark}Bouton "Voir l'offre"\\
+    $\bullet$ Liste comparative Trivago
+  };
+
+  \node[node-white, below=12mm of home, text width=3.8cm, minimum height=1.8cm] (map) {
+    \textbf{Sélection Carte (Isochrone)}\\
+    \scriptsize Filtre spatial sur la carte
+  };
+
+  % --- Liaisons ---
+  \draw[flow-arrow] (onboarding) -- (home);
+  \draw[flow-arrow, draw=ciGreen] (home.east) -- node[label-style, above] {Clic fiche} (detail.west);
+  \draw[flow-arrow, draw=ciGreen, bend right=15] (detail.south west) to node[label-style, below] {Retour} (home.south east);
+
+  \draw[flow-arrow] (home.south) -- (map.north);
+  \draw[flow-arrow] (map.north west) -- (home.south west);
+  \draw[flow-arrow, draw=ciGreen] (map.east) -- ++(5mm,0) |- (detail.south);
+
+\end{tikzpicture}
+\caption{Screenflow fonctionnel de l'application mobile.}
+\end{figure}
+
+\newpage
+
+% ================================================================== %
+% DIAGRAMME 11 : DEPLOIEMENT PHYSIQUE / CLOUD AWS (NOUVEAU)
+% ================================================================== %
+\section*{Diagramme 11 : Diagramme de Déploiement Cloud (Infrastructure de Production)}
+\label{diag:deploiement}
+Ce diagramme détaille comment la solution logicielle est déployée sur le Cloud d'AWS.
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}[node distance=8mm, scale=0.88, every node/.style={scale=0.88}]
+
+  % --- Utilisateur ---
+  \node[node-blue, text width=4cm] (user) {Utilisateur Final\\(Navigateur / Smartphone)};
+
+  % --- Cloud Amazon Web Services ---
+  \node[node-green, below=1.2cm of user, text width=12cm, minimum height=4.2cm, align=left] (vpc) {
+    \quad \textbf{VPC Amazon Web Services (10.0.0.0/16)}\\[6pt]
+    \qquad \textbf{Sous-réseau Public :}\\
+    \qquad \quad $\bullet$ \texttt{Application Load Balancer} (ALB) - Redirection de trafic HTTPS \\[12pt]
+    \qquad \textbf{Sous-réseau Privé :}\\
+    \qquad \quad $\bullet$ \texttt{AWS EC2 Instance (t3.medium)}\\
+    \qquad \quad \quad \footnotesize Linux + Uvicorn/FastAPI + Scrapers \quad \textbf{(Port 8000)} \\[10pt]
+    \qquad \quad $\bullet$ \texttt{Amazon RDS PostgreSQL 16} (Base managée) \quad \textbf{(Port 5432)}
+  };
+
+  % Liaisons
+  \draw[flow-arrow, line width=1pt] (user.south) -- node[label-style, right] {Port 443} ([yshift=3.2cm]vpc.south);
+
+\end{tikzpicture}
+\caption{Déploiement architectural sur les services cloud d'Amazon Web Services (AWS).}
+\end{figure}
+
+\newpage
+
+% ================================================================== %
+% DIAGRAMME 12 : ARBRE DE DECISION CONFIANCE UNIVERSAL SCRAPER (NOUVEAU)
+% ================================================================== %
+\section*{Diagramme 12 : Arbre de décision - Indice de confiance d'extraction}
+\label{diag:confiance}
+Comment le scraper évalue s'il doit automatiquement publier les annonces ou demander validation.
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}[node distance=8mm, scale=0.88, every node/.style={scale=0.88}]
+
+  \node[node-gold] (start) {Extraction brute d'un site non certifié};
+  
+  \node[base-node, shape=diamond, aspect=2.2, below=6mm of start] (dec1) {Présence de coordonnées GPS ?};
+  \node[base-node, shape=diamond, aspect=2.2, below=6mm of dec1] (dec2) {Le prix est-il cohérent?};
+
+  \node[node-red, right=1.8cm of dec1, text width=3cm] (rec1) {Confiance faible\\(Gating: Rejet)};
+  \node[node-white, left=1.8cm of dec2, text width=3.5cm] (rec2) {Confiance moyenne\\(Gating: \textbf{Pending} admin)};
+  
+  \node[node-green, below=8mm of dec2, text width=4cm] (auto) {Confiance élevée $\ge 0.75$\\(Gating: \textbf{Auto-Promoted})};
+
+  % Connecteurs
+  \draw[flow-arrow] (start) -- (dec1);
+  \draw[flow-arrow] (dec1.east) -- node[label-style, above] {Non} (rec1.west);
+  \draw[flow-arrow] (dec1.south) -- node[label-style, right] {Oui} (dec2.north);
+
+  \draw[flow-arrow] (dec2.west) -- node[label-style, above] {Non} (rec2.east);
+  \draw[flow-arrow] (dec2.south) -- node[label-style, right] {Oui} (auto.north);
+
+\end{tikzpicture}
+\caption{Calcul dynamique du score de confiance d'extraction pour le scraper universel.}
+\end{figure}
+
+\newpage
+
+% ================================================================== %
+% DIAGRAMME 13 : SCHEDULER BACKEND (NOUVEAU)
+% ================================================================== %
+\section*{Diagramme 13 : Planification des Tâches Asynchrones (APScheduler)}
+\label{diag:scheduler}
+Explication du cycle des crons gérés en arrière-plan du serveur FastAPI.
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}[node distance=8mm, scale=0.9, every node/.style={scale=0.9}]
+
+  % Le démon APScheduler
+  \node[node-green, text width=7.2cm] (daemon) {
+    \textbf{APScheduler Daemon}\\
+    \small S'exécute en arrière-plan du service FastAPI
+  };
+
+  % Tâches planifiées
+  \node[node-white, below left=1.2cm and 2mm of daemon, text width=4.5cm] (job1) {
+    \textbf{Crawl des Sources}\\
+    \scriptsize
+    $\bullet$ Planification : Tous les jours à 02h00\\
+    $\bullet$ Action : Appel des scrapers
+  };
+
+  \node[node-white, below=1.2cm of daemon, text width=4.5cm] (job2) {
+    \textbf{Nettoyage des Disparitions}\\
+    \scriptsize
+    $\bullet$ Planification : Toutes les 6 heures\\
+    $\bullet$ Action : Marquer les supprimés
+  };
+
+  \node[node-white, below right=1.2cm and 2mm of daemon, text width=4.5cm] (job3) {
+    \textbf{Indicateurs (Analytics)}\\
+    \scriptsize
+    $\bullet$ Planification : Chaque lundi à 03h00\\
+    $\bullet$ Action : Recompute all scores
+  };
+
+  % Liaisons
+  \draw[flow-arrow, draw=ciGreen] (daemon.south) -- ++(0,-6mm) -| (job1.north);
+  \draw[flow-arrow, draw=ciGreen] (daemon.south) -- (job2.north);
+  \draw[flow-arrow, draw=ciGreen] (daemon.south) -- ++(0,-6mm) -| (job3.north);
+
+\end{tikzpicture}
+\caption{Orchestration des tâches planifiées d'administration des données.}
+\end{figure}
+
+\newpage
+
+% ================================================================== %
+% DIAGRAMME 14 : PRICE ANALYZER (NOUVEAU)
+% ================================================================== %
+\section*{Diagramme 14 : Logique du Price Analyzer (Analyse comparative du marché)}
+\label{diag:priceanalyzer}
+Ce schéma montre comment l'application élabore le badge analytique (ex: *"Moins cher que la moyenne"*) pour aider l'acheteur.
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}[node distance=8mm, scale=0.9, every node/.style={scale=0.9}]
+
+  \node[node-blue] (start) {Consultation de la fiche d'un appartement};
+  
+  \node[node-white, below=5mm of start, text width=7.5cm] (avg) {
+    Récupération du prix moyen dans \texttt{neighborhood\_analytics}\\
+    pour le type de bien dans le même quartier
+  };
+
+  \node[base-node, shape=diamond, aspect=2.2, below=6mm of avg] (dec) {Prix de l'appartement vs Moyenne ?};
+
+  \node[node-green, below left=1cm and 2mm of dec, text width=3.8cm] (lower) {
+    \textbf{Inférieur à la Moyenne}\\
+    \scriptsize Badge : "Offre économique"
+  };
+
+  \node[node-gold, below=1cm of dec, text width=3.8cm] (mean) {
+    \textbf{Égal à la moyenne ($\pm 10\%$)}\\
+    \scriptsize Badge : "Au juste prix"
+  };
+
+  \node[node-red, below right=1cm and 2mm of dec, text width=3.8cm] (higher) {
+    \textbf{Supérieur à la Moyenne}\\
+    \scriptsize Badge : "Bâtiment Premium"
+  };
+
+  % Liaisons
+  \draw[flow-arrow] (start) -- (avg);
+  \draw[flow-arrow] (avg) -- (dec);
+  \draw[flow-arrow] (dec.south west) -- (lower.north);
+  \draw[flow-arrow] (dec.south) -- (mean.north);
+  \draw[flow-arrow] (dec.south east) -- (higher.north);
+
+\end{tikzpicture}
+\caption{Processus d'analyse de valeur immobilière locale.}
+\end{figure}
+
+\newpage
+
+% ================================================================== %
+% DIAGRAMME 15 : TRADUCTION DECRIPTIONS (NOUVEAU)
+% ================================================================== %
+\section*{Diagramme 15 : Pipeline de traduction et d'internationalisation}
+\label{diag:traductions}
+Comment les annonces sont traduites à la volée entre le Français et l'Anglais.
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}[node distance=8mm, scale=0.9, every node/.style={scale=0.9}]
+
+  \node[node-blue] (request) {Requête HTTP cliente avec en-tête\\ \texttt{Accept-Language: en}};
+  
+  \node[node-white, below=6mm of request, text width=6.5cm] (api) {FastAPI intercepte la requête};
+
+  \node[base-node, shape=diamond, aspect=2.2, below=6mm of api] (dec) {Traduction présente en base ?};
+
+  \node[node-green, below left=8mm and 5mm of dec, text width=5cm] (db) {
+    Lecture de la table \texttt{listing\_translations}\\
+    \scriptsize Chargement immédiat de la traduction
+  };
+
+  \node[node-gold, below right=8mm and 5mm of dec, text width=5cm] (translate) {
+    Appel du traducteur arrière\\
+    \scriptsize Traduit le français en anglais, stocke en base
+  };
+
+  \node[node-blue, below=4cm of dec, text width=6cm] (response) {Retour de l'annonce en anglais};
+
+  % Liaisons
+  \draw[flow-arrow] (request) -- (api);
+  \draw[flow-arrow] (api) -- (dec);
+  \draw[flow-arrow] (dec.south west) -- (db.north);
+  \draw[flow-arrow] (dec.south east) -- (translate.north);
+  \draw[flow-arrow] (db.south) -- ++(0,-5mm) -| (response.north);
+  \draw[flow-arrow] (translate.south) -- ++(0,-5mm) -| (response.north);
+
+\end{tikzpicture}
+\caption{Fonctionnement de la traduction et du bilinguisme dynamique.}
+\end{figure}
+
+\end{document}

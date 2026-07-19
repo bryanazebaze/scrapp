@@ -22,17 +22,22 @@ match_key = sha1(property_type | city_slug | neighborhood_slug)
 
 For a new draft we query every canonical with the same match_key, compute
 DCS against each, and pick the best:
-  - title_sim (rapidfuzz token_set_ratio) >= 80  -> Confirmed Match (link)
-  - best DCS >= 0.65                              -> Probable Match (link)
-  - otherwise                                     -> New Property
+  - title_sim (rapidfuzz token_set_ratio) >= 80 AND DCS >= 0.75
+    -> Confirmed Match (link)
+  - best DCS >= 0.75 (with no hard-veto)        -> Probable Match (link)
+  - otherwise                                    -> New Property
+
+Hard vetoes (block auto-merge regardless of DCS):
+  - Price difference > 25 % between the draft and the canonical
+  - Bedrooms explicitly contradict (both present but different values)
 
 The factors and classification are stored in raw_listings.match_explanation
 so the admin review UI can show WHY two listings were (or were not) merged.
 
 Classifications:
-  Confirmed Match : DCS >= 0.85 (or title_sim >= 80)
-  Probable Match  : 0.65 <= DCS < 0.85
-  New Property    : DCS < 0.65
+  Confirmed Match : DCS >= 0.85 (or title_sim >= 80 + DCS >= 0.75)
+  Probable Match  : 0.75 <= DCS < 0.85
+  New Property    : DCS < 0.75
 """
 from __future__ import annotations
 
@@ -84,25 +89,30 @@ def _title_sim(a: str | None, b: str | None) -> float:
 
 
 def _price_proximity(p1: int | None, p2: int | None) -> float:
+    """Steep linear decay: 10 % gap → 0.70, 20 % → 0.40, 25 % → 0.25,
+    33 % → ~0.01. This makes price a strong discriminator — the old
+    formula (1 − ratio) scored a 33 % gap at 0.67, which was far too
+    lenient and caused cross-source false merges."""
     if not p1 or not p2:
-        return 0.5  # neutral when a side is missing
+        return 0.3  # reduced from 0.5 — missing data should not inflate DCS
     lo, hi = min(p1, p2), max(p1, p2)
     if hi == 0:
-        return 0.5
-    return 1.0 - min(abs(hi - lo) / float(hi), 1.0)
+        return 0.3
+    ratio = abs(hi - lo) / float(hi)
+    return max(1.0 - 3.0 * ratio, 0.0)
 
 
 def _exact_or_neutral(a, b) -> float:
     if a is None or b is None:
-        return 0.5
+        return 0.3  # reduced from 0.5
     return 1.0 if a == b else 0.0
 
 
 def _surface_match(a: float | None, b: float | None, tol: float = 0.15) -> float:
     if a is None or b is None:
-        return 0.5
+        return 0.3  # reduced from 0.5
     if a <= 0 or b <= 0:
-        return 0.5
+        return 0.3
     lo, hi = min(a, b), max(a, b)
     return 1.0 if (hi - lo) / hi <= tol else 0.0
 
@@ -116,11 +126,11 @@ def _location_sim(loc_id_a: int | None, loc_id_b: int | None,
 
 def _image_overlap(imgs_a: list[str], imgs_b: list[str]) -> float:
     # Cross-source image URLs almost never overlap (different sites host
-    # different copies), so this factor is held neutral (0.5) when comparing
+    # different copies), so this factor is held neutral (0.3) when comparing
     # a draft to a canonical (which has no single image set). It still
     # contributes a small 0.05 weight; the other factors carry the signal.
     if not imgs_a or not imgs_b:
-        return 0.5
+        return 0.3
     ha = {hashlib.md5(u.encode("utf-8")).hexdigest() for u in imgs_a if u}
     hb = {hashlib.md5(u.encode("utf-8")).hexdigest() for u in imgs_b if u}
     if not ha or not hb:
@@ -157,7 +167,7 @@ def compute_dcs(draft: RawListingDraft, canonical: CanonicalProperty,
 def classify(dcs: float) -> str:
     if dcs >= 0.85:
         return "Confirmed Match"
-    if dcs >= 0.65:
+    if dcs >= 0.75:
         return "Probable Match"
     return "New Property"
 
@@ -166,7 +176,8 @@ def classify(dcs: float) -> str:
 # Matching against the canonical table
 # --------------------------------------------------------------------------- #
 TITLE_CONFIRM_THRESHOLD = 80  # rapidfuzz token_set_ratio, raised from 70
-PROBABLE_DCS_THRESHOLD = 0.65
+PROBABLE_DCS_THRESHOLD = 0.75  # raised from 0.65 — was causing false merges
+PRICE_DIFF_MAX = 0.25  # hard veto: >25 % price gap blocks auto-merge
 
 
 @dataclass
@@ -176,6 +187,7 @@ class MatchResult:
     dcs: float
     factors: MatchFactors
     auto_promote: bool  # True if the match is good enough to link automatically
+    veto_reasons: list[str] = None  # populated when a hard veto blocked auto-merge
 
 
 def find_canonical_match(db: Session, draft: RawListingDraft,
@@ -186,23 +198,25 @@ def find_canonical_match(db: Session, draft: RawListingDraft,
        can be parsed, skip key-matching — return New Property.
     2. Retrieve ALL canonicals sharing that key (a small candidate set).
     3. Compute DCS against each; track the best.
-    4. If best title_sim >= 80 -> Confirmed Match (link).
-       Elif best DCS >= 0.65  -> Probable Match (link with explanation).
-       Else                  -> New Property.
+    4. Hard vetoes: price gap > 25 % or explicit bedroom contradiction block
+       auto-merge regardless of DCS.
+    5. If title_sim >= 80 AND DCS >= 0.75 and not vetoed -> Confirmed Match.
+       Elif DCS >= 0.75 and not vetoed -> Probable Match (link).
+       Else                             -> New Property.
     """
     city = detect_city(draft.location_raw)
     neighborhood = detect_neighborhood(draft.location_raw, city)
     mk = compute_match_key(draft.property_type_raw, city, neighborhood)
     if mk is None:
         return MatchResult(None, "New Property", 0.0,
-                           MatchFactors(0, 0, 0, 0, 0, 0, 0), False)
+                           MatchFactors(0, 0, 0, 0, 0, 0, 0), False, None)
 
     candidates = db.query(CanonicalProperty).filter(
         CanonicalProperty.match_key == mk
     ).all()
     if not candidates:
         return MatchResult(None, "New Property", 0.0,
-                           MatchFactors(0, 0, 0, 0, 0, 0, 0), False)
+                           MatchFactors(0, 0, 0, 0, 0, 0, 0), False, None)
 
     best: tuple[float, MatchFactors, CanonicalProperty] | None = None
     for canon in candidates:
@@ -215,19 +229,51 @@ def find_canonical_match(db: Session, draft: RawListingDraft,
         normalize_text(draft.title_raw),
         normalize_text(canon.title_canonical),
     )
-    if title_ratio >= TITLE_CONFIRM_THRESHOLD:
-        return MatchResult(canon.id, "Confirmed Match", dcs, factors, True)
+
+    # --- Hard vetoes: block auto-merge regardless of DCS score ---
+    vetoed = False
+    veto_reasons = []
+
+    # 1. Price-difference guard: > 25 % gap is almost certainly a different
+    #    property or a different rental condition (e.g. 6-month vs 12-month
+    #    lease). The old algorithm merged a 100 k / 150 k pair (50 % gap)
+    #    because other factors compensated — that was a false positive.
+    if draft.price_parsed and canon.current_best_price:
+        price_diff = abs(draft.price_parsed - canon.current_best_price)
+        price_hi = max(draft.price_parsed, canon.current_best_price)
+        if price_diff / float(price_hi) > PRICE_DIFF_MAX:
+            vetoed = True
+            veto_reasons.append(
+                f"price_diff_{price_diff / price_hi:.0%}"
+            )
+
+    # 2. Bedrooms hard veto: if both sides have explicit bedroom counts and
+    #    they differ, this is very likely a different property. A studio (1
+    #    bed) vs a 3-bedroom apartment should never auto-merge.
+    if factors.bedrooms_match == 0.0:
+        vetoed = True
+        veto_reasons.append("bedrooms_contradict")
+
+    # --- Title short-circuit: require BOTH high title similarity AND DCS ---
+    if title_ratio >= TITLE_CONFIRM_THRESHOLD and dcs >= PROBABLE_DCS_THRESHOLD and not vetoed:
+        return MatchResult(canon.id, "Confirmed Match", dcs, factors, True, None)
     classification = classify(dcs)
-    auto = dcs >= PROBABLE_DCS_THRESHOLD
-    return MatchResult(canon.id if auto else None, classification, dcs, factors, auto)
+    auto = dcs >= PROBABLE_DCS_THRESHOLD and not vetoed
+    return MatchResult(
+        canon.id if auto else None, classification, dcs, factors, auto,
+        veto_reasons if vetoed else None,
+    )
 
 
 def explanation_dict(result: MatchResult) -> dict:
     """Build the JSONB explanation stored on raw_listings.match_explanation."""
-    return {
+    out = {
         "classification": result.classification,
         "dcs": round(result.dcs, 4),
         "matched_canonical_id": result.canonical_id,
         "factors": {k: round(v, 4) for k, v in asdict(result.factors).items()},
         "auto_promoted": result.auto_promote,
     }
+    if result.veto_reasons:
+        out["veto_reasons"] = result.veto_reasons
+    return out

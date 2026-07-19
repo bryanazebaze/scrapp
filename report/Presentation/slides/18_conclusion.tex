@@ -1,0 +1,30 @@
+%% slides/18_conclusion.tex
+\begin{frame}{Conclusion \& Perspectives}
+  \begin{alertblock}{\faCheckCircle\ Bilan global}
+    La plateforme CentralImmo est \textbf{fonctionnelle} : collecte automatique sur 3 sources, déduplication DCS opérée, historique des prix conservé, application mobile Flutter livrée, API validée par test de charge (100\,\% de succès).
+  \end{alertblock}
+
+  \vspace{0.4cm}
+  \begin{columns}[T]
+    \column{0.5\textwidth}
+      \begin{block}{\faTimesCircle\ Limites identifiées}
+        \footnotesize
+        \begin{itemize}
+          \item Doublons uniquement \textbf{intra-source} à ce stade.
+          \item Endpoint principal $>$ 500 ms (pas de pagination).
+          \item Seuil DCS fixé \textbf{empiriquement}.
+          \item Couverture de tests automatisés partielle.
+        \end{itemize}
+      \end{block}
+    \column{0.5\textwidth}
+      \begin{block}{\faRocket\ Perspectives}
+        \footnotesize
+        \begin{itemize}
+          \item Étendre aux \textbf{réseaux sociaux} (Facebook, WhatsApp).
+          \item \textbf{Pagination} serveur pour $<$ 500 ms.
+          \item Calibrage DCS par \textbf{apprentissage supervisé}.
+          \item Suite de tests automatisés complète.
+        \end{itemize}
+      \end{block}
+  \end{columns}
+\end{frame}

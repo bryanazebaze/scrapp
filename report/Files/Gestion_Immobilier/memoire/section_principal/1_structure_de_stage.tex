@@ -1,0 +1,100 @@
+% --- CHAPITRE 1 : PRÉSENTATION DE L'ENVIRONNEMENT ---
+\chapter{À la Découverte de Smart Service Hub}
+
+Ce premier chapitre a pour vocation de présenter \ac{SSH} (Smart Service Hub), la structure d'accueil au sein de laquelle nous avons effectué notre stage académique. Nous commencerons par décrire l'identité, l'historique et les missions globales de l'entreprise. Ensuite, nous aborderons son architecture organisationnelle afin de positionner clairement notre équipe de travail. Enfin, nous exposerons l'environnement de travail et la pile technologique mis à disposition pour garantir le succès de nos missions.
+
+\section{Smart Service Hub (SSH) : structure d'accueil}
+
+Fondée en 2023 dans le but de répondre aux besoins technologiques de plus en plus complexes des entreprises et des particuliers, \ac{SSH} est une jeune pousse qui se positionne dans le conseil et les services informatiques, avec une approche axée sur la rigueur et la proximité avec ses clients.
+
+Implantée au lieu-dit Snec Emia (Yaoundé), l'entreprise bénéficie d'un accès privilégié à un vivier exceptionnel de développeurs et occupe une position stratégique au cœur de la ville, facilitant l'accès de ses collaborateurs et l'interaction avec l'écosystème technologique local.
+
+Le cœur de métier de \ac{SSH} consiste à fournir du conseil, des services et des produits informatiques sur mesure. L'entreprise structure ses activités majeures autour de l'ingénierie logicielle, l'optimisation des parcs informatiques, la sécurité des données, ainsi que la formation aux nouvelles technologies.
+
+\section{Organisation et cadre du stage}
+
+Afin d'orchestrer ses différents projets avec agilité, Smart Service Hub s'articule autour d'une Direction Générale chapeautant trois principaux pôles stratégiques. L'organigramme ci-dessous permet de visualiser la structure de l'entreprise et la sphère précise dans laquelle notre trinôme a évolué.
+
+\begin{figure}[H]
+    \centering
+    \begin{tikzpicture}[
+        scale=0.9, transform shape,
+        edge from parent fork down,
+        level distance=2.2cm,
+        sibling distance=5.5cm,
+        ceoNode/.style={fill=primaryGreen!10, draw=primaryGreen, line width=0.8pt, rounded corners=3pt, font=\bfseries\tiny, text width=2.4cm, text centered, minimum height=0.9cm},
+        dirNode/.style={fill=primaryGreen!5, draw=primaryGreen!80!black, line width=0.7pt, rounded corners=2pt, font=\bfseries\tiny, text width=2.4cm, text centered, minimum height=0.9cm},
+        srvNode/.style={fill=white, draw=elegantGray!70, line width=0.5pt, rounded corners=2pt, font=\tiny, text width=2.2cm, text centered, minimum height=0.9cm},
+        edge from parent/.style={draw=elegantGray!80, line width=0.8pt}
+    ]
+        \node[ceoNode] (ceo) {CEO}
+            child {node[dirNode] {Direction Marketing}
+                child[sibling distance=2.8cm] {node[srvNode] {Service de Communication}}
+                child[sibling distance=2.8cm] {node[srvNode] {Service des Opérations}}
+            }
+            child {node[dirNode] {Direction Technique}
+                child[sibling distance=2.8cm] {node[srvNode] {Service de Design}}
+                child[sibling distance=2.8cm] {node[srvNode] (dev) {Service de Développement}}
+            }
+            child {node[dirNode] {Direction Administrative}
+                child[sibling distance=2.8cm] {node[srvNode] {Service Financier}}
+                child[sibling distance=2.8cm] {node[srvNode] {Service des RH}}
+            };
+
+        \node[dirNode, right=1.6cm of ceo, yshift=0.1cm] (sec) {Secrétariat Général};
+        \draw[line width=0.8pt, elegantGray!80, -Stealth] (ceo.east) -- (sec.west);
+
+        % Mise en évidence du service d'accueil
+        \draw[draw=red, thick, dashed, rounded corners=2pt] ([xshift=-2pt,yshift=2pt]dev.north west) rectangle ([xshift=2pt,yshift=-2pt]dev.south east);
+    \end{tikzpicture}
+    \caption{Organigramme de \ac{SSH} (encadré en rouge : notre service d'accueil)}
+    \label{fig:organigramme}
+\end{figure}
+
+Dès l'entame de notre stage du 5 janvier au 30 juin 2026, la réalisation de l'application s'est faite sous la forme d'un projet de groupe composé de trois membres. Intégrés sous la houlette de la \textbf{Direction Technique}, nous avons été affectés au \textbf{Service de Développement}. Pour superviser notre avancement, nous étions sous la tutelle directe de notre encadreur professionnel, \textbf{Monsieur NGNITEDEM OLDRICH}. Notre travail s'est naturellement fondu dans les méthodes agiles de l'entreprise : chaque semaine s'organisait autour de réunions (rencontres présentielles ou visioconférences \textit{Google Meet}) pour nous répartir les tâches. Les travaux accomplis étaient ensuite soumis à notre encadreur, dont les critiques constructives et révisions orientaient notre logique pour accroître la qualité de la solution finale.
+
+\section{Environnement de travail}
+
+\paragraph*{Matériel}
+L'équipe disposait d'un accès aux locaux de la startup et bénéficiait d'une connexion Internet à très haut débit. Chaque membre travaillait sur son propre ordinateur portable (exigeant un minimum de 16~Go de RAM pour faire tourner nos émulateurs lourds). Cette organisation nous a offert une flexibilité totale dans la gestion quotidienne de notre confort de développement.
+
+\begin{table}[H]
+    \centering
+    \small
+    \renewcommand{\arraystretch}{1.5}
+    \arrayrulecolor{black}
+    \begin{tabular}{|l|p{10cm}|}
+        \hline
+        \rowcolor{headergray}
+        \textbf{Outil} & \textbf{Rôle et finalité} \\ \hline
+        \textbf{Visual Studio Code} & Éditeur de code principal, léger et hautement personnalisable. \\ \hline
+        \textbf{Android Studio} & Environnement de développement pour le débogage et l'exécution des émulateurs mobiles. \\ \hline
+        \textbf{Git / GitHub} & Outil de gestion de version décentralisé pour le travail d'équipe collaboratif. \\ \hline
+        \textbf{Taiga} & Plateforme de gestion de projet Agile (Scrum) servant à planifier et suivre les sprints. \\ \hline
+    \end{tabular}
+    \caption{Outils de développement et de gestion projet exploités}
+    \label{tab:outils_developpement}
+\end{table}
+
+\paragraph*{Stack technique}
+La \emph{stack} technique mobilisée pour construire l'architecture et l'intelligence de notre plateforme est répertoriée dans le tableau de synthèse ci-dessous.
+
+\begin{table}[H]
+    \centering
+    \small
+    \renewcommand{\arraystretch}{1.5}
+    \arrayrulecolor{black}
+    \begin{tabular}{|l|p{10cm}|}
+        \hline
+        \rowcolor{headergray}
+        \textbf{Technologie} & \textbf{Usage au sein de la plateforme} \\ \hline
+        \textbf{Flutter / Dart} \hyperref[ref:flutter]{[10]} & Framework mobile utilisé pour concevoir l'application cliente multiplateforme. \\ \hline
+        \textbf{Python / FastAPI} \hyperref[ref:fastapi]{[9]} & Framework web asynchrone pour le backend d'API REST. \\ \hline
+        \textbf{PostgreSQL} \hyperref[ref:postgresql]{[16]} & SGBD relationnel pour le stockage et l'indexation des annonces agrégées. \\ \hline
+        \textbf{BeautifulSoup / requests} \hyperref[ref:beautifulsoup]{[13]} & Bibliothèques de collecte automatisée (crawlers) pour l'extraction HTML. \\ \hline
+        \textbf{RapidFuzz} \hyperref[ref:rapidfuzz]{[14]} & Bibliothèque de similarité textuelle (distance de Levenshtein) pour la déduplication. \\ \hline
+        \textbf{APScheduler} \hyperref[ref:apscheduler]{[15]} & Ordonnanceur de tâches en Python pour les crawls périodiques. \\ \hline
+    \end{tabular}
+    \caption{Stack technologique déployée pour la plateforme}
+    \label{tab:stack_technologique}
+\end{table}

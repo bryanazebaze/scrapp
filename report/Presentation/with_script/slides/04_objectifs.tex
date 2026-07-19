@@ -1,0 +1,48 @@
+%% slides/04_objectifs.tex
+\begin{frame}{Introduction}{Objectifs du Projet}
+  \vspace{0.4cm}
+  \begin{center}
+    \begin{tikzpicture}[
+      stepnode/.style={circle, fill=UY1Purple, text=white, font=\Large\bfseries, minimum size=1.5cm},
+      box/.style={rectangle, rounded corners, draw=UY1Purple, fill=white, text width=3.6cm, align=center, minimum height=1.5cm, font=\footnotesize\bfseries}
+    ]
+      \node[stepnode] (n1) at (-5, 0) {\faRobot};
+      \node[box, below=0.2cm of n1] {Collecte\\Automatique};
+
+      \node[stepnode] (n2) at (0, 0) {\faFilter};
+      \node[box, below=0.2cm of n2] {Déduplication\\Intelligente (DCS)};
+
+      \node[stepnode] (n3) at (5, 0) {\faMobile};
+      \node[box, below=0.2cm of n3] {Centralisation\\Mobile \& Web};
+
+      \draw[-latex, ultra thick, UY1Purple] (n1) -- (n2);
+      \draw[-latex, ultra thick, UY1Purple] (n2) -- (n3);
+    \end{tikzpicture}
+  \end{center}
+
+  \vspace{0.4cm}
+  \begin{columns}[T]
+    \column{0.5\textwidth}
+      \begin{block}{\faBullseye\ Objectifs quantifiés}
+        \footnotesize
+        \begin{itemize}
+          \item Couvrir au moins \textbf{3 sources} d'annonces.
+          \item Déduplication automatique inter-sources.
+          \item API REST $<$ 500 ms.
+        \end{itemize}
+      \end{block}
+    \column{0.5\textwidth}
+      \begin{block}{\faCalendar\ Cadre}
+        \footnotesize
+        \begin{itemize}
+          \item Stage de \textbf{6 mois} (5 janv. — 30 juin 2026).
+          \item Structure d'accueil : \textbf{Smart Service Hub}.
+          \item Encadreur : M. NGNITEDEM OLDRICH.
+        \end{itemize}
+      \end{block}
+  \end{columns}
+\note{
+\textbf{\textcolor{speakerKelcy}{[EN] AZEFACK K.}}\\
+``Three concrete objectives: \textbf{automatic collection}, \textbf{intelligent deduplication}, \textbf{mobile and web centralization}. Quantitatively: at least three sources, an inter-source deduplication algorithm, a REST API under 500 ms, and a working Flutter app. Carried out during a \textbf{six-month internship} at Smart Service Hub, under Mr. Ngnitedem Oldrich.'' ~|~ \textbf{$\approx$1 min}
+}
+\end{frame}

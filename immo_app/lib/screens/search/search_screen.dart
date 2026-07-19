@@ -9,7 +9,6 @@ import '../../theme/typography.dart';
 import '../../theme/spacing.dart';
 import '../../widgets/animations.dart';
 import '../../widgets/floating_search_button.dart';
-import '../../widgets/ios_bottom_nav.dart';
 import '../widgets/annonce_card.dart';
 import 'filter_sheet.dart';
 
@@ -23,11 +22,17 @@ class SearchScreen extends ConsumerStatefulWidget {
 class _SearchScreenState extends ConsumerState<SearchScreen> {
   final _controller = TextEditingController();
   final _focusNode = FocusNode();
+  bool _hasText = false;
 
   @override
   void initState() {
     super.initState();
-    _controller.addListener(() => setState(() {}));
+    _controller.addListener(() {
+      final hasText = _controller.text.isNotEmpty;
+      if (hasText != _hasText) {
+        setState(() => _hasText = hasText);
+      }
+    });
   }
 
   @override
@@ -89,7 +94,37 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(l10n.searchTitle, style: AppTypography.display),
+                  Row(
+                    children: [
+                      GestureDetector(
+                        onTap: () {
+                          if (context.canPop()) {
+                            context.pop();
+                          } else {
+                            context.go('/');
+                          }
+                        },
+                        child: Container(
+                          width: 38,
+                          height: 38,
+                          decoration: BoxDecoration(
+                            color: AppColors.surface,
+                            shape: BoxShape.circle,
+                            boxShadow: AppColors.cardShadow,
+                          ),
+                          child: const Icon(
+                            Icons.arrow_back_ios_new_rounded,
+                            size: 16,
+                            color: AppColors.textPrimary,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: AppSpacing.md),
+                      Expanded(
+                        child: Text(l10n.searchTitle, style: AppTypography.display),
+                      ),
+                    ],
+                  ),
                   const SizedBox(height: AppSpacing.lg),
                   Container(
                     decoration: BoxDecoration(
@@ -159,7 +194,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                                   ),
                               ],
                             ),
-                            if (_controller.text.isNotEmpty)
+                            if (_hasText)
                               IconButton(
                                 icon: const Icon(
                                   Icons.cancel_rounded,
@@ -214,6 +249,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                             city: null,
                             minPrice: filters.minPrice,
                             maxPrice: filters.maxPrice,
+                            propertyType: filters.propertyType,
                           );
                         },
                       ),
@@ -237,6 +273,30 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                             city: filters.city,
                             minPrice: null,
                             maxPrice: null,
+                            propertyType: filters.propertyType,
+                          );
+                        },
+                      ),
+                    if (filters.propertyType != null &&
+                        filters.propertyType!.isNotEmpty)
+                      Chip(
+                        label: Text(filters.propertyType!,
+                            style: AppTypography.caption
+                                .copyWith(color: AppColors.textPrimary)),
+                        backgroundColor: AppColors.primaryLight,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(AppRadius.sm),
+                        ),
+                        side: BorderSide.none,
+                        deleteIcon: const Icon(Icons.close_rounded,
+                            size: 14, color: AppColors.textSecondary),
+                        onDeleted: () {
+                          ref.read(filterStateProvider.notifier).state =
+                              FilterState(
+                            city: filters.city,
+                            minPrice: filters.minPrice,
+                            maxPrice: filters.maxPrice,
+                            propertyType: null,
                           );
                         },
                       ),
@@ -424,18 +484,6 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
               ),
           ],
         ),
-      ),
-      bottomNavigationBar: IOSBottomNav(
-        currentIndex: 1,
-        items: AppNavItems.mainTabs,
-        onTap: (i) {
-          switch (i) {
-            case 0: context.go('/'); break;
-            case 1: break;
-            case 2: context.go('/favorites'); break;
-            case 3: context.go('/map'); break;
-          }
-        },
       ),
     );
   }

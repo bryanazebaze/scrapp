@@ -1,6 +1,6 @@
 {
-    "name": "immo_app",
-    "short_name": "immo_app",
+    "name": "CentralImmo",
+    "short_name": "CentralImmo",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",

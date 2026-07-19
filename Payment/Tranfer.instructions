@@ -1,0 +1,940 @@
+# Transfers API
+
+> Send money to beneficiaries with the Notch Pay Transfers API
+
+# Transfers API
+
+<Note>
+  The Transfers API allows you to send money to beneficiaries through various channels, such as mobile money accounts and bank accounts. Use these endpoints to programmatically initiate and manage transfers.
+</Note>
+
+<Callout type="warning">
+  All transfer-related endpoints require both standard API key authentication and additional authentication using the `X-Grant` header for enhanced security.
+
+  ```bash
+  Authorization: YOUR_PUBLIC_KEY
+  X-Grant: YOUR_PRIVATE_KEY
+  ```
+</Callout>
+
+<Callout type="info">
+  For API transfers, you must add your IP address to the whitelist in your dashboard at [https://business.notchpay.co/settings/developer/ips](https://business.notchpay.co/settings/developer/ips)
+</Callout>
+
+## The Transfer Object
+
+<CodeGroup>
+  ```json Transfer Object
+  {
+    "id": "trf_123456789",
+    "reference": "ref_123456789",
+    "amount": 5000,
+    "currency": "XAF",
+    "status": "complete",
+    "beneficiary": "ben_123456789",
+    "channel": "cm.mtn",
+    "description": "Salary payment",
+    "metadata": {},
+    "created_at": "2023-01-01T12:00:00Z",
+    "completed_at": "2023-01-01T12:05:00Z"
+  }
+  ```
+</CodeGroup>
+
+### Transfer Object Properties
+
+<ResponseField name="id" type="string">
+  Unique identifier for the transfer
+</ResponseField>
+
+<ResponseField name="reference" type="string">
+  Your custom reference for the transfer
+</ResponseField>
+
+<ResponseField name="amount" type="number">
+  Amount of the transfer in the smallest currency unit
+</ResponseField>
+
+<ResponseField name="currency" type="string">
+  Three-letter ISO currency code
+</ResponseField>
+
+<ResponseField name="status" type="string">
+  Status of the transfer: `pending`, `processing`, `complete`, `failed`, `canceled`
+</ResponseField>
+
+<ResponseField name="beneficiary" type="string">
+  ID of the beneficiary receiving the transfer
+</ResponseField>
+
+<ResponseField name="channel" type="string">
+  Payment channel used for the transfer (e.g., `cm.mtn`, `cm.orange`)
+</ResponseField>
+
+<ResponseField name="description" type="string">
+  Description of the transfer
+</ResponseField>
+
+<ResponseField name="metadata" type="object">
+  Additional data attached to the transfer
+</ResponseField>
+
+<ResponseField name="created_at" type="string">
+  Timestamp when the transfer was created
+</ResponseField>
+
+<ResponseField name="completed_at" type="string">
+  Timestamp when the transfer was completed (if applicable)
+</ResponseField>
+
+## API Endpoints
+
+<Card title="List All Transfers" icon="list" color="#16A34A">
+  <Tabs>
+    <Tab title="Request">
+      ```bash
+      GET /transfers
+      ```
+
+      Retrieve a list of transfers with pagination.
+
+      ### Query Parameters
+
+      <ParamField query="limit" type="integer">
+        Number of items per page (default: 30, max: 100)
+      </ParamField>
+
+      <ParamField query="page" type="integer">
+        Page number (default: 1)
+      </ParamField>
+
+      <ParamField query="search" type="string">
+        Search by reference or beneficiary
+      </ParamField>
+
+      <ParamField query="status" type="string">
+        Filter by status
+      </ParamField>
+
+      <ParamField query="channels" type="string">
+        Filter by transfer channels (comma-separated)
+      </ParamField>
+
+      <ParamField query="date_start" type="string">
+        Start date filter (format: YYYY-MM-DD)
+      </ParamField>
+
+      <ParamField query="date_end" type="string">
+        End date filter (format: YYYY-MM-DD)
+      </ParamField>
+    </Tab>
+
+    <Tab title="Response">
+      ```json
+      {
+        "code": 200,
+        "status": "OK",
+        "message": "Transfers retrieved",
+        "totals": 50,
+        "last_page": 2,
+        "current_page": 1,
+        "selected": 30,
+        "items": [
+          {
+            "id": "trf_123456789",
+            "reference": "ref_123456789",
+            "amount": 5000,
+            "currency": "XAF",
+            "status": "complete",
+            "beneficiary": "ben_123456789",
+            "channel": "cm.mtn",
+            "created_at": "2023-01-01T12:00:00Z"
+          },
+          // More transfers...
+        ]
+      }
+      ```
+    </Tab>
+  </Tabs>
+</Card>
+
+<Card title="Create a Transfer" icon="plus" color="#16A34A">
+  <Tabs>
+    <Tab title="Request">
+      ```bash
+      POST /transfers
+      ```
+
+      Initiate a new transfer to a beneficiary.
+
+      ### Request Parameters
+
+      <ParamField body="amount" type="number" required>
+        Amount to transfer in the smallest currency unit
+      </ParamField>
+
+      <ParamField body="currency" type="string" required>
+        Three-letter ISO currency code (e.g., XAF)
+      </ParamField>
+
+      <ParamField body="beneficiary" type="string" required={false}>
+        ID of an existing beneficiary (required if beneficiary details are not provided)
+      </ParamField>
+
+      <ParamField body="beneficiary_data" type="object" required={false}>
+        Beneficiary details (required if `beneficiary` is not provided)
+
+        <Expandable title="Beneficiary Data Object">
+          <ParamField body="name" type="string" required>
+            Beneficiary's name
+          </ParamField>
+
+          <ParamField body="email" type="string">
+            Beneficiary's email address
+          </ParamField>
+
+          <ParamField body="phone" type="string" required>
+            Beneficiary's phone number
+          </ParamField>
+
+          <ParamField body="account_number" type="string">
+            Account number for bank transfers
+          </ParamField>
+
+          <ParamField body="bank_code" type="string">
+            Bank code for bank transfers
+          </ParamField>
+
+          <ParamField body="country" type="string">
+            Beneficiary's country code
+          </ParamField>
+        </Expandable>
+      </ParamField>
+
+      <ParamField body="channel" type="string" required>
+        Payment channel to use for the transfer
+      </ParamField>
+
+      <ParamField body="description" type="string">
+        Description of the transfer
+      </ParamField>
+
+      <ParamField body="reference" type="string">
+        Unique reference for the transfer
+      </ParamField>
+
+      <ParamField body="metadata" type="object">
+        Additional data to attach to the transfer
+      </ParamField>
+
+      ### Example Requests
+
+      <CodeGroup>
+        ```json With Existing Beneficiary
+        {
+          "amount": 5000,
+          "currency": "XAF",
+          "beneficiary": "ben_123456789",
+          "channel": "cm.mtn",
+          "description": "Salary payment",
+          "reference": "salary_jan_2023"
+        }
+        ```
+
+        ```json With New Beneficiary
+        {
+          "amount": 5000,
+          "currency": "XAF",
+          "beneficiary_data": {
+            "name": "John Doe",
+            "phone": "+237670000000",
+            "email": "john@example.com"
+          },
+          "channel": "cm.mtn",
+          "description": "Salary payment",
+          "reference": "salary_jan_2023"
+        }
+        ```
+      </CodeGroup>
+    </Tab>
+
+    <Tab title="Response">
+      ```json
+      {
+        "status": "Accepted",
+        "message": "Transfer initiated",
+        "code": 201,
+        "transfer": {
+          "id": "trf_123456789",
+          "reference": "salary_jan_2023",
+          "amount": 5000,
+          "currency": "XAF",
+          "status": "pending",
+          "beneficiary": "ben_123456789",
+          "channel": "cm.mtn",
+          "description": "Salary payment",
+          "created_at": "2023-01-01T12:00:00Z"
+        }
+      }
+      ```
+
+      <Callout type="info">
+        After initiating a transfer, you should monitor its status using webhooks or by retrieving it periodically.
+      </Callout>
+    </Tab>
+  </Tabs>
+</Card>
+
+<Card title="Retrieve a Transfer" icon="magnifying-glass" color="#16A34A">
+  <Tabs>
+    <Tab title="Request">
+      ```bash
+      GET /transfers/{id}
+      ```
+
+      Retrieve details of a specific transfer.
+
+      ### Path Parameters
+
+      <ParamField path="id" type="string" required>
+        ID or reference of the transfer to retrieve
+      </ParamField>
+    </Tab>
+
+    <Tab title="Response">
+      ```json
+      {
+        "status": "Accepted",
+        "message": "Transfer retrieved",
+        "code": 202,
+        "transfer": {
+          "id": "trf_123456789",
+          "reference": "salary_jan_2023",
+          "amount": 5000,
+          "currency": "XAF",
+          "status": "complete",
+          "beneficiary": "ben_123456789",
+          "channel": "cm.mtn",
+          "description": "Salary payment",
+          "created_at": "2023-01-01T12:00:00Z",
+          "completed_at": "2023-01-01T12:05:00Z"
+        }
+      }
+      ```
+    </Tab>
+  </Tabs>
+</Card>
+
+<Card title="Cancel a Transfer" icon="ban" color="#16A34A">
+  <Tabs>
+    <Tab title="Request">
+      ```bash
+      DELETE /transfers/{id}
+      ```
+
+      Cancel a pending transfer.
+
+      ### Path Parameters
+
+      <ParamField path="id" type="string" required>
+        ID or reference of the transfer to cancel
+      </ParamField>
+    </Tab>
+
+    <Tab title="Response">
+      ```json
+      {
+        "code": 202,
+        "status": "Accepted",
+        "message": "Transfer canceled successfully"
+      }
+      ```
+
+      <Callout type="warning">
+        You can only cancel transfers that are in the `pending` status. Transfers that are already `processing`, `complete`, or `failed` cannot be canceled.
+      </Callout>
+    </Tab>
+  </Tabs>
+</Card>
+
+## Bulk Transfers
+
+<Card title="Create a Bulk Transfer" icon="layer-group" color="#16A34A">
+  <Tabs>
+    <Tab title="Request">
+      ```bash
+      POST /transfers/bulk
+      ```
+
+      Initiate multiple transfers in a single request.
+
+      ### Request Parameters
+
+      <ParamField body="transfers" type="array" required>
+        Array of transfer objects
+
+        <Expandable title="Transfer Object">
+          <ParamField body="amount" type="number" required>
+            Amount to transfer
+          </ParamField>
+
+          <ParamField body="beneficiary" type="string">
+            ID of an existing beneficiary
+          </ParamField>
+
+          <ParamField body="beneficiary_data" type="object">
+            Beneficiary details (if not using an existing beneficiary)
+          </ParamField>
+
+          <ParamField body="channel" type="string" required>
+            Payment channel
+          </ParamField>
+
+          <ParamField body="reference" type="string">
+            Unique reference
+          </ParamField>
+
+          <ParamField body="description" type="string">
+            Description
+          </ParamField>
+        </Expandable>
+      </ParamField>
+
+      <ParamField body="currency" type="string" required>
+        Three-letter ISO currency code for all transfers
+      </ParamField>
+
+      <ParamField body="description" type="string">
+        Description for the bulk transfer
+      </ParamField>
+
+      ### Example Request
+
+      ```json
+      {
+        "currency": "XAF",
+        "description": "January 2023 Payroll",
+        "transfers": [
+          {
+            "amount": 5000,
+            "beneficiary": "ben_123456789",
+            "channel": "cm.mtn",
+            "reference": "salary_john_jan_2023"
+          },
+          {
+            "amount": 7000,
+            "beneficiary_data": {
+              "name": "Jane Doe",
+              "phone": "+237670000001",
+              "email": "jane@example.com"
+            },
+            "channel": "cm.orange",
+            "reference": "salary_jane_jan_2023"
+          }
+        ]
+      }
+      ```
+    </Tab>
+
+    <Tab title="Response">
+      ```json
+      {
+        "status": "Accepted",
+        "message": "Bulk transfer initiated",
+        "code": 201,
+        "bulk_transfer": {
+          "id": "btrf_123456789",
+          "description": "January 2023 Payroll",
+          "currency": "XAF",
+          "total_amount": 12000,
+          "total_transfers": 2,
+          "created_at": "2023-01-01T12:00:00Z",
+          "transfers": [
+            {
+              "id": "trf_123456789",
+              "reference": "salary_john_jan_2023",
+              "amount": 5000,
+              "status": "pending"
+            },
+            {
+              "id": "trf_987654321",
+              "reference": "salary_jane_jan_2023",
+              "amount": 7000,
+              "status": "pending"
+            }
+          ]
+        }
+      }
+      ```
+
+      <Callout type="info">
+        Bulk transfers are processed asynchronously. Individual transfers may succeed or fail independently.
+      </Callout>
+    </Tab>
+  </Tabs>
+</Card>
+
+<Card title="Retrieve a Bulk Transfer" icon="magnifying-glass" color="#16A34A">
+  <Tabs>
+    <Tab title="Request">
+      ```bash
+      GET /transfers/bulk/{id}
+      ```
+
+      Retrieve details of a specific bulk transfer.
+
+      ### Path Parameters
+
+      <ParamField path="id" type="string" required>
+        ID of the bulk transfer to retrieve
+      </ParamField>
+    </Tab>
+
+    <Tab title="Response">
+      ```json
+      {
+        "status": "Accepted",
+        "message": "Bulk transfer retrieved",
+        "code": 202,
+        "bulk_transfer": {
+          "id": "btrf_123456789",
+          "description": "January 2023 Payroll",
+          "currency": "XAF",
+          "total_amount": 12000,
+          "total_transfers": 2,
+          "created_at": "2023-01-01T12:00:00Z",
+          "transfers": [
+            {
+              "id": "trf_123456789",
+              "reference": "salary_john_jan_2023",
+              "amount": 5000,
+              "status": "complete",
+              "beneficiary": "ben_123456789",
+              "channel": "cm.mtn",
+              "completed_at": "2023-01-01T12:05:00Z"
+            },
+            {
+              "id": "trf_987654321",
+              "reference": "salary_jane_jan_2023",
+              "amount": 7000,
+              "status": "complete",
+              "beneficiary": "ben_987654321",
+              "channel": "cm.orange",
+              "completed_at": "2023-01-01T12:07:00Z"
+            }
+          ]
+        }
+      }
+      ```
+    </Tab>
+  </Tabs>
+</Card>
+
+## Transfer Statuses
+
+<CardGroup cols={3}>
+  <Card title="pending" icon="clock" color="#f97316">
+    Transfer has been initiated but not yet processed
+  </Card>
+
+  <Card title="processing" icon="spinner" color="#3b82f6">
+    Transfer is being processed by the payment provider
+  </Card>
+
+  <Card title="complete" icon="check-circle" color="#16a34a">
+    Transfer has been completed
+  </Card>
+
+  <Card title="failed" icon="x-circle" color="#dc2626">
+    Transfer attempt failed
+  </Card>
+
+  <Card title="canceled" icon="ban" color="#6b7280">
+    Transfer was canceled by the merchant
+  </Card>
+</CardGroup>
+
+## Webhooks for Transfers
+
+<Callout type="info">
+  To receive real-time notifications about transfer status changes, set up webhooks for the following events:
+</Callout>
+
+<CardGroup cols={3}>
+  <Card title="transfer.created" icon="plus" color="#16A34A">
+    Triggered when a new transfer is created
+
+    ```json
+    {
+      "id": "evt_123456789",
+      "type": "transfer.created",
+      "data": {
+        "id": "trf_123456789",
+        "status": "pending"
+        // Other transfer properties
+      }
+    }
+    ```
+  </Card>
+
+  <Card title="transfer.complete" icon="check-circle" color="#16A34A">
+    Triggered when a transfer status changes to "complete"
+
+    ```json
+    {
+      "id": "evt_123456789",
+      "type": "transfer.complete",
+      "data": {
+        "id": "trf_123456789",
+        "status": "complete"
+        // Other transfer properties
+      }
+    }
+    ```
+  </Card>
+
+  <Card title="transfer.failed" icon="x-circle" color="#dc2626">
+    Triggered when a transfer fails
+
+    ```json
+    {
+      "id": "evt_123456789",
+      "type": "transfer.failed",
+      "data": {
+        "id": "trf_123456789",
+        "status": "failed",
+        "failure_reason": "Insufficient balance"
+        // Other transfer properties
+      }
+    }
+    ```
+  </Card>
+</CardGroup>
+
+See the [Webhooks API](/api-reference/webhooks) documentation for more information on setting up and handling webhooks.
+
+## Error Handling
+
+<AccordionGroup>
+  <Accordion title="Common Error Codes">
+    <ResponseField name="400" type="Bad Request">
+      Invalid request parameters
+
+      This typically occurs when required parameters are missing or have invalid values.
+    </ResponseField>
+
+    <ResponseField name="401" type="Unauthorized">
+      Invalid API key
+
+      Check that you're using the correct API key and that it's properly included in the Authorization header.
+    </ResponseField>
+
+    <ResponseField name="403" type="Forbidden">
+      Missing or invalid grant key
+
+      Transfer endpoints require the `X-Grant` header with your private key for additional security.
+    </ResponseField>
+
+    <ResponseField name="404" type="Not Found">
+      Transfer not found
+
+      The transfer ID or reference you provided doesn't exist or belongs to another account.
+    </ResponseField>
+
+    <ResponseField name="422" type="Unprocessable Entity">
+      Transfer cannot be processed
+
+      This occurs when there's a business logic error, such as insufficient balance or invalid beneficiary details.
+    </ResponseField>
+  </Accordion>
+
+  <Accordion title="Specific Transfer Errors">
+    <ResponseField name="Insufficient Balance" type="error">
+      ```json
+      {
+        "code": 422,
+        "status": "Unprocessable Entity",
+        "message": "Insufficient balance to complete this transfer"
+      }
+      ```
+
+      **Solution**: Add funds to your Notch Pay account before attempting the transfer.
+    </ResponseField>
+
+    <ResponseField name="Invalid Beneficiary" type="error">
+      ```json
+      {
+        "code": 422,
+        "status": "Unprocessable Entity",
+        "message": "Validation failed",
+        "errors": {
+          "beneficiary": ["Beneficiary not found"]
+        }
+      }
+      ```
+
+      **Solution**: Ensure the beneficiary exists and is correctly specified.
+    </ResponseField>
+
+    <ResponseField name="Invalid Channel" type="error">
+      ```json
+      {
+        "code": 422,
+        "status": "Unprocessable Entity",
+        "message": "Validation failed",
+        "errors": {
+          "channel": ["Invalid payment channel"]
+        }
+      }
+      ```
+
+      **Solution**: Use one of the supported payment channels for transfers.
+    </ResponseField>
+  </Accordion>
+</AccordionGroup>
+
+## Best Practices
+
+<CardGroup cols={2}>
+  <Card title="Store Transfer References" icon="database" color="#16A34A">
+    Always store the transfer ID and reference in your database for future reference and reconciliation.
+  </Card>
+
+  <Card title="Verify Transfer Status" icon="check-double" color="#16A34A">
+    Always verify the transfer status using the API before confirming to the recipient that funds have been sent.
+  </Card>
+
+  <Card title="Use Webhooks" icon="bell" color="#16A34A">
+    Set up webhooks for reliable transfer notifications, especially for asynchronous transfers like mobile money.
+  </Card>
+
+  <Card title="Idempotent References" icon="fingerprint" color="#16A34A">
+    Use unique, idempotent references for each transfer to prevent duplicate transfers and simplify reconciliation.
+  </Card>
+
+  <Card title="Error Handling" icon="triangle-exclamation" color="#16A34A">
+    Implement proper error handling for failed transfers, including user-friendly error messages and recovery options.
+  </Card>
+
+  <Card title="Balance Management" icon="wallet" color="#16A34A">
+    Check your account balance before initiating large transfers or bulk transfers to ensure sufficient funds.
+  </Card>
+</CardGroup>
+
+## Implementation Examples
+
+<Tabs>
+  <Tab title="Single Transfer">
+    <Steps>
+      <Step title="Create a Transfer">
+        <CodeGroup>
+          ```javascript Node.js
+          const axios = require('axios');
+
+          async function createTransfer() {
+            try {
+              const response = await axios.post('https://api.notchpay.co/transfers', {
+                amount: 5000,
+                currency: 'XAF',
+                beneficiary: 'ben_123456789',
+                channel: 'cm.mtn',
+                description: 'Salary payment',
+                reference: 'salary_jan_2023'
+              }, {
+                headers: {
+                  'Authorization': 'YOUR_PUBLIC_KEY',
+                  'X-Grant': 'YOUR_PRIVATE_KEY',
+                  'Content-Type': 'application/json'
+                }
+              });
+
+              console.log('Transfer initiated:', response.data);
+              return response.data.transfer.id;
+            } catch (error) {
+              console.error('Error creating transfer:', error.response?.data || error.message);
+              throw error;
+            }
+          }
+          ```
+
+          ```php PHP
+          <?php
+          function createTransfer() {
+            $curl = curl_init();
+
+            $data = [
+              'amount' => 5000,
+              'currency' => 'XAF',
+              'beneficiary' => 'ben_123456789',
+              'channel' => 'cm.mtn',
+              'description' => 'Salary payment',
+              'reference' => 'salary_jan_2023'
+            ];
+
+            curl_setopt_array($curl, [
+              CURLOPT_URL => 'https://api.notchpay.co/transfers',
+              CURLOPT_RETURNTRANSFER => true,
+              CURLOPT_POST => true,
+              CURLOPT_POSTFIELDS => json_encode($data),
+              CURLOPT_HTTPHEADER => [
+                'Authorization: YOUR_PUBLIC_KEY',
+                'X-Grant: YOUR_PRIVATE_KEY',
+                'Content-Type: application/json'
+              ]
+            ]);
+
+            $response = curl_exec($curl);
+            $err = curl_error($curl);
+            curl_close($curl);
+
+            if ($err) {
+              throw new Exception("Error creating transfer: " . $err);
+            }
+
+            $result = json_decode($response, true);
+            echo "Transfer initiated: " . $result['transfer']['id'] . "\n";
+            return $result['transfer']['id'];
+          }
+          ```
+        </CodeGroup>
+      </Step>
+
+      <Step title="Check Transfer Status">
+        <CodeGroup>
+          ```javascript Node.js
+          async function checkTransferStatus(transferId) {
+            try {
+              const response = await axios.get(`https://api.notchpay.co/transfers/${transferId}`, {
+                headers: {
+                  'Authorization': 'YOUR_PUBLIC_KEY',
+                  'X-Grant': 'YOUR_PRIVATE_KEY'
+                }
+              });
+
+              console.log('Transfer status:', response.data.transfer.status);
+              return response.data.transfer;
+            } catch (error) {
+              console.error('Error checking transfer:', error.response?.data || error.message);
+              throw error;
+            }
+          }
+          ```
+
+          ```php PHP
+          function checkTransferStatus($transferId) {
+            $curl = curl_init();
+
+            curl_setopt_array($curl, [
+              CURLOPT_URL => "https://api.notchpay.co/transfers/{$transferId}",
+              CURLOPT_RETURNTRANSFER => true,
+              CURLOPT_HTTPHEADER => [
+                'Authorization: YOUR_PUBLIC_KEY',
+                'X-Grant: YOUR_PRIVATE_KEY'
+              ]
+            ]);
+
+            $response = curl_exec($curl);
+            $err = curl_error($curl);
+            curl_close($curl);
+
+            if ($err) {
+              throw new Exception("Error checking transfer: " . $err);
+            }
+
+            $result = json_decode($response, true);
+            echo "Transfer status: " . $result['transfer']['status'] . "\n";
+            return $result['transfer'];
+          }
+          ```
+        </CodeGroup>
+      </Step>
+    </Steps>
+  </Tab>
+
+  <Tab title="Bulk Transfer">
+    <Steps>
+      <Step title="Create a Bulk Transfer">
+        <CodeGroup>
+          ```javascript Node.js
+          async function createBulkTransfer() {
+            try {
+              const response = await axios.post('https://api.notchpay.co/transfers/bulk', {
+                currency: 'XAF',
+                description: 'January 2023 Payroll',
+                transfers: [
+                  {
+                    amount: 5000,
+                    beneficiary: 'ben_123456789',
+                    channel: 'cm.mtn',
+                    reference: 'salary_john_jan_2023'
+                  },
+                  {
+                    amount: 7000,
+                    beneficiary_data: {
+                      name: 'Jane Doe',
+                      phone: '+237670000001',
+                      email: 'jane@example.com'
+                    },
+                    channel: 'cm.orange',
+                    reference: 'salary_jane_jan_2023'
+                  }
+                ]
+              }, {
+                headers: {
+                  'Authorization': 'YOUR_PUBLIC_KEY',
+                  'X-Grant': 'YOUR_PRIVATE_KEY',
+                  'Content-Type': 'application/json'
+                }
+              });
+
+              console.log('Bulk transfer initiated:', response.data);
+              return response.data.bulk_transfer.id;
+            } catch (error) {
+              console.error('Error creating bulk transfer:', error.response?.data || error.message);
+              throw error;
+            }
+          }
+          ```
+        </CodeGroup>
+      </Step>
+
+      <Step title="Check Bulk Transfer Status">
+        <CodeGroup>
+          ```javascript Node.js
+          async function checkBulkTransferStatus(bulkTransferId) {
+            try {
+              const response = await axios.get(`https://api.notchpay.co/transfers/bulk/${bulkTransferId}`, {
+                headers: {
+                  'Authorization': 'YOUR_PUBLIC_KEY',
+                  'X-Grant': 'YOUR_PRIVATE_KEY'
+                }
+              });
+
+              console.log('Bulk transfer details:', response.data);
+
+              // Check status of individual transfers
+              response.data.bulk_transfer.transfers.forEach(transfer => {
+                console.log(`Transfer ${transfer.id}: ${transfer.status}`);
+              });
+
+              return response.data.bulk_transfer;
+            } catch (error) {
+              console.error('Error checking bulk transfer:', error.response?.data || error.message);
+              throw error;
+            }
+          }
+          ```
+        </CodeGroup>
+      </Step>
+    </Steps>
+  </Tab>
+</Tabs>
+
+<Callout type="success">
+  For more information about beneficiaries, see the [Beneficiaries API](/api-reference/beneficiaries) documentation.
+</Callout>
+
+
+---
+
+> To find navigation and other pages in this documentation, fetch the llms.txt file at: https://developer.notchpay.co/llms.txt

@@ -32,13 +32,13 @@ class IOSBottomNav extends StatelessWidget {
             border: Border.all(color: AppColors.border, width: 0.5),
             boxShadow: [
               BoxShadow(
-                color: const Color(0xFF111418).withOpacity(0.08),
+                color: const Color(0xFF1A1A17).withOpacity(0.08),
                 blurRadius: 24,
                 offset: const Offset(0, 8),
                 spreadRadius: -4,
               ),
               BoxShadow(
-                color: const Color(0xFF111418).withOpacity(0.04),
+                color: const Color(0xFF1A1A17).withOpacity(0.04),
                 blurRadius: 6,
                 offset: const Offset(0, 2),
               ),
@@ -127,18 +127,13 @@ class _NavButton extends StatelessWidget {
   }
 }
 
-/// Pre-configured navigation items for the 4 main screens.
+/// Pre-configured navigation items for the 3 main screens.
 class AppNavItems {
   AppNavItems._();
   static final home = IOSNavItem(
     icon: Icons.home_outlined,
     activeIcon: Icons.home_rounded,
     labelBuilder: (l10n) => l10n.navHome,
-  );
-  static final search = IOSNavItem(
-    icon: Icons.search_outlined,
-    activeIcon: Icons.search_rounded,
-    labelBuilder: (l10n) => l10n.navSearch,
   );
   static final favorites = IOSNavItem(
     icon: Icons.favorite_border_rounded,
@@ -151,5 +146,5 @@ class AppNavItems {
     labelBuilder: (l10n) => l10n.navMap,
   );
 
-  static final List<IOSNavItem> mainTabs = [home, search, favorites, map];
+  static final List<IOSNavItem> mainTabs = [home, favorites, map];
 }

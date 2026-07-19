@@ -1,0 +1,92 @@
+% ==============================================================
+%  DIAGRAMME — Arbre de décision DCS (Duplicate Confidence Score)
+%  Fichier externe, appelé via \input dans le chapitre 2
+% ==============================================================
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}[
+  node distance=4mm and 1cm,
+  font=\scriptsize\sffamily,
+  >=Stealth,
+  factorNode/.style={
+    draw=ciBorder, line width=0.8pt, rounded corners=3pt,
+    fill=white, text=ciDark, align=center,
+    text width=3.8cm, inner sep=5pt
+  },
+  weightNode/.style={
+    draw=ciGold!80!black, line width=0.8pt, rounded corners=3pt,
+    fill=ciGoldLight, text=ciDark, align=center,
+    text width=2.2cm, inner sep=5pt
+  },
+  sumNode/.style={
+    draw=ciGreen, line width=0.9pt, rounded corners=3pt,
+    fill=ciGreenLight, text=ciDark, align=center,
+    text width=2.2cm, inner sep=6pt
+  },
+  decisionGreen/.style={
+    draw=ciGreen, line width=0.8pt, rounded corners=3pt,
+    fill=ciGreenLight, text=ciDark, align=center,
+    text width=2.6cm, inner sep=5pt
+  },
+  decisionGold/.style={
+    draw=ciGold!80!black, line width=0.8pt, rounded corners=3pt,
+    fill=ciGoldLight, text=ciDark, align=center,
+    text width=2.6cm, inner sep=5pt
+  },
+  decisionRed/.style={
+    draw=ciRed, line width=0.8pt, rounded corners=3pt,
+    fill=ciRed!8, text=ciDark, align=center,
+    text width=2.6cm, inner sep=5pt
+  },
+  arrow/.style={-Stealth, line width=0.8pt},
+  arrowGold/.style={-Stealth, line width=0.8pt, draw=ciGold!80!black},
+  arrowGreen/.style={-Stealth, line width=0.8pt, draw=ciGreen},
+  arrowRed/.style={-Stealth, line width=0.8pt, draw=ciRed}
+]
+
+  % --- Colonnes : Facteurs | Poids | Somme | Décisions ---
+
+  % Facteurs (colonne gauche)
+  \node[factorNode] (f1) {Similitude de Titre\\(RapidFuzz)};
+  \node[factorNode, below=of f1] (f2) {Proximit\'e de Prix\\(\'ecart $<$ 15\,\%)};
+  \node[factorNode, below=of f2] (f3) {Type de bien\\(Villa, Studio, \ldots)};
+  \node[factorNode, below=of f3] (f4) {Nombre de chambres\\(comparaison exacte)};
+
+  % Poids (colonne milieu-gauche)
+  \node[weightNode, right=1cm of f1] (p1) {Poids : 35\,\%};
+  \node[weightNode, right=1cm of f2] (p2) {Poids : 25\,\%};
+  \node[weightNode, right=1cm of f3] (p3) {Poids : 20\,\%};
+  \node[weightNode, right=1cm of f4] (p4) {Poids : 20\,\%};
+
+  % Somme pondérée (colonne centre)
+  \node[sumNode, right=1.4cm of p2, yshift=-4.5mm, minimum height=1.6cm] (sum)
+    {\textbf{Somme\\Pond\'er\'ee}\\[2pt]\scriptsize Score / 100};
+
+  % Décisions (colonne droite)
+  \node[decisionGreen, right=1.4cm of sum, yshift=1.3cm] (conf)
+    {\textbf{Fiche Fusionn\'ee}\\Score $\geq$ 85\,\%};
+  \node[decisionGold, right=1.4cm of sum] (prob)
+    {\textbf{Validation manuelle}\\65\,\% -- 84\,\%};
+  \node[decisionRed, right=1.4cm of sum, yshift=-1.3cm] (newp)
+    {\textbf{Nouveau Bien}\\Score $<$ 65\,\%};
+
+  % --- Flèches : Facteurs -> Poids -> Somme ---
+  \draw[arrow] (f1) -- (p1);
+  \draw[arrow] (f2) -- (p2);
+  \draw[arrow] (f3) -- (p3);
+  \draw[arrow] (f4) -- (p4);
+
+  \draw[arrowGold] (p1.east) -- (sum.north west);
+  \draw[arrowGold] (p2.east) -- (sum.west);
+  \draw[arrowGold] (p3.east) -- (sum.west);
+  \draw[arrowGold] (p4.east) -- (sum.south west);
+
+  % --- Flèches : Somme -> Décisions ---
+  \draw[arrowGreen] (sum.east) -- (conf.west);
+  \draw[arrowGold]  (sum.east) -- (prob.west);
+  \draw[arrowRed]   (sum.east) -- (newp.west);
+
+\end{tikzpicture}
+\caption{Algorithme de d\'ecision sur la d\'eduplication DCS}
+\label{fig:arbre_dcs}
+\end{figure}

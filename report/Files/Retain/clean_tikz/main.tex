@@ -1,0 +1,35 @@
+\documentclass[a4paper,landscape]{article}
+\usepackage[margin=1.5cm]{geometry}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{tikz}
+\usetikzlibrary{shapes.geometric, arrows.meta, positioning, fit, backgrounds, calc}
+\usepackage{xcolor}
+
+\tikzset{
+    font=\sffamily,
+    >=Stealth,
+    % Colors
+    compBlue/.style={draw=blue!80!black, fill=blue!5},
+    compOrange/.style={draw=orange!80!black, fill=orange!5},
+    compGreen/.style={draw=green!60!black, fill=green!5},
+    compPurple/.style={draw=purple!80!black, fill=purple!5},
+    % Shapes
+    comp/.style={rectangle, thick, rounded corners=4pt,
+                 minimum width=3cm, minimum height=1.2cm, align=center, compBlue},
+    db/.style={cylinder, thick, aspect=0.25,
+               minimum width=2.5cm, minimum height=3cm, align=center, shape border rotate=90, compBlue},
+    diamondShape/.style={diamond, aspect=2, thick, align=center, inner sep=2pt, compOrange},
+    group/.style={rectangle, draw=gray!40, fill=gray!5, dashed, rounded corners=8pt, inner sep=15pt},
+    % Flow & Labels
+    flow/.style={->, thick, gray!80!black},
+    lbl/.style={fill=white, font=\scriptsize\sffamily, inner sep=2pt, text=gray!80!black, align=center}
+}
+\pagestyle{empty}
+
+\begin{document}
+\input{tech_1_to_6.tex}
+\input{tech_7_to_11.tex}
+\input{simple_1_to_5.tex}
+\input{simple_6_to_10.tex}
+\end{document}

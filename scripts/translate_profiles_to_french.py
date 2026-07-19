@@ -1,6 +1,6 @@
 """Translate all neighborhood_profiles and city_profiles from English to French.
 
-Uses Qwen AI (DashScope) to batch-translate text fields and JSONB arrays/objects
+Uses DeepSeek to batch-translate text fields and JSONB arrays/objects
 per record. Idempotent — running twice just re-translates.
 """
 from __future__ import annotations
@@ -19,10 +19,10 @@ from sqlalchemy.orm import sessionmaker
 
 from core.config import settings
 
-# Qwen client
-qwen = AsyncOpenAI(
-    api_key=settings.dashscope_api_key,
-    base_url=settings.qwen_base_url,
+# DeepSeek client
+deepseek = AsyncOpenAI(
+    api_key=settings.deepseek_api_key,
+    base_url=settings.deepseek_base_url,
 )
 
 SYSTEM_PROMPT = (
@@ -40,15 +40,15 @@ SYSTEM_PROMPT = (
 
 
 async def translate_fields(fields: dict) -> dict:
-    """Send a dict of fields to Qwen, get back translated dict. Retries on failure."""
+    """Send a dict of fields to DeepSeek, get back translated dict. Retries on failure."""
     to_translate = {k: v for k, v in fields.items() if v}
     if not to_translate:
         return {}
 
     for attempt in range(4):
         try:
-            resp = await qwen.chat.completions.create(
-                model=settings.qwen_model,
+            resp = await deepseek.chat.completions.create(
+                model=settings.deepseek_model,
                 messages=[
                     {"role": "system", "content": SYSTEM_PROMPT},
                     {"role": "user", "content": json.dumps(to_translate, ensure_ascii=False)},

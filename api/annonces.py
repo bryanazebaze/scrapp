@@ -63,6 +63,8 @@ def _canon_to_breve(c: CanonicalProperty, loc: Location | None,
         city=loc.city if loc else None,
         neighborhood=loc.neighborhood if loc else None,
         location_slug=loc.slug if loc else None,
+        lat=loc.lat if loc else None,
+        lng=loc.lng if loc else None,
         bedrooms=c.bedrooms,
         bathrooms=c.bathrooms,
         area_sqm=c.area_sqm,
@@ -74,7 +76,7 @@ def _canon_to_breve(c: CanonicalProperty, loc: Location | None,
 @router.get("", response_model=List[AnnonceBreve])
 def list_annonces(
     skip: int = Query(0, ge=0),
-    limit: int = Query(50, ge=1, le=200),
+    limit: int = Query(50, ge=1, le=500),
     property_type: Optional[str] = None,
     city: Optional[str] = None,
     neighborhood: Optional[str] = None,
@@ -149,6 +151,53 @@ def list_annonces(
             RawListing.price_parsed == c.current_best_price,
         ).first()
         results.append(_canon_to_breve(c, loc, best))
+    return results
+
+
+@router.get("/nearby", response_model=List[AnnonceBreve])
+def get_nearby_annonces(
+    lat: float = Query(...),
+    lng: float = Query(...),
+    radius_km: float = Query(5.0),
+    db: Session = Depends(get_db),
+):
+    """Find active listings within radius_km of the given coordinates."""
+    import math
+
+    def haversine(lat1, lon1, lat2, lon2):
+        if lat1 is None or lon1 is None or lat2 is None or lon2 is None:
+            return float('inf')
+        R = 6371.0
+        dlat = math.radians(lat2 - lat1)
+        dlon = math.radians(lon2 - lon1)
+        a = math.sin(dlat / 2)**2 + math.cos(math.radians(lat1)) * math.cos(math.radians(lat2)) * math.sin(dlon / 2)**2
+        c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
+        return R * c
+
+    canons = db.query(CanonicalProperty).join(
+        Location, CanonicalProperty.location_id == Location.id
+    ).filter(
+        CanonicalProperty.is_active == True,
+        CanonicalProperty.current_best_price.isnot(None),
+        Location.lat.isnot(None),
+        Location.lng.isnot(None),
+    ).all()
+
+    nearby = []
+    for c in canons:
+        dist = haversine(lat, lng, c.location.lat, c.location.lng)
+        if dist <= radius_km:
+            nearby.append((dist, c))
+
+    nearby.sort(key=lambda x: x[0])
+
+    results = []
+    for dist, c in nearby[:50]:
+        best = db.query(RawListing).filter(
+            RawListing.canonical_property_id == c.id,
+            RawListing.price_parsed == c.current_best_price,
+        ).first()
+        results.append(_canon_to_breve(c, c.location, best))
     return results
 
 
@@ -299,104 +348,22 @@ def analyse_prix(annonce_id: int, db: Session = Depends(get_db)):
     """Compare a property's price against comparable listings
     (same property_type + same city) and return a market-position verdict.
 
-    Uses the normalized `locations` table (no hardcoded city list). Falls
-    back to "insufficient_data" when fewer than 3 comparables are available.
+    Category-aware:
+      - Structure (Appartement/Maison/...): compares total price vs the mean
+        total price of same-type comparables (verdict bands ±10% on total).
+      - Land (Terrain): compares price/m2 vs the mean price/m2 of land
+        comparables (verdict bands ±10% on XAF/m2).
+
+    Falls back to city-wide comparables when the property's neighborhood has
+    fewer than 3 same-type comparables (`fallback_level="city"`).
     """
+    from core.analytics import compute_price_analysis
+
     canon = db.query(CanonicalProperty).filter(
         CanonicalProperty.id == annonce_id
     ).first()
     if not canon:
         raise HTTPException(404, "Annonce non trouvée")
 
-    price = canon.current_best_price
-    city = canon.location.city if canon.location else None
-    ptype = canon.property_type
-
-    # Base response (insufficient-data shape)
-    base = PriceAnalyse(
-        listing_id=canon.id,
-        price=price,
-        city=city,
-        property_type=ptype,
-        sample_size=0,
-        min_price=None, max_price=None,
-        mean_price=None, median_price=None,
-        percentile=None,
-        verdict="insufficient_data",
-        summary="",
-    )
-
-    if price is None or not city or not ptype:
-        base.summary = "Données insuffisantes pour analyser ce bien."
-        return base
-
-    # Comparables: same type + same city, with a price, excluding this listing.
-    comparables = (
-        db.query(CanonicalProperty.current_best_price)
-        .join(Location, CanonicalProperty.location_id == Location.id)
-        .filter(
-            CanonicalProperty.property_type == ptype,
-            Location.city == city,
-            CanonicalProperty.current_best_price.isnot(None),
-            CanonicalProperty.is_active == True,
-            CanonicalProperty.id != canon.id,
-        )
-        .all()
-    )
-    prices = sorted([r[0] for r in comparables if r[0] is not None])
-
-    # Include this listing in the distribution for percentile calc.
-    sample = sorted(prices + [price])
-    sample_size = len(sample)
-
-    if sample_size < 3:
-        base.summary = (
-            f"Pas encore assez de {ptype.lower()}s à {city} pour comparer "
-            f"({sample_size - 1} bien(s) similaire(s))."
-        )
-        return base
-
-    import statistics
-    mean_price = int(statistics.mean(sample))
-    median_price = int(statistics.median(sample))
-    min_price = sample[0]
-    max_price = sample[-1]
-
-    # Percentile: fraction of sample at or below this price (0-100).
-    below = sum(1 for p in prices if p <= price)
-    percentile = round(100.0 * below / len(prices), 1)
-
-    # Verdict bands (relative to median).
-    delta_pct = ((price - median_price) / median_price * 100) if median_price else 0
-    if delta_pct <= -10:
-        verdict = "below_market"
-    elif delta_pct >= 10:
-        verdict = "above_market"
-    else:
-        verdict = "around_market"
-
-    verdict_phrases = {
-        "below_market": f"{abs(delta_pct):.0f}% sous le prix médian des {ptype.lower()}s à {city}.",
-        "around_market": f"Prix dans la moyenne des {ptype.lower()}s à {city} (±10%).",
-        "above_market": f"{delta_pct:.0f}% au-dessus du prix médian des {ptype.lower()}s à {city}.",
-    }
-    summary = (
-        f"{verdict_phrases[verdict]} "
-        f"Basé sur {len(prices)} bien(s) similaire(s) "
-        f"(médiane {median_price:,} XAF)."
-    ).replace(",", " ")
-
-    return PriceAnalyse(
-        listing_id=canon.id,
-        price=price,
-        city=city,
-        property_type=ptype,
-        sample_size=sample_size,
-        min_price=min_price,
-        max_price=max_price,
-        mean_price=mean_price,
-        median_price=median_price,
-        percentile=percentile,
-        verdict=verdict,
-        summary=summary,
-    )
+    result = compute_price_analysis(db, canon)
+    return PriceAnalyse(**result)

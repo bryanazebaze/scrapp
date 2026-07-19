@@ -6,8 +6,8 @@ Parses queries like:
   "villa with pool in Yaoundé"
 
 Two parsing strategies:
-  1. AI-assisted: sends the query to Qwen (DashScope) which returns structured
-     JSON filters. Used when DASHSCOPE_API_KEY is configured.
+  1. AI-assisted: sends the query to DeepSeek which returns structured
+     JSON filters. Used when DEEPSEEK_API_KEY is configured.
   2. Regex fallback: keyword/regex extraction. Always available.
 """
 from __future__ import annotations
@@ -16,7 +16,7 @@ import re
 from typing import List, Optional
 
 from fastapi import APIRouter, Depends, Query
-from sqlalchemy import or_
+from sqlalchemy import or_, func
 from sqlalchemy.orm import Session
 
 from core.ai_search import ai_parse_search_query
@@ -26,9 +26,27 @@ from core.schemas import AnnonceBreve
 from api.annonces import _canon_to_breve
 from scrapers.utils import (
     CAMEROON_CITIES, CAMEROON_NEIGHBORHOODS, classify_property_type,
+    normalize_text,
 )
 
 router = APIRouter(prefix="/search", tags=["search"])
+
+# --------------------------------------------------------------------------- #
+# Accent-insensitive matching helpers
+# --------------------------------------------------------------------------- #
+_ACCENT_FROM = "éèêëàâäîïôöùûüçÉÈÊËÀÂÄÎÏÔÖÙÛÜÇ"
+_ACCENT_TO   = "eeeeaaaiioouuucEEEEAAAIIOOUUUC"
+
+
+def _sql_normalize(column):
+    """SQL expression: lower() + remove French accents for ilike matching."""
+    return func.translate(func.lower(column), _ACCENT_FROM, _ACCENT_TO)
+
+
+def _norm(s: str) -> str:
+    """Python-side: lower + remove accents (for matching against DB values)."""
+    table = str.maketrans(_ACCENT_FROM, _ACCENT_TO)
+    return s.lower().translate(table)
 
 
 # Common French/English grammatical stopwords to strip before keyword
@@ -54,12 +72,33 @@ def _extract_keywords(q: str) -> list[str]:
     return keywords
 
 
-def _keyword_fallback_query(keywords: list[str], db: Session):
-    """Build a query that matches any keyword in title or description."""
+def _keyword_fallback_query(keywords: list[str], filters: dict, db: Session):
+    """Build a query that matches any keyword in title or description.
+
+    Respects the parsed city/neighborhood constraints (joined via Location)
+    so that a query naming a city with no inventory returns [] rather than
+    falling back to unrelated listings in other cities. Mirrors the
+    city/neighborhood join used by `_build_query`.
+    """
     query = db.query(CanonicalProperty).filter(
         CanonicalProperty.is_active == True,
         CanonicalProperty.current_best_price.isnot(None),
     )
+    # Apply the same location join+filter as _build_query so the fallback
+    # never relaxes the city/neighborhood constraint.
+    if filters.get("city") or filters.get("neighborhood"):
+        query = query.join(Location,
+                           CanonicalProperty.location_id == Location.id)
+        if filters.get("city"):
+            norm_city = _norm(filters["city"])
+            query = query.filter(
+                _sql_normalize(Location.city).ilike(f"%{norm_city}%")
+                | _sql_normalize(Location.neighborhood).ilike(f"%{norm_city}%")
+            )
+        if filters.get("neighborhood"):
+            norm_nb = _norm(filters["neighborhood"])
+            query = query.filter(
+                _sql_normalize(Location.neighborhood).ilike(f"%{norm_nb}%"))
     clauses = []
     for kw in keywords:
         clauses.append(CanonicalProperty.title_canonical.ilike(f"%{kw}%"))
@@ -155,16 +194,16 @@ def parse_search_query(q: str) -> dict:
             filters["property_type"] = ptype
             break
 
-    # City: match Cameroon cities mentioned in the query (case-insensitive)
-    q_norm = q_lower
+    # City: match Cameroon cities mentioned in the query (accent-insensitive)
+    q_norm = normalize_text(q_lower)
     for city in CAMEROON_CITIES:
-        if city.lower() in q_norm:
+        if normalize_text(city) in q_norm:
             filters["city"] = city
             break
 
-    # Neighborhood: match known neighborhoods (case-insensitive)
+    # Neighborhood: match known neighborhoods (accent-insensitive)
     for nb in CAMEROON_NEIGHBORHOODS:
-        if nb.lower() in q_norm:
+        if normalize_text(nb) in q_norm:
             filters["neighborhood"] = nb
             break
 
@@ -190,14 +229,17 @@ def _build_query(filters: dict, db: Session):
         query = query.join(Location,
                            CanonicalProperty.location_id == Location.id)
         if "city" in filters:
-            # "Ville ou Quartier" — match against both city and neighborhood
+            # Accent-insensitive: normalize both the query value and the DB
+            # column before matching so "Yaounde" matches "Yaoundé".
+            norm_city = _norm(filters["city"])
             query = query.filter(
-                Location.city.ilike(f"%{filters['city']}%")
-                | Location.neighborhood.ilike(f"%{filters['city']}%")
+                _sql_normalize(Location.city).ilike(f"%{norm_city}%")
+                | _sql_normalize(Location.neighborhood).ilike(f"%{norm_city}%")
             )
         if "neighborhood" in filters:
+            norm_nb = _norm(filters["neighborhood"])
             query = query.filter(
-                Location.neighborhood.ilike(f"%{filters['neighborhood']}%"))
+                _sql_normalize(Location.neighborhood).ilike(f"%{norm_nb}%"))
     if "min_price" in filters:
         query = query.filter(
             CanonicalProperty.current_best_price >= filters["min_price"])
@@ -243,7 +285,7 @@ async def search(
 ):
     """Natural-language property search.
 
-    Tries AI parsing (Qwen) first, falls back to regex parsing.
+    Tries AI parsing (DeepSeek) first, falls back to regex parsing.
     Explicit query params (city, min_price, etc.) override parsed values.
 
     Examples:
@@ -276,11 +318,16 @@ async def search(
 
     # 5. Fallback: if no structured-filter results and the raw query is
     #    non-empty, search title/description for each extracted keyword.
+    #    The fallback respects the parsed city/neighborhood constraints
+    #    (joined via Location) so a query naming a city with no inventory
+    #    returns [] rather than relaxing the city constraint.
     if not results and q.strip():
         keywords = _extract_keywords(q)
         if keywords:
-            fb_query = _keyword_fallback_query(keywords, db)
-            return _execute(fb_query, db, skip, limit)
+            fb_query = _keyword_fallback_query(keywords, filters, db)
+            results = _execute(fb_query, db, skip, limit)
+            if results:
+                return results
 
     return results
 

@@ -54,7 +54,7 @@ class ListingHistoryEvent(BaseModel):
 
 
 class AnnonceBreve(BaseModel):
-    """Lightweight listing for the home/search screens."""
+    """Lightweight listing for the home/search/screens."""
     id: int
     title: str
     property_type: Optional[str]
@@ -63,6 +63,8 @@ class AnnonceBreve(BaseModel):
     city: Optional[str]
     neighborhood: Optional[str]
     location_slug: Optional[str]
+    lat: Optional[float] = None
+    lng: Optional[float] = None
     bedrooms: Optional[int]
     bathrooms: Optional[int]
     area_sqm: Optional[float]
@@ -87,19 +89,39 @@ class AnnonceDetaillee(AnnonceBreve):
 class PriceAnalyse(BaseModel):
     """Market position of one property vs comparable listings
     (same property_type + same city). All prices in XAF.
+
+    Category-aware:
+      - Structure (Appartement/Maison/...): comparison_metric="total_price";
+        min_price/max_price/mean_price populated; price-per-sqm fields NULL.
+      - Land (Terrain): comparison_metric="price_per_sqm";
+        min_price_per_sqm/max_price_per_sqm/avg_price_per_sqm populated;
+        total-price fields NULL.
+      `savings` is positive when the listing is below market.
+      `fallback_level` is "neighborhood" when comparables came from the same
+      neighborhood, "city" when the neighborhood had < 3 comparables and the
+      set was widened to the whole city.
     """
     listing_id: int
     price: Optional[int]
     city: Optional[str]
     property_type: Optional[str]
+    category: Optional[str] = None  # "Structure" | "Land" | None
+    comparison_metric: Optional[str] = None  # "total_price" | "price_per_sqm"
     sample_size: int
-    min_price: Optional[int]
-    max_price: Optional[int]
-    mean_price: Optional[int]
-    median_price: Optional[int]
-    percentile: Optional[float]  # 0-100, where this price sits in the sample
-    verdict: Optional[str]  # "below_market" | "around_market" | "above_market" | "insufficient_data"
-    summary: str  # human-readable French summary for the UI callout
+    min_price: Optional[int] = None
+    max_price: Optional[int] = None
+    mean_price: Optional[int] = None
+    median_price: Optional[int] = None
+    min_price_per_sqm: Optional[float] = None
+    max_price_per_sqm: Optional[float] = None
+    avg_price_per_sqm: Optional[float] = None
+    avg_comparison: Optional[float] = None  # mean of comparables' metric
+    listing_comparison: Optional[float] = None  # listing's value for the metric
+    savings: Optional[float] = None  # positive = below market
+    fallback_level: Optional[str] = None  # "neighborhood" | "city" | None
+    percentile: Optional[float] = None  # 0-100, where this price sits in the sample
+    verdict: Optional[str] = None  # "below_market" | "around_market" | "above_market" | "insufficient_data"
+    summary: str = ""  # human-readable French summary for the UI callout
 
 
 # --------------------------------------------------------------------------- #
@@ -117,24 +139,29 @@ class LocationSchema(BaseModel):
 
 
 class NeighborhoodAnalyticsSchema(BaseModel):
-    location_id: int
-    city: str
-    neighborhood: Optional[str]
-    slug: str
-    property_type: Optional[str]
-    listing_count: int
-    average_price: Optional[int]
-    median_price: Optional[int]
-    min_price: Optional[int]
-    max_price: Optional[int]
-    price_per_sqm: Optional[float]
-    premium_score: Optional[float]
-    demand_score: Optional[float]
-    growth_score: Optional[float]
-    activity_score: Optional[float]
-    luxury_score: Optional[float]
-    trend_direction: Optional[str]
-    trend_pct: Optional[float]
+    location_id: Optional[int] = None
+    city: Optional[str] = None
+    neighborhood: Optional[str] = None
+    slug: Optional[str] = None
+    property_type: Optional[str] = None
+    category: Optional[str] = None  # "Structure" | "Land" | None
+    listing_count: int = 0
+    average_price: Optional[int] = None
+    median_price: Optional[int] = None
+    min_price: Optional[int] = None
+    max_price: Optional[int] = None
+    price_per_sqm: Optional[float] = None
+    min_price_per_sqm: Optional[float] = None
+    max_price_per_sqm: Optional[float] = None
+    avg_price_per_sqm: Optional[float] = None
+    fallback_level: Optional[str] = None  # "neighborhood" | "city" | None
+    premium_score: Optional[float] = None
+    demand_score: Optional[float] = None
+    growth_score: Optional[float] = None
+    activity_score: Optional[float] = None
+    luxury_score: Optional[float] = None
+    trend_direction: Optional[str] = None
+    trend_pct: Optional[float] = None
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -155,6 +182,28 @@ class SchedulerJobSchema(BaseModel):
     next_run: Optional[datetime]
     status: str
     last_error: Optional[str]
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class JobUpdateSchema(BaseModel):
+    """PATCH /admin/jobs/{job_id} body — either field is optional."""
+    cron_expr: Optional[str] = None
+    paused: Optional[bool] = None
+
+
+class JobSchemaOut(BaseModel):
+    """Enhanced job view: SchedulerJob row + live APScheduler next_run_time + paused flag."""
+    id: int
+    job_type: str
+    source_id: Optional[int] = None
+    cron_expr: Optional[str] = None
+    last_run: Optional[datetime] = None
+    next_run: Optional[datetime] = None
+    status: str
+    last_error: Optional[str] = None
+    paused: bool = False
+    job_aps_id: Optional[str] = None
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -210,3 +259,115 @@ class NeighborhoodProfileSchema(BaseModel):
     description: Optional[str] = None
 
     model_config = ConfigDict(from_attributes=True)
+
+
+# --------------------------------------------------------------------------- #
+# AI Chat
+# --------------------------------------------------------------------------- #
+class ChatMessage(BaseModel):
+    """One message in the chat conversation history."""
+    role: str  # "user" | "assistant"
+    content: str
+
+
+class ChatRequest(BaseModel):
+    """Request body for POST /chat."""
+    message: str
+    history: List[ChatMessage] = []
+    language: str = "fr"  # "fr" or "en" — controls AI response language
+
+
+class ChatResponse(BaseModel):
+    """Response from the AI chat agent."""
+    reply: str
+    properties: List[AnnonceBreve] = []
+    tool_used: Optional[str] = None
+    tool_metadata: Optional[dict] = None
+
+
+# --------------------------------------------------------------------------- #
+# Payments
+# --------------------------------------------------------------------------- #
+class UpgradeRequest(BaseModel):
+    """Request body for POST /payments/upgrade."""
+    phone: str
+    channel: str  # "cm.mtn" | "cm.orange"
+    amount: int = 2000  # XAF
+
+
+class PaymentStatusResponse(BaseModel):
+    """Response for GET /payments/{reference}/status."""
+    status: str
+    is_paid: bool
+    reference: str
+
+
+class PaymentMeResponse(BaseModel):
+    """Response for GET /payments/me."""
+    is_paid: bool
+    paid_at: Optional[str] = None
+    amount: Optional[int] = None
+
+
+# --------------------------------------------------------------------------- #
+# End-user auth (email/password)
+# --------------------------------------------------------------------------- #
+class UserRegisterSchema(BaseModel):
+    """POST /auth/register body."""
+    display_name: str
+    email: str
+    phone: Optional[str] = None
+    password: str
+
+
+class UserLoginSchema(BaseModel):
+    """POST /auth/login body."""
+    email: str
+    password: str
+
+
+class UserOutSchema(BaseModel):
+    """User record returned to clients (no password_hash)."""
+    id: int
+    email: Optional[str] = None
+    display_name: Optional[str] = None
+    phone: Optional[str] = None
+    is_active: bool = True
+    created_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class UserTokenSchema(BaseModel):
+    """POST /auth/register|login response."""
+    access_token: str
+    token_type: str = "bearer"
+    user: UserOutSchema
+
+
+# --------------------------------------------------------------------------- #
+# Admin auth
+# --------------------------------------------------------------------------- #
+class AdminLoginSchema(BaseModel):
+    """POST /admin/login body — identifier may be username or email."""
+    identifier: str
+    password: str
+
+
+class AdminUserOutSchema(BaseModel):
+    """Admin user returned to clients (no password_hash)."""
+    id: int
+    username: Optional[str] = None
+    email: Optional[str] = None
+    is_active: bool = True
+    is_superadmin: bool = False
+    created_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class AdminTokenSchema(BaseModel):
+    """POST /admin/login response."""
+    access_token: str
+    token_type: str = "bearer"
+    admin: AdminUserOutSchema

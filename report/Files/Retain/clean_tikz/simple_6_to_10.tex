@@ -1,0 +1,129 @@
+% ============================================================
+% DIAGRAM S6 — SUIVI DES PRIX
+% ============================================================
+\clearpage
+\section*{Diagramme S6 — Le Suivi des Prix dans le Temps}
+\begin{center}
+\begin{tikzpicture}[node distance=1.5cm and 2.5cm]
+
+\node[comp, compBlue] (j1) {Jour 1\\(50M XAF)};
+\node[comp, compGreen, right=of j1] (j15) {Jour 15\\(45M XAF)};
+\node[comp, draw=gray!80, fill=gray!5, right=of j15] (j30) {Jour 30\\(45M XAF)};
+\node[comp, compPurple, right=of j30] (j45) {Jour 45\\(Retiré)};
+
+\draw[flow] (j1) -- node[lbl] {baisse de prix} (j15);
+\draw[flow] (j15) -- node[lbl] {aucun changement} (j30);
+\draw[flow] (j30) -- node[lbl] {disparu du site} (j45);
+
+\end{tikzpicture}
+\end{center}
+
+% ============================================================
+% DIAGRAM S7 — INTELLIGENCE QUARTIER
+% ============================================================
+\clearpage
+\section*{Diagramme S7 — L'Intelligence du Quartier}
+\begin{center}
+\begin{tikzpicture}[node distance=2cm and 2.5cm]
+
+\node[comp, compBlue] (raw) {Toutes les Annonces\\du Quartier};
+
+\node[comp, compGreen, above right=1cm and 2cm of raw] (s1) {Premium Score};
+\node[comp, compGreen, above right=0cm and 2cm of raw] (s2) {Demand Score};
+\node[comp, compGreen, below right=0cm and 2cm of raw] (s3) {Growth Score};
+\node[comp, compGreen, below right=1cm and 2cm of raw] (s4) {Activity Score};
+
+\node[comp, compOrange, right=4cm of raw] (fiche) {Fiche Quartier\\(Résumé Global)};
+
+\draw[flow] (raw) |- node[lbl, near start] {calcule} (s1);
+\draw[flow] (raw) |- (s2);
+\draw[flow] (raw) |- (s3);
+\draw[flow] (raw) |- (s4);
+
+\draw[flow] (s1) -| node[lbl, near end] {compile} (fiche);
+\draw[flow] (s2) -| (fiche);
+\draw[flow] (s3) -| (fiche);
+\draw[flow] (s4) -| (fiche);
+
+\end{tikzpicture}
+\end{center}
+
+% ============================================================
+% DIAGRAM S8 — CYCLE AUTOMATIQUE
+% ============================================================
+\clearpage
+\section*{Diagramme S8 — Le Cycle Automatique}
+\begin{center}
+\begin{tikzpicture}[node distance=1.5cm and 2.5cm]
+
+\node[db] (db) {Base Centrale};
+
+\node[comp, compOrange, above=of db] (t1) {Toutes les 6h\\(Mise à jour prix)};
+\node[comp, compBlue, left=of db] (t2) {Tous les jours (02h)\\(Crawl complet)};
+\node[comp, compPurple, right=of db] (t3) {Tous les lundis\\(Recalcul Stats)};
+\node[comp, draw=gray!80, fill=gray!5, below=of db] (t4) {Manuel\\(À la demande)};
+
+\draw[flow] (t1) -- node[lbl] {sauvegarde} (db);
+\draw[flow] (t2) -- node[lbl] {sauvegarde} (db);
+\draw[flow] (t3) -- node[lbl] {sauvegarde} (db);
+\draw[flow] (t4) -- node[lbl] {sauvegarde} (db);
+
+\end{tikzpicture}
+\end{center}
+
+% ============================================================
+% DIAGRAM S9 — AJOUTER UN NOUVEAU SITE
+% ============================================================
+\clearpage
+\section*{Diagramme S9 — Ajouter un Nouveau Site}
+\begin{center}
+\begin{tikzpicture}[node distance=1.5cm and 2cm]
+
+\node[comp, draw=gray!80, fill=gray!5] (admin) {Administrateur};
+\node[comp, compBlue, right=of admin] (robot) {Robot\\Explorateur};
+\node[comp, compOrange, right=of robot] (extr) {Extraction\\Automatique};
+\node[diamondShape, right=of extr] (score) {Score ?};
+
+\node[comp, compGreen, right=of score] (ok) {Validé};
+\node[comp, compPurple, below=of score] (rej) {Rejeté};
+
+\draw[flow] (admin) -- node[lbl] {ajoute l'URL} (robot);
+\draw[flow] (robot) -- node[lbl] {trouve les pages} (extr);
+\draw[flow] (extr) -- node[lbl] {évalue la qualité} (score);
+\draw[flow] (score) -- node[lbl] {fiable} (ok);
+\draw[flow] (score) -- node[lbl] {peu fiable} (rej);
+
+\end{tikzpicture}
+\end{center}
+
+% ============================================================
+% DIAGRAM S10 — GESTION DES IMAGES
+% ============================================================
+\clearpage
+\section*{Diagramme S10 — Gestion des Images}
+\begin{center}
+\begin{tikzpicture}[node distance=2.5cm and 2.5cm]
+
+% Mauvaise approche
+\node[comp, compOrange] (s1) {Site Source};
+\node[db, compPurple, right=of s1] (db1) {Notre Serveur};
+\node[comp, compPurple, right=of db1] (app1) {Application};
+
+\draw[flow, dashed, draw=red!80] (s1) -- node[lbl] {télécharge 23MB} (db1);
+\draw[flow, dashed, draw=red!80] (db1) -- node[lbl] {affiche copie locale} (app1);
+
+\node[above=0.5cm of db1, font=\bfseries\sffamily, text=red!80] {ANCIENNE APPROCHE (COPIE)};
+
+% Bonne approche
+\node[comp, compOrange, below=3cm of s1] (s2) {Site Source};
+\node[db, compGreen, right=of s2] (db2) {Notre Serveur};
+\node[comp, compGreen, right=of db2] (app2) {Application};
+
+\draw[flow, draw=green!60!black] (s2) -- node[lbl] {garde juste l'URL} (db2);
+\draw[flow, draw=green!60!black] (db2) -- node[lbl] {transmet l'URL} (app2);
+\draw[flow, draw=green!60!black, bend right=30] (s2) to node[lbl, swap] {charge directement l'image (0 MB)} (app2);
+
+\node[above=0.5cm of db2, font=\bfseries\sffamily, text=green!60!black] {NOTRE APPROCHE (LIEN)};
+
+\end{tikzpicture}
+\end{center}

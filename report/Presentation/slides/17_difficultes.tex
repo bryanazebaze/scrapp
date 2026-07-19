@@ -1,0 +1,22 @@
+%% slides/17_difficultes.tex
+\begin{frame}{Bilan}{Difficultés Rencontrées et Solutions}
+  \begin{block}{\faExclamationTriangle\ Problème 1 — Hétérogénéité des sites sources}
+    \small Chaque site d'annonces possède sa propre structure HTML.
+    \\[2pt]
+    \textbf{\faCheck\ Solution :} Analyse site par site, modélisation de \textbf{patterns spécifiques} par source dans des adaptateurs dédiés (\texttt{SourceAdapter}).
+  \end{block}
+
+  \vspace{0.3cm}
+  \begin{block}{\faBalanceScale\ Problème 2 — Lenteur de la déduplication}
+    \small Comparer chaque nouvelle annonce à toute la base est trop coûteux ($O(N)$).
+    \\[2pt]
+    \textbf{\faCheck\ Solution :} \textbf{Pré-filtrage} par quartier et type de bien (un studio à Mvan n'est jamais comparé à une villa à Bastos) — élimine $\approx$ \textbf{95\,\%} des comparaisons inutiles.
+  \end{block}
+
+  \vspace{0.3cm}
+  \begin{block}{\faLock\ Problème 3 — Anti-bot des sites sources}
+    \small Risque de blocage par les serveurs scrapeés.
+    \\[2pt]
+    \textbf{\faCheck\ Solution :} \texttt{BaseFetchMixin} — \textbf{robots.txt}, headers navigateur, délais jitterés, retries et rotation de session.
+  \end{block}
+\end{frame}

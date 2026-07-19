@@ -1,0 +1,22 @@
+NOTCH PAY API TEST REPORT
+Generated: 2025-12-13 22:28:24
+Duration: 23.28s
+
+SUMMARY:
+  Total Tests: 18
+  Passed: 8
+  Failed: 10
+  Warnings: []
+
+ERRORS:
+  - Create a Transfer: Failed to create beneficiary: {'code': '422', 'status': 'Unprocessable Content', 'message': 'The channel field is required. (and 1 more error)', 'errors': {'channel': ['The channel field is required.'], 'account_number': ['The account number field is required.']}}
+  - Create a Customer: Status: 422, Response: {'code': '422', 'status': 'Unprocessable Content', 'message': 'The phone field must be a valid number.', 'errors': {'phone': ['The phone field must be a valid number.']}}
+  - Create a Beneficiary: Status: 422, Response: {'code': '422', 'status': 'Unprocessable Content', 'message': 'The channel field is required. (and 1 more error)', 'errors': {'channel': ['The channel field is required.'], 'account_number': ['The account number field is required.']}}
+  - Check Balance for Specific Currency: Status: 404, Response: {'code': '404', 'status': 'Not Found', 'message': 'Resource Not Found'}
+  - List Balance History: Status: 404, Response: {'code': '404', 'status': 'Not Found', 'message': 'Resource Not Found'}
+  - List Payment Channels: Status: 404, Response: {'code': '404', 'status': 'Not Found', 'message': 'Resource Not Found'}
+  - List Countries: Status: 404, Response: {'code': '404', 'status': 'Not Found', 'message': 'Resource Not Found'}
+  - List Currencies: Status: 404, Response: {'code': '404', 'status': 'Not Found', 'message': 'Resource Not Found'}
+  - List Banks: Status: 404, Response: {'code': '404', 'status': 'Not Found', 'message': 'Resource Not Found'}
+  - List Webhooks: Status: 406, Response: {'code': '406', 'status': 'Not Acceptable', 'message': 'Private Key Required'}
+

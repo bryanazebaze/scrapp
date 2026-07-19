@@ -284,6 +284,12 @@ abstract class AppLocalizations {
   /// **'Vous avez tout vu'**
   String get homeSeenAll;
 
+  /// No description provided for @homeUnlockMore.
+  ///
+  /// In fr, this message translates to:
+  /// **'Débloquer plus de biens'**
+  String get homeUnlockMore;
+
   /// No description provided for @homeEmptyTitle.
   ///
   /// In fr, this message translates to:
@@ -794,6 +800,48 @@ abstract class AppLocalizations {
   /// **'Explorez par ville'**
   String get mapSubtitle;
 
+  /// No description provided for @mapRoute.
+  ///
+  /// In fr, this message translates to:
+  /// **'Itineraire'**
+  String get mapRoute;
+
+  /// No description provided for @nearbyHint.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ou etes-vous ? (ex: Bastos)'**
+  String get nearbyHint;
+
+  /// No description provided for @nearbyEmptyHint.
+  ///
+  /// In fr, this message translates to:
+  /// **'Recherchez un lieu pour trouver des biens a proximite'**
+  String get nearbyEmptyHint;
+
+  /// No description provided for @nearbyLocationNotFound.
+  ///
+  /// In fr, this message translates to:
+  /// **'Localisation introuvable. Soyez plus precis (ex: Bastos).'**
+  String get nearbyLocationNotFound;
+
+  /// No description provided for @nearbyGpsDisabled.
+  ///
+  /// In fr, this message translates to:
+  /// **'Veuillez activer le GPS.'**
+  String get nearbyGpsDisabled;
+
+  /// No description provided for @nearbyGpsDenied.
+  ///
+  /// In fr, this message translates to:
+  /// **'Permissions GPS refusees.'**
+  String get nearbyGpsDenied;
+
+  /// No description provided for @nearbyGpsDeniedForever.
+  ///
+  /// In fr, this message translates to:
+  /// **'GPS desactive en permanence. Activez-le dans les parametres.'**
+  String get nearbyGpsDeniedForever;
+
   /// No description provided for @mapCityCount.
   ///
   /// In fr, this message translates to:
@@ -920,6 +968,54 @@ abstract class AppLocalizations {
   /// **'Pas assez de données pour comparer les prix dans {area}.'**
   String analysisInsufficientData(String area);
 
+  /// No description provided for @analysisSavingsPerSqm.
+  ///
+  /// In fr, this message translates to:
+  /// **'Vous économisez {amount} XAF/m² par rapport au prix moyen au m².'**
+  String analysisSavingsPerSqm(String amount);
+
+  /// No description provided for @analysisExtraCostPerSqm.
+  ///
+  /// In fr, this message translates to:
+  /// **'Vous payez {amount} XAF/m² de plus par rapport au prix moyen au m².'**
+  String analysisExtraCostPerSqm(String amount);
+
+  /// No description provided for @analysisAveragePricePerSqm.
+  ///
+  /// In fr, this message translates to:
+  /// **'Prix moyen au m² : {amount} XAF/m².'**
+  String analysisAveragePricePerSqm(String amount);
+
+  /// No description provided for @analysisCityFallbackCaption.
+  ///
+  /// In fr, this message translates to:
+  /// **'Comparaison basée sur la ville (données insuffisantes au quartier).'**
+  String get analysisCityFallbackCaption;
+
+  /// No description provided for @neighborhoodCityFallbackCaption.
+  ///
+  /// In fr, this message translates to:
+  /// **'Données insuffisantes au quartier — basé sur la ville.'**
+  String get neighborhoodCityFallbackCaption;
+
+  /// No description provided for @neighborhoodStatsMinPerSqm.
+  ///
+  /// In fr, this message translates to:
+  /// **'Prix min/m²'**
+  String get neighborhoodStatsMinPerSqm;
+
+  /// No description provided for @neighborhoodStatsAveragePerSqm.
+  ///
+  /// In fr, this message translates to:
+  /// **'Prix moyen/m²'**
+  String get neighborhoodStatsAveragePerSqm;
+
+  /// No description provided for @neighborhoodStatsMaxPerSqm.
+  ///
+  /// In fr, this message translates to:
+  /// **'Prix max/m²'**
+  String get neighborhoodStatsMaxPerSqm;
+
   /// No description provided for @detailSimilarProperties.
   ///
   /// In fr, this message translates to:
@@ -931,6 +1027,228 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'Source'**
   String get detailSourceFallback;
+
+  /// No description provided for @viewMore.
+  ///
+  /// In fr, this message translates to:
+  /// **'Voir plus'**
+  String get viewMore;
+
+  /// No description provided for @viewLess.
+  ///
+  /// In fr, this message translates to:
+  /// **'Voir moins'**
+  String get viewLess;
+
+  /// No description provided for @viewMoreCount.
+  ///
+  /// In fr, this message translates to:
+  /// **'Voir plus (+{count})'**
+  String viewMoreCount(int count);
+
+  /// No description provided for @readMore.
+  ///
+  /// In fr, this message translates to:
+  /// **'Lire plus'**
+  String get readMore;
+
+  /// No description provided for @readLess.
+  ///
+  /// In fr, this message translates to:
+  /// **'Lire moins'**
+  String get readLess;
+
+  /// No description provided for @listen.
+  ///
+  /// In fr, this message translates to:
+  /// **'Écouter'**
+  String get listen;
+
+  /// No description provided for @stopVoice.
+  ///
+  /// In fr, this message translates to:
+  /// **'Arrêter'**
+  String get stopVoice;
+
+  /// No description provided for @voiceLoading.
+  ///
+  /// In fr, this message translates to:
+  /// **'Génération audio…'**
+  String get voiceLoading;
+
+  /// No description provided for @voiceError.
+  ///
+  /// In fr, this message translates to:
+  /// **'Audio indisponible'**
+  String get voiceError;
+
+  /// No description provided for @viewAllAmenities.
+  ///
+  /// In fr, this message translates to:
+  /// **'Voir toutes les aménités'**
+  String get viewAllAmenities;
+
+  /// No description provided for @viewMoreSources.
+  ///
+  /// In fr, this message translates to:
+  /// **'Voir {count} autres sources'**
+  String viewMoreSources(int count);
+
+  /// No description provided for @chatTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'CentralBot'**
+  String get chatTitle;
+
+  /// No description provided for @chatSubtitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Cherchez des biens, comparez les prix, analysez la securite des villes.'**
+  String get chatSubtitle;
+
+  /// No description provided for @chatInputHint.
+  ///
+  /// In fr, this message translates to:
+  /// **'Decrivez ce que vous cherchez...'**
+  String get chatInputHint;
+
+  /// No description provided for @chatSuggestionSafety.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ville la plus sure ?'**
+  String get chatSuggestionSafety;
+
+  /// No description provided for @chatSuggestionVillas.
+  ///
+  /// In fr, this message translates to:
+  /// **'Villas a Douala'**
+  String get chatSuggestionVillas;
+
+  /// No description provided for @chatSuggestionTrending.
+  ///
+  /// In fr, this message translates to:
+  /// **'Quartiers tendance'**
+  String get chatSuggestionTrending;
+
+  /// No description provided for @chatSuggestionApartments.
+  ///
+  /// In fr, this message translates to:
+  /// **'Appartement 3 ch a Bastos'**
+  String get chatSuggestionApartments;
+
+  /// No description provided for @chatPropertiesFound.
+  ///
+  /// In fr, this message translates to:
+  /// **'{count} bien(s) trouve(s)'**
+  String chatPropertiesFound(int count);
+
+  /// No description provided for @chatTrendingTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Quartiers tendance'**
+  String get chatTrendingTitle;
+
+  /// No description provided for @chatNeighborhoodsTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Quartiers de {city}'**
+  String chatNeighborhoodsTitle(String city);
+
+  /// No description provided for @chatThreatsLabel.
+  ///
+  /// In fr, this message translates to:
+  /// **'Menaces:'**
+  String get chatThreatsLabel;
+
+  /// No description provided for @chatSafeZonesLabel.
+  ///
+  /// In fr, this message translates to:
+  /// **'Zones sures:'**
+  String get chatSafeZonesLabel;
+
+  /// No description provided for @chatGoodPrice.
+  ///
+  /// In fr, this message translates to:
+  /// **'Bon prix'**
+  String get chatGoodPrice;
+
+  /// No description provided for @chatAboveMarket.
+  ///
+  /// In fr, this message translates to:
+  /// **'Au-dessus du marche'**
+  String get chatAboveMarket;
+
+  /// No description provided for @chatAtMarket.
+  ///
+  /// In fr, this message translates to:
+  /// **'Prix dans le marche'**
+  String get chatAtMarket;
+
+  /// No description provided for @chatScoreGrowth.
+  ///
+  /// In fr, this message translates to:
+  /// **'Croissance'**
+  String get chatScoreGrowth;
+
+  /// No description provided for @chatScoreDemand.
+  ///
+  /// In fr, this message translates to:
+  /// **'Demande'**
+  String get chatScoreDemand;
+
+  /// No description provided for @chatScoreActivity.
+  ///
+  /// In fr, this message translates to:
+  /// **'Activite'**
+  String get chatScoreActivity;
+
+  /// No description provided for @chatScoreLuxury.
+  ///
+  /// In fr, this message translates to:
+  /// **'Luxe'**
+  String get chatScoreLuxury;
+
+  /// No description provided for @chatScorePremium.
+  ///
+  /// In fr, this message translates to:
+  /// **'Premium'**
+  String get chatScorePremium;
+
+  /// No description provided for @chatListingsUnit.
+  ///
+  /// In fr, this message translates to:
+  /// **'biens'**
+  String get chatListingsUnit;
+
+  /// No description provided for @voiceListening.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ecoute...'**
+  String get voiceListening;
+
+  /// No description provided for @voiceTapToSpeak.
+  ///
+  /// In fr, this message translates to:
+  /// **'Parlez'**
+  String get voiceTapToSpeak;
+
+  /// No description provided for @voicePermissionDenied.
+  ///
+  /// In fr, this message translates to:
+  /// **'Permission microphone refusee'**
+  String get voicePermissionDenied;
+
+  /// No description provided for @voiceSpeechError.
+  ///
+  /// In fr, this message translates to:
+  /// **'Reconnaissance vocale indisponible'**
+  String get voiceSpeechError;
+
+  /// No description provided for @voiceSpeechUnavailable.
+  ///
+  /// In fr, this message translates to:
+  /// **'Saisie vocale non disponible sur cet appareil'**
+  String get voiceSpeechUnavailable;
 }
 
 class _AppLocalizationsDelegate

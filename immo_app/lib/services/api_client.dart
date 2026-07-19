@@ -1,4 +1,7 @@
 import 'package:dio/dio.dart';
+import 'package:firebase_auth/firebase_auth.dart' as fb_auth;
+import 'package:flutter/foundation.dart' show debugPrint;
+import 'package:shared_preferences/shared_preferences.dart';
 import '../config.dart';
 import '../models/annonce.dart';
 import '../models/location.dart';
@@ -12,11 +15,15 @@ class ApiClient {
 
   late final Dio _dio;
 
+  /// Read-only access to the authed Dio singleton (for services that need
+  /// to call endpoints not yet wrapped as methods).
+  Dio get dio => _dio;
+
   ApiClient._internal() {
     _dio = Dio(BaseOptions(
       baseUrl: AppConfig.apiBaseUrl,
       connectTimeout: const Duration(seconds: 10),
-      receiveTimeout: const Duration(seconds: 15),
+      receiveTimeout: const Duration(seconds: 120),
       headers: {
         'Accept': 'application/json',
         // Default to French; updated live by setLocale() when the user
@@ -30,6 +37,30 @@ class ApiClient {
       responseHeader: false,
       error: true,
       responseBody: false,
+    ));
+
+    // Auth token interceptor: prefer the locally-stored JWT
+    // (`centralimmo:token`, set by email/password registration); fall back
+    // to the Firebase ID token when only a Google sign-in is available.
+    _dio.interceptors.add(InterceptorsWrapper(
+      onRequest: (options, handler) async {
+        try {
+          final prefs = await SharedPreferences.getInstance();
+          final jwt = prefs.getString('centralimmo:token');
+          if (jwt != null && jwt.isNotEmpty) {
+            options.headers['Authorization'] = 'Bearer $jwt';
+          } else {
+            final user = fb_auth.FirebaseAuth.instance.currentUser;
+            if (user != null) {
+              final token = await user.getIdToken();
+              options.headers['Authorization'] = 'Bearer $token';
+            }
+          }
+        } catch (e) {
+          debugPrint('ApiClient auth interceptor: token fetch failed ($e) — skipping header');
+        }
+        handler.next(options);
+      },
     ));
   }
 
@@ -97,6 +128,24 @@ class ApiClient {
     return [];
   }
 
+  // ---- Nearby search ----
+
+  /// GET /annonces/nearby — find listings within radius_km of coordinates.
+  Future<List<Annonce>> fetchNearbyAnnonces({
+    required double lat,
+    required double lng,
+    double radiusKm = 5.0,
+  }) async {
+    final res = await _dio.get('/annonces/nearby', queryParameters: {
+      'lat': lat,
+      'lng': lng,
+      'radius_km': radiusKm,
+    });
+    return (res.data as List)
+        .map((e) => Annonce.fromJson(e as Map<String, dynamic>))
+        .toList();
+  }
+
   // ---- Search ----
 
   Future<List<Annonce>> search(String query, {int skip = 0, int limit = 50}) async {
@@ -116,6 +165,7 @@ class ApiClient {
     String? city,
     int? minPrice,
     int? maxPrice,
+    String? propertyType,
     int skip = 0,
     int limit = 50,
   }) async {
@@ -127,6 +177,9 @@ class ApiClient {
     if (city != null && city.isNotEmpty) params['city'] = city;
     if (minPrice != null) params['min_price'] = minPrice;
     if (maxPrice != null) params['max_price'] = maxPrice;
+    if (propertyType != null && propertyType.isNotEmpty) {
+      params['property_type'] = propertyType;
+    }
 
     final path = (query != null && query.isNotEmpty) ? '/search' : '/annonces';
     final res = await _dio.get(path, queryParameters: params);
@@ -213,5 +266,33 @@ class ApiClient {
   Future<Map<String, dynamic>> recomputeAnalytics() async {
     final res = await _dio.post('/admin/analytics/recompute');
     return res.data as Map<String, dynamic>;
+  }
+
+  // ---- AI Chat ----
+
+  /// POST /chat — send a message to the AI agent and get a reply.
+  /// The agent can call backend tools (search, safety profiles, analytics)
+  /// to answer dynamically from the database.
+  Future<Map<String, dynamic>> chat(
+    String message,
+    List<Map<String, String>> history, {
+    String language = 'fr',
+  }) async {
+    try {
+      final res = await _dio.post('/chat', data: {
+        'message': message,
+        'history': history,
+        'language': language,
+      });
+      final data = res.data;
+      if (data is! Map<String, dynamic>) {
+        debugPrint('ApiClient.chat(): unexpected response type: ${data.runtimeType}');
+        throw Exception('Invalid response type from server: ${data.runtimeType}');
+      }
+      return data;
+    } on DioException catch (e) {
+      debugPrint('ApiClient.chat() DioException: ${e.type} ${e.message}');
+      rethrow;
+    }
   }
 }

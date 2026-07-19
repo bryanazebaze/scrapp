@@ -120,6 +120,9 @@ def create_canonical(db: Session, draft: RawListingDraft,
     # Sanity-cap bedrooms/bathrooms to smallint range (max 32767).
     # Scrapers may extract wrong values (e.g. surface area parsed as bathrooms).
     bedrooms = draft.bedrooms
+    # A "Chambre" listing IS one room, so its bedroom count must be +1.
+    if draft.property_type_raw == "Chambre":
+        bedrooms = (bedrooms or 0) + 1
     if bedrooms is not None and (bedrooms < 0 or bedrooms > 50):
         bedrooms = None
     bathrooms = draft.bathrooms

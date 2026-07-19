@@ -108,7 +108,7 @@ class _FadeInSlideState extends State<FadeInSlide>
 class PulseDot extends StatefulWidget {
   final Color color;
   final double size;
-  const PulseDot({super.key, this.color = const Color(0xFF10B981), this.size = 8});
+  const PulseDot({super.key, this.color = const Color(0xFF1F8A4C), this.size = 8});
 
   @override
   State<PulseDot> createState() => _PulseDotState();

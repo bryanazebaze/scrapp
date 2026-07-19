@@ -1,0 +1,217 @@
+% ═══════════════════════════════════════════════════════════════
+%  CHAPITRE 3 — BILAN ET APPORTS
+% ═══════════════════════════════════════════════════════════════
+
+\chapter{Bilan et Apports}
+\label{chap:bilan_apports}
+
+Ce troisi\`eme et dernier chapitre dresse le bilan de notre stage. L'objectif est double : d'une part, pr\'esenter l'\'etat r\'eel de la plateforme \`a partir des donn\'ees effectivement pr\'esentes en base au moment de la r\'edaction ; d'autre part, faire notre auto-\'evaluation des comp\'etences acquises, tant sur le plan technique que sur le plan humain. Nous terminerons par un avis personnel sur cette exp\'erience professionnelle.
+
+% ===========================================================
+\section{R\'esultats : \'etat de la plateforme au moment de la r\'edaction}
+% ===========================================================
+Les chiffres pr\'esent\'es ici sont extraits directement de la base de donn\'ees de production au 16 juillet 2026. La plateforme \'etant appel\'ee \`a \'evoluer (de nouvelles collectes \'etant programm\'ees r\'eguli\`erement par l'ordonnanceur), ces valeurs sont susceptibles de changer \`a mesure que le syst\`eme s'enrichit de nouvelles sources et de nouvelles annonces. Les deux premi\`eres sources (Mapiole, Kasastay) ont \'et\'e int\'egr\'ees au cours du stage (janvier--juin 2026) ; la troisi\`eme (Ny\`e Ta Piole) a \'et\'e ajout\'ee le 16 juillet 2026, apr\`es la fin officielle du stage, dans le cadre du prolongement du projet.
+
+\subsection{Comparaison Avant / Apr\`es notre intervention}
+Avant notre travail, la recherche de logement au Cameroun reposait sur un processus enti\`erement manuel, lent et pollu\'e par les doublons. Le tableau~\ref{tab:avant_apres} r\'esume cette \'evolution :
+
+\begin{table}[H]
+    \centering
+    \small
+    \renewcommand{\arraystretch}{1.4}
+    \arrayrulecolor{black}
+    \begin{tabular}{|p{3.5cm}|p{5cm}|p{5cm}|}
+        \hline
+        \rowcolor{headergray}
+        \textbf{Indicateur} & \textbf{Avant (m\'ethode manuelle)} & \textbf{Apr\`es (avec CentralImmo)} \\ \hline
+        \textbf{Collecte des annonces} & Manuelle, site par site (tr\`es lent). & Automatique, les scripts travaillent seuls. \\ \hline
+        \textbf{Doublons visibles} & Fr\'equents, l'utilisateur tombe plusieurs fois sur la m\^eme maison. & Doublons fusionn\'es automatiquement par le DCS. \\ \hline
+        \textbf{Suivi des prix} & Inexistant, les anciens prix disparaissent. & Historique des variations de prix conserv\'e. \\ \hline
+    \end{tabular}
+    \caption{Comparaison fonctionnelle Avant / Apr\`es notre intervention}
+    \label{tab:avant_apres}
+\end{table}
+
+\subsection{Donn\'ees collect\'ees}
+Depuis le d\'eploiement des robots de collecte (premi\`ere ex\'ecution le 25 juin 2026), la base contient 265 annonces brutes issues de trois sources actives : Mapiole (162 annonces), Kasastay (69 annonces) et Ny\`e Ta Piole (34 annonces). Le tableau~\ref{tab:etat_base} synth\'etise l'\'etat de la base au moment de la r\'edaction.
+
+\begin{table}[H]
+    \centering
+    \small
+    \renewcommand{\arraystretch}{1.3}
+    \arrayrulecolor{black}
+    \begin{tabular}{|l|c|}
+        \hline
+        \rowcolor{headergray}
+        \textbf{Indicateur} & \textbf{Valeur au 16/07/2026} \\ \hline
+        Annonces brutes collect\'ees & 265 \\ \hline
+        Sources actives & 3 (Mapiole, Kasastay, Ny\`e Ta Piole) \\ \hline
+        Fiches canoniques (apr\`es d\'eduplication) & 227 \\ \hline
+        Doublons d\'etect\'es et fusionn\'es & $\approx$ 38 ($\approx$ 14\,\%) \\ \hline
+        \'Ev\'enements d'historique enregistr\'es & 506 \\ \hline
+        \quad dont changements de prix & 124 \\ \hline
+        \quad dont changements de disponibilit\'e & 111 \\ \hline
+        \quad dont retraits & 6 \\ \hline
+        Fiches avec au moins un changement de prix & 98 \\ \hline
+        Localisations couvertes (villes / quartiers) & 7 / 53 \\ \hline
+        P\'eriode de collecte active & 25 juin -- 16 juillet 2026 \\ \hline
+    \end{tabular}
+    \caption{\'Etat de la base de donn\'ees au moment de la r\'edaction}
+    \label{tab:etat_base}
+\end{table}
+
+La r\'epartition par type de bien (\textbf{Figure~\ref{fig:repartition_types}}) refl\`ete la nature du march\'e camerounais : les terrains et les appartements repr\'esentent la majorit\'e des annonces, devant les chambres et les maisons.
+
+\begin{figure}[H]
+    \centering
+    \begin{tikzpicture}[font=\sffamily]
+        % Axe X (horizontal bars)
+        \def\barh{0.45}
+        % Data: type | count
+        % Terrain 94, Appartement 93, Chambre 25, Maison 8, Autre 5, Bureau 2
+        % Max = 94 -> scale to 8cm
+        \pgfmathsetmacro{\barw}{8/94}
+
+        % Terrain
+        \node[font=\small, left] at (0,0.7) {Terrain};
+        \draw[fill=primaryGreen!70, draw=primaryGreen] (0, 0.7-\barh/2) rectangle (\barw*94, 0.7+\barh/2);
+        \node[font=\small\bfseries, right] at (\barw*94, 0.7) {94};
+
+        % Appartement
+        \node[font=\small, left] at (0,0) {Appartement};
+        \draw[fill=primaryGreen!60, draw=primaryGreen] (0, -\barh/2) rectangle (\barw*93, \barh/2);
+        \node[font=\small\bfseries, right] at (\barw*93, 0) {93};
+
+        % Chambre
+        \node[font=\small, left] at (0,-0.7) {Chambre};
+        \draw[fill=primaryGreen!45, draw=primaryGreen] (0, -0.7-\barh/2) rectangle (\barw*25, -0.7+\barh/2);
+        \node[font=\small\bfseries, right] at (\barw*25, -0.7) {25};
+
+        % Maison
+        \node[font=\small, left] at (0,-1.4) {Maison};
+        \draw[fill=primaryGreen!35, draw=primaryGreen] (0, -1.4-\barh/2) rectangle (\barw*8, -1.4+\barh/2);
+        \node[font=\small\bfseries, right] at (\barw*8, -1.4) {8};
+
+        % Autre
+        \node[font=\small, left] at (0,-2.1) {Autre};
+        \draw[fill=primaryGreen!25, draw=primaryGreen] (0, -2.1-\barh/2) rectangle (\barw*5, -2.1+\barh/2);
+        \node[font=\small\bfseries, right] at (\barw*5, -2.1) {5};
+
+        % Bureau
+        \node[font=\small, left] at (0,-2.8) {Bureau};
+        \draw[fill=primaryGreen!20, draw=primaryGreen] (0, -2.8-\barh/2) rectangle (\barw*2, -2.8+\barh/2);
+        \node[font=\small\bfseries, right] at (\barw*2, -2.8) {2};
+
+        % Axe
+        \draw[thick] (0,-3.3) -- (8,-3.3);
+        \node[below, font=\footnotesize] at (4,-3.4) {Nombre d'annonces};
+    \end{tikzpicture}
+    \caption{R\'epartition des 227 fiches canoniques par type de bien (au 16/07/2026)}
+    \label{fig:repartition_types}
+\end{figure}
+
+\subsection{D\'eduplication et historique des prix}
+Sur les 265 annonces brutes collect\'ees, l'algorithme DCS en a fusionn\'e environ 38, r\'eduisant le nombre de fiches uniques \`a 227 : environ 14\,\% des annonces \'etaient des doublons (un m\^eme bien publi\'e plusieurs fois sur une m\^eme source). Dix-sept fiches canoniques regroupent ainsi plusieurs annonces brutes, les 210 autres n'\'etant pr\'esentes qu'en un seul exemplaire. \`A ce stade, aucun doublon inter-sources n'a \'et\'e d\'etect\'e : les doublons observ\'es sont intra-source (le m\^eme bien republi\'e sur Mapiole, Kasastay ou Ny\`e Ta Piole). Le taux de doublons inter-sources devrait augmenter \`a mesure que de nouvelles sources seront int\'egr\'ees et que leurs catalogues se recouperont.
+
+C\^ot\'e historique, 506 \'ev\'enements ont \'et\'e enregistr\'es sur la p\'eriode de collecte : 124 changements de prix, 111 changements de disponibilit\'e et 6 retraits. Pr\`es de la moiti\'e des fiches (98 sur 227) disposent d'au moins un changement de prix, ce qui permet \`a l'utilisateur de consulter l'\'evolution du tarif d'un bien donn\'e au fil du temps.
+
+\subsection{Tests de charge de l'API}
+Pour \'evaluer la r\'esistance du serveur backend en production, nous avons effectu\'e un test de charge avec l'outil \textbf{hey} sur l'endpoint principal \texttt{/annonces} (qui interroge la base et renvoie l'ensemble des fiches canoniques). La commande ex\'ecut\'ee est la suivante :
+
+\begin{verbatim}
+hey -n 100 -c 10 -m GET http://13.51.127.214:8000/annonces
+\end{verbatim}
+
+Cette commande envoie 100 requ\^etes r\'eparties sur 10 connexions concurrentes. Le serveur a r\'epondu par 100 codes \texttt{200 OK}, soit un taux de r\'eussite de 100\,\%. Les principaux r\'esultats sont r\'esum\'es dans le tableau~\ref{tab:hey_results} :
+
+\begin{table}[H]
+    \centering
+    \small
+    \renewcommand{\arraystretch}{1.3}
+    \arrayrulecolor{black}
+    \begin{tabular}{|l|c|}
+        \hline
+        \rowcolor{headergray}
+        \textbf{Indicateur} & \textbf{Valeur} \\ \hline
+        Requ\^etes totales & 100 \\ \hline
+        Concurrence & 10 \\ \hline
+        R\'eussites (\texttt{200 OK}) & 100 \\ \hline
+        Temps moyen par requ\^ete & $\approx$ 0{,}77 s \\ \hline
+        M\'ediane (P50) & $\approx$ 0{,}75 s \\ \hline
+        90\textsuperscript{e} percentile (P90) & $\approx$ 1{,}58 s \\ \hline
+        Requ\^etes par seconde & $\approx$ 12 \\ \hline
+        Taille moyenne d'une r\'eponse & $\approx$ 41 Ko \\ \hline
+    \end{tabular}
+    \caption{R\'esultats du test de charge \texttt{hey} sur l'endpoint \texttt{/annonces}}
+    \label{tab:hey_results}
+\end{table}
+
+La \textbf{Figure~\ref{fig:hey_load_test}} reproduit l'ex\'ecution de ce test. Le temps de r\'eponse moyen se situe autour de 0{,}77 s, au-dessus de l'objectif initial de 500 ms. Cet \'ecart s'explique en grande partie par le volume de donn\'ees renvoy\'e par cet endpoint (environ 41 Ko par r\'eponse, soit l'ensemble des fiches sans pagination). Les endpoints plus l\'egers, comme \texttt{/health}, r\'epondent en moins de 0{,}4 s. Une pagination c\^ot\'e serveur permettrait de ramener le temps de r\'eponse de \texttt{/annonces} sous la barre des 500 ms ; cette optimisation est pr\'evue pour la prochaine it\'eration.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\textwidth]{hey_results}
+    \caption{Test de charge \texttt{hey} : 100 requ\^etes sur l'endpoint \texttt{/annonces} du serveur de production}
+    \label{fig:hey_load_test}
+\end{figure}
+
+
+% ===========================================================
+\section{Auto-\'evaluation des comp\'etences}
+% ===========================================================
+Au terme de ce stage, il nous semble important de porter un regard r\'etroactif sur les comp\'etences d\'evelopp\'ees, tant sur le plan technique qu'humain. Cette auto-\'evaluation s'articule autour de deux volets : les savoir-faire techniques (\emph{Hard Skills}) et le comportement en \'equipe (\emph{Soft Skills}).
+
+\subsection{Comp\'etences techniques acquises (\emph{Hard Skills})}
+Le tableau~\ref{tab:hard_skills} r\'esume les savoir-faire techniques que nous avons d\'evelopp\'es durant ce stage :
+
+\begin{table}[H]
+    \centering
+    \small
+    \renewcommand{\arraystretch}{1.3}
+    \arrayrulecolor{black}
+    \begin{tabularx}{\textwidth}{|l|X|}
+        \hline
+        \rowcolor{headergray}
+        \textbf{Domaine} & \textbf{Ce que nous savons faire concr\`etement} \\ \hline
+        \textbf{Python et FastAPI} & Cr\'eer un serveur web rapide capable de g\'erer plusieurs t\^aches en m\^eme temps. \\ \hline
+        \textbf{Web Scraping} & \'Ecrire des robots d'extraction de donn\'ees capables de s'adapter aux diff\'erentes structures HTML des sites sources. \\ \hline
+        \textbf{PostgreSQL} & Concevoir une base de donn\'ees organis\'ee en couches, avec historique et protection contre les \'ecrasements. \\ \hline
+        \textbf{Flutter} & D\'evelopper une application mobile compl\`ete avec carte interactive et connexion au serveur. \\ \hline
+        \textbf{Docker} & Isoler nos environnements de d\'eveloppement pour \'eviter les probl\`emes de compatibilit\'e. \\ \hline
+    \end{tabularx}
+    \caption{Comp\'etences techniques acquises durant le stage}
+    \label{tab:hard_skills}
+\end{table}
+
+\subsection{Comportement en \'equipe (\emph{Soft Skills})}
+
+\begin{table}[H]
+    \centering
+    \small
+    \renewcommand{\arraystretch}{1.3}
+    \arrayrulecolor{black}
+    \begin{tabularx}{\textwidth}{|l|X|}
+        \hline
+        \rowcolor{headergray}
+        \textbf{Qualit\'e} & \textbf{Comment elle s'est manifest\'ee dans le projet} \\ \hline
+        \textbf{Travail d'\'equipe} & Division claire des t\^aches entre les trois membres : un sur l'interface mobile, un sur les robots, un sur la base de donn\'ees. \\ \hline
+        \textbf{R\'esolution de probl\`emes} & Face aux d\'efis techniques (lenteur de l'algorithme, h\'et\'erog\'en\'eit\'e des sites sources), nous avons appris \`a chercher des solutions par nous-m\^emes. \\ \hline
+        \textbf{Adaptabilit\'e} & Apprentissage rapide de technologies que nous n'avions jamais utilis\'ees avant le stage (Docker, FastAPI). \\ \hline
+    \end{tabularx}
+    \caption{Comp\'etences comportementales d\'evelopp\'ees durant le stage}
+    \label{tab:soft_skills}
+\end{table}
+
+% ===========================================================
+\section{Avis sur le stage}
+% ===========================================================
+Pour conclure ce bilan, nous souhaitons donner notre avis personnel sur cette exp\'erience professionnelle. Le stage a-t-il r\'epondu \`a nos attentes ?
+
+La r\'eponse est clairement \textbf{oui}. Nous sommes arriv\'es avec des connaissances principalement th\'eoriques issues des cours magistraux, et nous avons eu la chance de les appliquer sur un projet concret et techniquement formateur. Ce stage nous a donn\'e l'opportunit\'e de participer \`a la conception d'un syst\`eme complet, de la base de donn\'ees jusqu'\`a l'application mobile, en passant par un algorithme de d\'eduplication. L'\'equipe de SSH nous a accord\'e une autonomie appr\'eci\'ee tout en restant disponible pour nous guider quand c'\'etait n\'ecessaire.
+
+Si nous devions mentionner un point \`a am\'eliorer, ce serait la dur\'ee du stage. Le temps imparti ne nous a pas permis d'int\'egrer toutes les sources souhait\'ees (par exemple les groupes Facebook ou WhatsApp), ni d'optimiser pleinement les temps de r\'eponse de l'API. Malgr\'e cela, le prototype livr\'e est fonctionnel et test\'e, et constitue une base solide pour des it\'erations futures.
+
+Cette exp\'erience nous a confirm\'e que le d\'eveloppement logiciel appliqu\'e aux probl\`emes concrets de notre soci\'et\'e est la voie dans laquelle nous souhaitons continuer \`a avancer.
+
+\paragraph*{Conclusion du chapitre}
+Ce chapitre a pr\'esent\'e les r\'esultats mesurables de notre travail au moment de la r\'edaction, nos apprentissages techniques et humains, ainsi que notre appr\'eciation du stage. Les donn\'ees collect\'ees montrent que CentralImmo, bien qu'encore limit\'e en couverture, r\'epond aux besoins identifi\'es et constitue une base que les it\'erations futures pourront enrichir. La conclusion g\'en\'erale qui suit r\'esumera l'ensemble du m\'emoire.

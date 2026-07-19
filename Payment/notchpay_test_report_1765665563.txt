@@ -1,0 +1,24 @@
+NOTCH PAY API TEST REPORT
+Generated: 2025-12-13 23:39:23
+Duration: 27.30s
+
+SUMMARY:
+  Total Tests: 14
+  Passed: 11
+  Failed: 3
+  Warnings: ['Create a Transfer: Insufficient funds (expected in sandbox)', 'Check Balance for Specific Currency: Endpoint not found (might not be available)', 'List Balance History: Endpoint not found (might not be available)', 'List Payment Channels: Endpoint not found (might not be available)', 'Get Channel Details: Skipped (channels endpoint not available)', 'List Countries: Endpoint not found (might not be available)', 'List Currencies: Endpoint not found (might not be available)', 'List Banks: Endpoint not found (might not be available)']
+
+ERRORS:
+  - Create a Customer: Status: 500, Response: {'code': '500', 'status': "Whoop's Application Error - Please contact support"}
+  - Retrieve a Beneficiary: Status: 202, Response: {'status': 'Accepted', 'message': 'Beneficiary retrieved', 'code': 202, 'beneficiary': {'id': 'bn.test_mTwlstZfyTNkbocQ', 'phone': '+237670000000', 'name': 'Partner 1765658607', 'email': None, 'sandbox': 1, 'country': 'CM', 'payment_method': None}, 'recipient': {'id': 'bn.test_mTwlstZfyTNkbocQ', 'phone': '+237670000000', 'name': 'Partner 1765658607', 'email': None, 'sandbox': 1, 'country': 'CM', 'payment_method': None}}
+  - Update a Beneficiary: Status: 403, Response: {'code': '403', 'status': 'Forbidden'}
+
+WARNINGS:
+  - Create a Transfer: Insufficient funds (expected in sandbox)
+  - Check Balance for Specific Currency: Endpoint not found (might not be available)
+  - List Balance History: Endpoint not found (might not be available)
+  - List Payment Channels: Endpoint not found (might not be available)
+  - Get Channel Details: Skipped (channels endpoint not available)
+  - List Countries: Endpoint not found (might not be available)
+  - List Currencies: Endpoint not found (might not be available)
+  - List Banks: Endpoint not found (might not be available)

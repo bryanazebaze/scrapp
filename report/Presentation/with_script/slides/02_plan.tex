@@ -1,0 +1,26 @@
+%% slides/02_plan.tex
+\begin{frame}{Plan de la Présentation}
+  \begin{center}
+    \begin{tikzpicture}[
+      sectionbox/.style={rectangle, rounded corners=15pt, draw=UY1Purple, thick, fill=white, text width=9cm, align=center, minimum height=0.8cm},
+      numbercircle/.style={circle, fill=UY1Purple, text=white, font=\bfseries, minimum size=0.8cm}
+    ]
+      \node[diamond, fill=UY1Purple, minimum size=4cm, text=white, font=\Huge\bfseries] at (-5, -2) {Plan};
+
+      \node[sectionbox] (s1) at (2, 0)   {\textbf{Introduction}};
+      \node[numbercircle] at (6.5, 0)   {01};
+      \node[sectionbox] (s2) at (2, -1)  {\textbf{Présentation de la Structure d'Accueil}};
+      \node[numbercircle] at (6.5, -1)  {02};
+      \node[sectionbox] (s3) at (2, -2)  {\textbf{Travaux Réalisés}};
+      \node[numbercircle] at (6.5, -2)  {03};
+      \node[sectionbox] (s4) at (2, -3)  {\textbf{Bilan et Apports}};
+      \node[numbercircle] at (6.5, -3)  {04};
+      \node[sectionbox] (s5) at (2, -4)  {\textbf{Conclusion \& Perspectives}};
+      \node[numbercircle] at (6.5, -4)  {05};
+    \end{tikzpicture}
+  \end{center}
+\note{
+\textbf{\textcolor{speakerKelcy}{[EN] AZEFACK K.}}\\
+``Our presentation follows five parts. First, an \textbf{introduction} to the problem we tackled. Second, the \textbf{host company} where we built this — Smart Service Hub. Third, the \textbf{work we delivered}: architecture, database, scrapers, and our deduplication algorithm. Fourth, the \textbf{results and assessment}. And finally, our \textbf{conclusion and perspectives}.'' ~|~ \textbf{$\approx$30 s}
+}
+\end{frame}

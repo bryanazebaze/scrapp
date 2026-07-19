@@ -31,11 +31,11 @@ DB_USER="${DB_USER:-immo_user}"
 DB_PASS="${DB_PASS:-$(openssl rand -base64 24 | tr -d '/+=' | head -c 24)}"
 API_HOST="${API_HOST:-0.0.0.0}"
 API_PORT="${API_PORT:-8000}"
-# Optional: pass DASHSCOPE_API_KEY=... when running setup.sh to enable AI
+# Optional: pass DEEPSEEK_API_KEY=... when running setup.sh to enable AI
 # features (natural-language search, profile translation). Leave empty to use
 # the regex-based fallback search (API still runs without it).
-DASHSCOPE_API_KEY="${DASHSCOPE_API_KEY:-}"
-QWEN_MODEL="${QWEN_MODEL:-qwen-plus}"
+DEEPSEEK_API_KEY="${DEEPSEEK_API_KEY:-}"
+DEEPSEEK_MODEL="${DEEPSEEK_MODEL:-deepseek-v4-flash}"
 
 # Path to this script's directory (contains the dump + requirements)
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -221,10 +221,10 @@ CORS_ORIGINS=*
 SCRAPER_DELAY_MIN=2.0
 SCRAPER_DELAY_MAX=5.0
 
-# AI / Qwen (DashScope) — enables natural-language search + translations.
+# AI / DeepSeek — enables natural-language search + translations.
 # Leave blank to use the regex-based fallback (API runs fine without it).
-DASHSCOPE_API_KEY=${DASHSCOPE_API_KEY}
-QWEN_MODEL=${QWEN_MODEL}
+DEEPSEEK_API_KEY=${DEEPSEEK_API_KEY}
+DEEPSEEK_MODEL=${DEEPSEEK_MODEL}
 
 # Optional: HTTP proxy for scrapers.
 HTTP_PROXY=

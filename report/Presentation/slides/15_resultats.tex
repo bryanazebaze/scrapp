@@ -1,0 +1,53 @@
+%% slides/15_resultats.tex
+\begin{frame}{Bilan}{État de la Plateforme au 16/07/2026}
+  \begin{columns}[T]
+    \column{0.45\textwidth}
+      \begin{block}{\faDatabase\ Chiffres clés}
+        \begin{itemize}
+          \setlength{\itemsep}{4pt}
+          \item \textbf{265} annonces brutes collectées.
+          \item \textbf{3} sources actives (Mapiole, Kasastay, Nyè Ta Piole).
+          \item \textbf{227} fiches canoniques après déduplication.
+          \item $\approx$ \textbf{38} doublons fusionnés ($\approx$ 14\,\%).
+          \item \textbf{506} événements d'historique.
+          \item \textbf{124} changements de prix suivis.
+          \item \textbf{7} villes / \textbf{53} quartiers couverts.
+        \end{itemize}
+      \end{block}
+
+    \column{0.55\textwidth}
+      \begin{center}
+        \begin{tikzpicture}[font=\sffamily, xscale=0.95, yscale=0.9]
+          \def\barh{0.42}
+          \pgfmathsetmacro{\barw}{4.5/94}
+          % Terrain
+          \node[font=\small, left] at (0,0.7) {Terrain};
+          \draw[fill=UY1Purple!70, draw=UY1Purple] (0, 0.7-\barh/2) rectangle (\barw*94, 0.7+\barh/2);
+          \node[font=\small\bfseries, right] at (\barw*94, 0.7) {94};
+          % Appartement
+          \node[font=\small, left] at (0,0) {Appartement};
+          \draw[fill=UY1Purple!60, draw=UY1Purple] (0, -\barh/2) rectangle (\barw*93, \barh/2);
+          \node[font=\small\bfseries, right] at (\barw*93, 0) {93};
+          % Chambre
+          \node[font=\small, left] at (0,-0.7) {Chambre};
+          \draw[fill=UY1Purple!45, draw=UY1Purple] (0, -0.7-\barh/2) rectangle (\barw*25, -0.7+\barh/2);
+          \node[font=\small\bfseries, right] at (\barw*25, -0.7) {25};
+          % Maison
+          \node[font=\small, left] at (0,-1.4) {Maison};
+          \draw[fill=UY1Purple!35, draw=UY1Purple] (0, -1.4-\barh/2) rectangle (\barw*8, -1.4+\barh/2);
+          \node[font=\small\bfseries, right] at (\barw*8, -1.4) {8};
+          % Autre
+          \node[font=\small, left] at (0,-2.1) {Autre};
+          \draw[fill=UY1Purple!25, draw=UY1Purple] (0, -2.1-\barh/2) rectangle (\barw*5, -2.1+\barh/2);
+          \node[font=\small\bfseries, right] at (\barw*5, -2.1) {5};
+          % Bureau
+          \node[font=\small, left] at (0,-2.8) {Bureau};
+          \draw[fill=UY1Purple!20, draw=UY1Purple] (0, -2.8-\barh/2) rectangle (\barw*2, -2.8+\barh/2);
+          \node[font=\small\bfseries, right] at (\barw*2, -2.8) {2};
+          \draw[thick] (0,-3.3) -- (4.5,-3.3);
+          \node[below, font=\scriptsize] at (2.25,-3.4) {Nombre d'annonces};
+        \end{tikzpicture}\\[0.1cm]
+        \scriptsize \textit{Répartition des 227 fiches canoniques par type de bien}
+      \end{center}
+  \end{columns}
+\end{frame}

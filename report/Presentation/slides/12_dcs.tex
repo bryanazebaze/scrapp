@@ -1,0 +1,54 @@
+%% slides/12_dcs.tex
+\begin{frame}{Travaux Réalisés}{Algorithme de Déduplication (DCS)}
+  \begin{center}
+    \begin{tikzpicture}[
+      node distance=3mm and 1cm,
+      font=\scriptsize\sffamily,
+      >=Stealth,
+      factorNode/.style={draw=ciBorder, line width=0.8pt, rounded corners=3pt, fill=white, text=ciDark, align=center, text width=3.6cm, inner sep=5pt},
+      weightNode/.style={draw=ciGold!80!black, line width=0.8pt, rounded corners=3pt, fill=ciGoldLight, text=ciDark, align=center, text width=2cm, inner sep=5pt},
+      sumNode/.style={draw=ciGreen, line width=0.9pt, rounded corners=3pt, fill=ciGreenLight, text=ciDark, align=center, text width=2cm, inner sep=6pt},
+      decisionGreen/.style={draw=ciGreen, line width=0.8pt, rounded corners=3pt, fill=ciGreenLight, text=ciDark, align=center, text width=2.5cm, inner sep=5pt},
+      decisionGold/.style={draw=ciGold!80!black, line width=0.8pt, rounded corners=3pt, fill=ciGoldLight, text=ciDark, align=center, text width=2.5cm, inner sep=5pt},
+      decisionRed/.style={draw=ciRed, line width=0.8pt, rounded corners=3pt, fill=ciRed!8, text=ciDark, align=center, text width=2.5cm, inner sep=5pt},
+      arrow/.style={-Stealth, line width=0.8pt},
+      arrowGold/.style={-Stealth, line width=0.8pt, draw=ciGold!80!black},
+      arrowGreen/.style={-Stealth, line width=0.8pt, draw=ciGreen},
+      arrowRed/.style={-Stealth, line width=0.8pt, draw=ciRed}
+    ]
+      % Facteurs
+      \node[factorNode] (f1) {Similitude de Titre\\(RapidFuzz)};
+      \node[factorNode, below=of f1] (f2) {Proximité de Prix\\(écart $<$ 15\,\%)};
+      \node[factorNode, below=of f2] (f3) {Type de bien\\(Villa, Studio, \ldots)};
+      \node[factorNode, below=of f3] (f4) {Nombre de chambres\\(comparaison exacte)};
+
+      % Poids
+      \node[weightNode, right=1cm of f1] (p1) {Poids : 35\,\%};
+      \node[weightNode, right=1cm of f2] (p2) {Poids : 25\,\%};
+      \node[weightNode, right=1cm of f3] (p3) {Poids : 20\,\%};
+      \node[weightNode, right=1cm of f4] (p4) {Poids : 20\,\%};
+
+      % Somme
+      \node[sumNode, right=1.2cm of p2, yshift=-4.5mm, minimum height=1.6cm] (sum)
+        {\textbf{Somme\\Pondérée}\\[2pt]\scriptsize Score / 100};
+
+      % Décisions
+      \node[decisionGreen, right=1.2cm of sum, yshift=1.3cm] (conf) {\textbf{Fiche Fusionnée}\\Score $\geq$ 85\,\%};
+      \node[decisionGold, right=1.2cm of sum] (prob) {\textbf{Validation manuelle}\\65\,\% -- 84\,\%};
+      \node[decisionRed, right=1.2cm of sum, yshift=-1.3cm] (newp) {\textbf{Nouveau Bien}\\Score $<$ 65\,\%};
+
+      % Flèches
+      \draw[arrow] (f1) -- (p1);
+      \draw[arrow] (f2) -- (p2);
+      \draw[arrow] (f3) -- (p3);
+      \draw[arrow] (f4) -- (p4);
+      \draw[arrowGold] (p1.east) -- (sum.north west);
+      \draw[arrowGold] (p2.east) -- (sum.west);
+      \draw[arrowGold] (p3.east) -- (sum.west);
+      \draw[arrowGold] (p4.east) -- (sum.south west);
+      \draw[arrowGreen] (sum.east) -- (conf.west);
+      \draw[arrowGold]  (sum.east) -- (prob.west);
+      \draw[arrowRed]   (sum.east) -- (newp.west);
+    \end{tikzpicture}
+  \end{center}
+\end{frame}

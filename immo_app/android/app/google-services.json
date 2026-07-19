@@ -1,0 +1,39 @@
+{
+  "project_info": {
+    "project_number": "462226982834",
+    "project_id": "centralimo-71b0d",
+    "storage_bucket": "centralimo-71b0d.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:462226982834:android:fc4225ddf1b406c4c146ab",
+        "android_client_info": {
+          "package_name": "com.example.centralimmo"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "462226982834-8d16o9ca2pqicl6mffqtup6lsv9o7toj.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAo0Ybjrh0iMWafCNeDiJt4VzRfquwweCw"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "462226982834-8d16o9ca2pqicl6mffqtup6lsv9o7toj.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

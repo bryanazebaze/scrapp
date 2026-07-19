@@ -21,6 +21,17 @@ class _FilterSheetState extends ConsumerState<FilterSheet> {
   late TextEditingController _minPriceController;
   late TextEditingController _maxPriceController;
 
+  /// Selected property type (null = any). "Chambre" maps to property_type=Chambre.
+  String? _selectedPropertyType;
+
+  static const List<String> _propertyTypes = [
+    'Appartement',
+    'Maison',
+    'Chambre',
+    'Terrain',
+    'Bureau',
+  ];
+
   @override
   void initState() {
     super.initState();
@@ -30,6 +41,7 @@ class _FilterSheetState extends ConsumerState<FilterSheet> {
         text: filters.minPrice?.toString() ?? '');
     _maxPriceController = TextEditingController(
         text: filters.maxPrice?.toString() ?? '');
+    _selectedPropertyType = filters.propertyType;
   }
 
   @override
@@ -49,6 +61,7 @@ class _FilterSheetState extends ConsumerState<FilterSheet> {
       city: city,
       minPrice: minPrice,
       maxPrice: maxPrice,
+      propertyType: _selectedPropertyType,
     );
     Navigator.pop(context);
   }
@@ -57,6 +70,9 @@ class _FilterSheetState extends ConsumerState<FilterSheet> {
     _cityController.clear();
     _minPriceController.clear();
     _maxPriceController.clear();
+    setState(() {
+      _selectedPropertyType = null;
+    });
     ref.read(filterStateProvider.notifier).state = const FilterState();
     Navigator.pop(context);
   }
@@ -131,6 +147,44 @@ class _FilterSheetState extends ConsumerState<FilterSheet> {
                     prefixIcon: const Icon(Icons.location_on_outlined,
                         size: 20, color: AppColors.textSecondary),
                   ),
+                ),
+                const SizedBox(height: AppSpacing.lg),
+
+                // --- Property type chips ---
+                Text('Type de bien',
+                    style: AppTypography.label.copyWith(
+                      shadows: [const Shadow(color: Colors.white24, blurRadius: 2)],
+                    )),
+                const SizedBox(height: AppSpacing.sm),
+                Wrap(
+                  spacing: AppSpacing.sm,
+                  runSpacing: AppSpacing.xs,
+                  children: _propertyTypes.map((type) {
+                    final selected = _selectedPropertyType == type;
+                    return FilterChip(
+                      label: Text(type),
+                      selected: selected,
+                      onSelected: (_) {
+                        setState(() {
+                          _selectedPropertyType = selected ? null : type;
+                        });
+                      },
+                      selectedColor: AppColors.primary,
+                      backgroundColor: Colors.white.withValues(alpha: 0.18),
+                      labelStyle: AppTypography.caption.copyWith(
+                        color: selected ? Colors.white : AppColors.textPrimary,
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(AppRadius.md),
+                      ),
+                      side: BorderSide(
+                        color: selected
+                            ? AppColors.primary
+                            : Colors.white.withValues(alpha: 0.25),
+                      ),
+                      showCheckmark: false,
+                    );
+                  }).toList(),
                 ),
                 const SizedBox(height: AppSpacing.lg),
 

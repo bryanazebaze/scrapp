@@ -1,0 +1,57 @@
+%% slides/08_cas_utilisation.tex
+\begin{frame}{Travaux Réalisés}{Acteurs et Cas d'Utilisation}
+  \begin{center}
+    \begin{tikzpicture}[node distance=4mm and 2cm, scale=0.85, every node/.style={scale=0.85}]
+      \node[align=center, font=\small\bfseries\sffamily, text=ciGreen, text width=8cm] (titleNode) {SERVICES DE L'APPLICATION};
+
+      \node[node-green, below=6mm of titleNode, text width=5cm] (uc1) {Rechercher par filtres};
+      \node[node-green, below=of uc1, text width=5cm] (uc2) {Comparer les prix multi-sources};
+      \node[node-green, below=of uc2, text width=5cm] (uc3) {Recherche par temps de trajet};
+      \node[node-green, below=of uc3, text width=5cm] (uc4) {Consulter les tendances par quartier};
+      \node[node-gold, below=of uc4, text width=5cm] (uc5) {Modérer les anomalies};
+      \node[node-gold, below=of uc5, text width=5cm] (uc6) {Déclencher / surveiller les crawls};
+
+      % Acteur gauche — Utilisateur Final
+      \node[align=center, left=2.2cm of uc2.south west] (user) {
+        \begin{tikzpicture}[scale=0.45]
+          \draw[fill=white, line width=0.8pt] (0,1) circle (0.25);
+          \draw[line width=0.8pt] (0,0.75) -- (0,0);
+          \draw[line width=0.8pt] (-0.35,0.45) -- (0.35,0.45);
+          \draw[line width=0.8pt] (0,0) -- (-0.25,-0.5);
+          \draw[line width=0.8pt] (0,0) -- (0.25,-0.5);
+        \end{tikzpicture}\\
+        \small\bfseries Utilisateur\\Final
+      };
+
+      % Acteur droit — Administrateur
+      \node[align=center, right=2.2cm of uc5.north east] (admin) {
+        \begin{tikzpicture}[scale=0.45]
+          \draw[fill=white, line width=0.8pt] (0,1) circle (0.25);
+          \draw[line width=0.8pt] (0,0.75) -- (0,0);
+          \draw[line width=0.8pt] (-0.35,0.45) -- (0.35,0.45);
+          \draw[line width=0.8pt] (0,0) -- (-0.25,-0.5);
+          \draw[line width=0.8pt] (0,0) -- (0.25,-0.5);
+        \end{tikzpicture}\\
+        \small\bfseries Administrateur\\(Crawler)
+      };
+
+      % Frontière du système
+      \begin{scope}[on background layer]
+        \node[group-box, fit=(titleNode) (uc1) (uc2) (uc3) (uc4) (uc5) (uc6), inner xsep=0.4cm, inner ysep=0.4cm] {};
+      \end{scope}
+
+      \draw[flow-arrow] (user.east) -- (uc1.west);
+      \draw[flow-arrow] (user.east) -- (uc2.west);
+      \draw[flow-arrow] (user.east) -- (uc3.west);
+      \draw[flow-arrow] (user.east) -- (uc4.west);
+      \draw[flow-arrow-gold] (admin.west) -- (uc5.east);
+      \draw[flow-arrow-gold] (admin.west) -- (uc6.east);
+    \end{tikzpicture}
+  \end{center}
+\note{
+\textbf{\textcolor{speakerKelcy}{[EN] AZEFACK K.}}\\
+``From that observation, we modeled two actors. The \textbf{end user} — searches, filters, compares prices, uses travel-time search. And the \textbf{administrator} — moderates anomalies, triggers and monitors crawls.''\\[6pt]
+\textbf{\textcolor{speakerAzebaze}{[FR] AZEBAZE B. — précise les cas d'usage}}\\
+``L'utilisateur final : quatre usages — recherche par filtres, comparaison multi-sources, recherche isochrone, tendances par quartier. L'administrateur : modération des annonces ambiguës et contrôle des robots de collecte. Ces deux profils structurent toute l'interface.'' ~|~ \textbf{$\approx$1 min}
+}
+\end{frame}

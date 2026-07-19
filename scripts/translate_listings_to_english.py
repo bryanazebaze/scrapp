@@ -5,7 +5,7 @@ raw_listings immutability — writes go to the side table, never to
 raw_listings itself. Idempotent: skips listings that already have an
 English translation.
 
-Batched with a semaphore to keep Qwen rate limits in check.
+Batched with a semaphore to keep DeepSeek rate limits in check.
 """
 from __future__ import annotations
 
@@ -22,9 +22,9 @@ from sqlalchemy.orm import sessionmaker
 
 from core.config import settings
 
-qwen = AsyncOpenAI(
-    api_key=settings.dashscope_api_key,
-    base_url=settings.qwen_base_url,
+deepseek = AsyncOpenAI(
+    api_key=settings.deepseek_api_key,
+    base_url=settings.deepseek_base_url,
 )
 
 SYSTEM_PROMPT = (
@@ -45,8 +45,8 @@ async def translate_one(raw_listing_id: int, description: str) -> tuple[int, str
     """Translate one description, retrying on failure. Returns (id, text)."""
     for attempt in range(4):
         try:
-            resp = await qwen.chat.completions.create(
-                model=settings.qwen_model,
+            resp = await deepseek.chat.completions.create(
+                model=settings.deepseek_model,
                 messages=[
                     {"role": "system", "content": SYSTEM_PROMPT},
                     {"role": "user", "content": description},

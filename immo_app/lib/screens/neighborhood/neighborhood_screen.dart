@@ -12,6 +12,10 @@ import '../../theme/typography.dart';
 import '../../theme/spacing.dart';
 import '../../widgets/animations.dart';
 import '../../widgets/glass_card.dart';
+import '../../widgets/expandable_section.dart';
+import '../../widgets/limited_chip_list.dart';
+import '../../widgets/expandable_text.dart';
+import '../../widgets/voice_reader_button.dart';
 
 class NeighborhoodScreen extends ConsumerWidget {
   final String slug;
@@ -84,7 +88,13 @@ class _AnalyticsContent extends ConsumerWidget {
           leading: Padding(
             padding: const EdgeInsets.all(8),
             child: GestureDetector(
-              onTap: () => context.go('/'),
+              onTap: () {
+                if (context.canPop()) {
+                  context.pop();
+                } else {
+                  context.go('/');
+                }
+              },
               child: Container(
                 width: 38,
                 height: 38,
@@ -132,7 +142,12 @@ class _AnalyticsContent extends ConsumerWidget {
                           ),
                         ),
                         const SizedBox(width: AppSpacing.sm),
-                        Text(l10n.neighborhoodLabel, style: AppTypography.label),
+                        Flexible(
+                          child: Text(l10n.neighborhoodLabel,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: AppTypography.label),
+                        ),
                       ],
                     ),
                     const SizedBox(height: AppSpacing.md),
@@ -185,8 +200,12 @@ class _AnalyticsContent extends ConsumerWidget {
                         ),
                       ),
                       const SizedBox(width: AppSpacing.sm),
-                      Text(l10n.neighborhoodScoresTitle,
-                          style: AppTypography.label),
+                      Flexible(
+                        child: Text(l10n.neighborhoodScoresTitle,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: AppTypography.label),
+                      ),
                     ],
                   ),
                 ),
@@ -385,7 +404,12 @@ class _SectionHeader extends StatelessWidget {
             child: Icon(icon, color: AppColors.primary, size: 16),
           ),
           const SizedBox(width: AppSpacing.sm),
-          Text(title, style: AppTypography.label),
+          Flexible(
+            child: Text(title,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: AppTypography.label),
+          ),
         ],
       ),
     );
@@ -398,11 +422,39 @@ class _SecuritySection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final color = _securityColor(profile.securityLevel);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _SectionHeader(icon: Icons.shield_rounded, title: AppLocalizations.of(context)!.neighborhoodSecuritySection),
+        // Section header with VoiceReaderButton for security notes
+        Padding(
+          padding: const EdgeInsets.only(bottom: AppSpacing.md),
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(7),
+                decoration: BoxDecoration(
+                  color: AppColors.primaryLight,
+                  borderRadius: BorderRadius.circular(AppRadius.sm),
+                ),
+                child: Icon(Icons.shield_rounded,
+                    color: AppColors.primary, size: 16),
+              ),
+              const SizedBox(width: AppSpacing.sm),
+              Flexible(
+                child: Text(l10n.neighborhoodSecuritySection,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: AppTypography.label),
+              ),
+              const Spacer(),
+              if (profile.securityNotes != null &&
+                  profile.securityNotes!.isNotEmpty)
+                VoiceReaderButton(text: profile.securityNotes!),
+            ],
+          ),
+        ),
 
         // Security rating badge
         if (profile.securityRating != null)
@@ -421,10 +473,14 @@ class _SecuritySection extends StatelessWidget {
                 children: [
                   Icon(Icons.shield_rounded, size: 14, color: color),
                   const SizedBox(width: 6),
-                  Text(
-                    profile.securityRating!,
-                    style: AppTypography.caption.copyWith(
-                        color: color, fontWeight: FontWeight.w600),
+                  Flexible(
+                    child: Text(
+                      profile.securityRating!,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: AppTypography.caption.copyWith(
+                          color: color, fontWeight: FontWeight.w600),
+                    ),
                   ),
                 ],
               ),
@@ -452,41 +508,43 @@ class _SecuritySection extends StatelessWidget {
             ),
           ),
 
-        // Risk factors
+        // Risk factors — progressive disclosure via LimitedChipList
         if (profile.riskFactors.isNotEmpty) ...[
           const SizedBox(height: AppSpacing.md),
-          Wrap(
-            spacing: AppSpacing.sm,
-            runSpacing: AppSpacing.sm,
-            children: profile.riskFactors.map((risk) {
-              return Container(
-                padding: const EdgeInsets.symmetric(
-                    horizontal: AppSpacing.md, vertical: 6),
-                decoration: BoxDecoration(
-                  color: AppColors.warningLight,
-                  borderRadius: BorderRadius.circular(AppRadius.sm),
-                  border: Border.all(
-                      color: AppColors.warning.withOpacity(0.3),
-                      width: 0.5),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(Icons.warning_amber_rounded,
-                        size: 14, color: AppColors.warning),
-                    const SizedBox(width: 4),
-                    Flexible(
-                      child: Text(
-                        risk,
-                        style: AppTypography.caption.copyWith(
-                            color: AppColors.warning,
-                            fontWeight: FontWeight.w500),
-                      ),
+          LimitedChipList<String>(
+            items: profile.riskFactors,
+            limit: 3,
+            chipBuilder: (risk) => Container(
+              padding: const EdgeInsets.symmetric(
+                  horizontal: AppSpacing.md, vertical: 6),
+              decoration: BoxDecoration(
+                color: AppColors.warningLight,
+                borderRadius: BorderRadius.circular(AppRadius.sm),
+                border: Border.all(
+                    color: AppColors.warning.withOpacity(0.3),
+                    width: 0.5),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.warning_amber_rounded,
+                      size: 14, color: AppColors.warning),
+                  const SizedBox(width: 4),
+                  Flexible(
+                    child: Text(
+                      risk,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: AppTypography.caption.copyWith(
+                          color: AppColors.warning,
+                          fontWeight: FontWeight.w500),
                     ),
-                  ],
-                ),
-              );
-            }).toList(),
+                  ),
+                ],
+              ),
+            ),
+            viewMoreLabel: l10n.viewMore,
+            viewLessLabel: l10n.viewLess,
           ),
         ],
       ],
@@ -500,56 +558,145 @@ class _AmenitiesSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final visible = amenities.take(3).toList();
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _SectionHeader(icon: Icons.store_rounded, title: AppLocalizations.of(context)!.neighborhoodAmenities),
-        ...amenities.map((amenity) => Padding(
+        _SectionHeader(icon: Icons.store_rounded, title: l10n.neighborhoodAmenities),
+        ...visible.map((amenity) => Padding(
               padding: const EdgeInsets.only(bottom: AppSpacing.sm),
-              child: SoftCard(
-                padding: const EdgeInsets.all(AppSpacing.lg),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        if (amenity.name != null)
-                          Expanded(
-                            child: Text(amenity.name!,
-                                style: AppTypography.titleSmall),
-                          ),
-                        if (amenity.type != null)
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 8, vertical: 3),
-                            decoration: BoxDecoration(
-                              color: AppColors.primaryLight,
-                              borderRadius: BorderRadius.circular(AppRadius.xs),
-                            ),
-                            child: Text(
-                              amenity.type!,
-                              style: AppTypography.caption.copyWith(
-                                  color: AppColors.primary,
-                                  fontWeight: FontWeight.w600,
-                                  fontSize: 10),
-                            ),
-                          ),
-                      ],
-                    ),
-                    if (amenity.description != null &&
-                        amenity.description!.isNotEmpty) ...[
-                      const SizedBox(height: 6),
-                      Text(
-                        amenity.description!,
-                        style: AppTypography.bodySecondary
-                            .copyWith(fontSize: 13),
-                      ),
-                    ],
-                  ],
+              child: _amenityCard(amenity),
+            )),
+        if (amenities.length > 3) ...[
+          const SizedBox(height: AppSpacing.xs),
+          GestureDetector(
+            onTap: () => _showAllAmenities(context, amenities),
+            child: Container(
+              padding:
+                  const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: 6),
+              decoration: BoxDecoration(
+                color: AppColors.surfaceVariant,
+                borderRadius: BorderRadius.circular(AppRadius.sm),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.keyboard_arrow_down_rounded,
+                      size: 14, color: AppColors.textSecondary),
+                  const SizedBox(width: 4),
+                  Text(
+                    l10n.viewAllAmenities,
+                    style: AppTypography.caption.copyWith(
+                        color: AppColors.textSecondary,
+                        fontWeight: FontWeight.w500),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+
+  void _showAllAmenities(BuildContext context, List<Amenity> amenities) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: AppColors.background,
+      shape: const RoundedRectangleBorder(
+        borderRadius:
+            BorderRadius.vertical(top: Radius.circular(AppRadius.xxl)),
+      ),
+      builder: (context) => DraggableScrollableSheet(
+        initialChildSize: 0.6,
+        maxChildSize: 0.95,
+        minChildSize: 0.3,
+        snap: true,
+        snapSizes: const [0.3, 0.6, 0.95],
+        builder: (context, scrollController) => Column(
+          children: [
+            // Handle bar
+            Container(
+              width: 40,
+              height: 4,
+              margin: const EdgeInsets.symmetric(vertical: AppSpacing.md),
+              decoration: BoxDecoration(
+                color: AppColors.border,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.only(bottom: AppSpacing.md),
+              child: Text(AppLocalizations.of(context)!.neighborhoodAmenities,
+                  style: AppTypography.titleSmall),
+            ),
+            Expanded(
+              child: ListView.builder(
+                controller: scrollController,
+                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.screen),
+                itemCount: amenities.length,
+                itemBuilder: (context, i) => Padding(
+                  padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+                  child: _amenityCard(amenities[i]),
                 ),
               ),
-            )),
-      ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _amenityCard(Amenity amenity) {
+    return SoftCard(
+      padding: const EdgeInsets.all(AppSpacing.lg),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              if (amenity.name != null)
+                Expanded(
+                  child: Text(amenity.name!,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: AppTypography.titleSmall),
+                ),
+              if (amenity.type != null)
+                Flexible(
+                  child: Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                    decoration: BoxDecoration(
+                      color: AppColors.primaryLight,
+                      borderRadius: BorderRadius.circular(AppRadius.xs),
+                    ),
+                    child: Text(
+                      amenity.type!,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: AppTypography.caption.copyWith(
+                          color: AppColors.primary,
+                          fontWeight: FontWeight.w600,
+                          fontSize: 10),
+                    ),
+                  ),
+                ),
+            ],
+          ),
+          if (amenity.description != null &&
+              amenity.description!.isNotEmpty) ...[
+            const SizedBox(height: 6),
+            Text(
+              amenity.description!,
+              style: AppTypography.bodySecondary.copyWith(fontSize: 13),
+            ),
+          ],
+        ],
+      ),
     );
   }
 }
@@ -561,45 +708,81 @@ class _ContextSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        _SectionHeader(icon: Icons.info_rounded, title: l10n.neighborhoodContextLocal),
-        if (profile.transportInfo != null &&
-            profile.transportInfo!.isNotEmpty)
-          _ContextCard(
-            icon: Icons.directions_bus_rounded,
-            title: l10n.neighborhoodTransport,
-            content: profile.transportInfo!,
-          ),
-        if (profile.realEstateContext != null &&
-            profile.realEstateContext!.isNotEmpty) ...[
-          const SizedBox(height: AppSpacing.sm),
-          _ContextCard(
-            icon: Icons.apartment_rounded,
-            title: l10n.neighborhoodRealEstateMarket,
-            content: profile.realEstateContext!,
-          ),
+    return ExpandableSection(
+      icon: Icons.info_rounded,
+      title: l10n.neighborhoodContextLocal,
+      initiallyExpanded: false,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (profile.transportInfo != null &&
+              profile.transportInfo!.isNotEmpty)
+            _ContextCard(
+              icon: Icons.directions_bus_rounded,
+              title: l10n.neighborhoodTransport,
+              content: profile.transportInfo!,
+            ),
+          if (profile.realEstateContext != null &&
+              profile.realEstateContext!.isNotEmpty) ...[
+            const SizedBox(height: AppSpacing.sm),
+            _ContextCard(
+              icon: Icons.apartment_rounded,
+              title: l10n.neighborhoodRealEstateMarket,
+              content: profile.realEstateContext!,
+            ),
+          ],
+          if (profile.demographics != null &&
+              profile.demographics!.isNotEmpty) ...[
+            const SizedBox(height: AppSpacing.sm),
+            _ContextCard(
+              icon: Icons.people_rounded,
+              title: l10n.neighborhoodDemographics,
+              content: profile.demographics!,
+            ),
+          ],
+          if (profile.description != null &&
+              profile.description!.isNotEmpty) ...[
+            const SizedBox(height: AppSpacing.sm),
+            // About section with VoiceReaderButton and ExpandableText
+            SoftCard(
+              padding: const EdgeInsets.all(AppSpacing.lg),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Container(
+                        width: 36,
+                        height: 36,
+                        decoration: BoxDecoration(
+                          color: AppColors.primaryLight,
+                          borderRadius: BorderRadius.circular(AppRadius.sm),
+                        ),
+                        child: Icon(Icons.info_outline_rounded,
+                            size: 18, color: AppColors.primary),
+                      ),
+                      const SizedBox(width: AppSpacing.md),
+                      Expanded(
+                          child: Text(l10n.neighborhoodAbout,
+                              style: AppTypography.titleSmall)),
+                      VoiceReaderButton(text: profile.description!),
+                    ],
+                  ),
+                  const SizedBox(height: AppSpacing.sm),
+                  ExpandableText(
+                    text: profile.description!,
+                    maxLines: 3,
+                    style: AppTypography.bodySecondary
+                        .copyWith(fontSize: 13, height: 1.5),
+                    expandLabel: l10n.readMore,
+                    collapseLabel: l10n.readLess,
+                  ),
+                ],
+              ),
+            ),
+          ],
         ],
-        if (profile.demographics != null &&
-            profile.demographics!.isNotEmpty) ...[
-          const SizedBox(height: AppSpacing.sm),
-          _ContextCard(
-            icon: Icons.people_rounded,
-            title: l10n.neighborhoodDemographics,
-            content: profile.demographics!,
-          ),
-        ],
-        if (profile.description != null &&
-            profile.description!.isNotEmpty) ...[
-          const SizedBox(height: AppSpacing.sm),
-          _ContextCard(
-            icon: Icons.info_outline_rounded,
-            title: l10n.neighborhoodAbout,
-            content: profile.description!,
-          ),
-        ],
-      ],
+      ),
     );
   }
 }
@@ -657,373 +840,453 @@ class _LandmarksSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         _SectionHeader(
-            icon: Icons.place_rounded, title: AppLocalizations.of(context)!.neighborhoodPointsOfInterest),
-        Wrap(
-          spacing: AppSpacing.sm,
-          runSpacing: AppSpacing.sm,
-          children: landmarks.map((landmark) {
-            return Container(
-              padding: const EdgeInsets.symmetric(
-                  horizontal: AppSpacing.md, vertical: 8),
-              decoration: BoxDecoration(
-                color: AppColors.infoLight,
-                borderRadius: BorderRadius.circular(AppRadius.sm),
-                border:
-                    Border.all(color: AppColors.info.withOpacity(0.2), width: 0.5),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(Icons.pin_drop_rounded, size: 14, color: AppColors.info),
-                  const SizedBox(width: 4),
-                  Text(
+            icon: Icons.place_rounded,
+            title: l10n.neighborhoodPointsOfInterest),
+        LimitedChipList<String>(
+          items: landmarks,
+          limit: 3,
+          chipBuilder: (landmark) => Container(
+            padding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.md, vertical: 8),
+            decoration: BoxDecoration(
+              color: AppColors.infoLight,
+              borderRadius: BorderRadius.circular(AppRadius.sm),
+              border:
+                  Border.all(color: AppColors.info.withOpacity(0.2), width: 0.5),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.pin_drop_rounded, size: 14, color: AppColors.info),
+                const SizedBox(width: 4),
+                Flexible(
+                  child: Text(
                     landmark,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                     style: AppTypography.caption.copyWith(
                         color: AppColors.info, fontWeight: FontWeight.w500),
                   ),
-                ],
-              ),
-            );
-          }).toList(),
+                ),
+              ],
+            ),
+          ),
+          viewMoreLabel: l10n.viewMore,
+          viewLessLabel: l10n.viewLess,
         ),
       ],
     );
   }
 }
 
-class _CitySection extends StatelessWidget {
+class _CitySection extends StatefulWidget {
   final CityProfile city;
   const _CitySection({required this.city});
 
   @override
+  State<_CitySection> createState() => _CitySectionState();
+}
+
+class _CitySectionState extends State<_CitySection> {
+  bool _threatsExpanded = false;
+  bool _contactsExpanded = false;
+
+  @override
   Widget build(BuildContext context) {
+    final city = widget.city;
     final l10n = AppLocalizations.of(context)!;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        // Section header
-        Padding(
-          padding: const EdgeInsets.only(bottom: AppSpacing.md),
-          child: Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(7),
-                decoration: BoxDecoration(
-                  color: AppColors.primaryLight,
-                  borderRadius: BorderRadius.circular(AppRadius.sm),
-                ),
-                child: Icon(Icons.location_city_rounded,
-                    color: AppColors.primary, size: 16),
-              ),
-              const SizedBox(width: AppSpacing.sm),
-              Expanded(
-                child:
-                    Text(l10n.cityInfoTitle(city.city), style: AppTypography.label),
-              ),
-            ],
-          ),
-        ),
 
-        // City security summary
-        if (city.securitySummary != null &&
-            city.securitySummary!.isNotEmpty)
-          SoftCard(
-            padding: const EdgeInsets.all(AppSpacing.lg),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Icon(Icons.shield_rounded,
-                    size: 18, color: _securityColor(city.securityLevel)),
-                const SizedBox(width: AppSpacing.md),
-                Expanded(
-                  child: Text(
-                    city.securitySummary!,
-                    style: AppTypography.body
-                        .copyWith(fontSize: 14, height: 1.5),
+    // Threats: show 2 when collapsed, all when expanded
+    final visibleThreats = _threatsExpanded
+        ? city.currentThreats
+        : city.currentThreats.take(2).toList();
+
+    // Emergency contacts: show 3 when collapsed, all when expanded
+    final visibleContacts = _contactsExpanded
+        ? city.emergencyContacts
+        : city.emergencyContacts.take(3).toList();
+
+    return ExpandableSection(
+      icon: Icons.location_city_rounded,
+      title: l10n.cityInfoTitle(city.city),
+      initiallyExpanded: false,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // City security summary
+          if (city.securitySummary != null &&
+              city.securitySummary!.isNotEmpty)
+            SoftCard(
+              padding: const EdgeInsets.all(AppSpacing.lg),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Icon(Icons.shield_rounded,
+                      size: 18, color: _securityColor(city.securityLevel)),
+                  const SizedBox(width: AppSpacing.md),
+                  Expanded(
+                    child: Text(
+                      city.securitySummary!,
+                      style: AppTypography.body
+                          .copyWith(fontSize: 14, height: 1.5),
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
 
-        // Current threats
-        if (city.currentThreats.isNotEmpty) ...[
-          const SizedBox(height: AppSpacing.md),
-          ...city.currentThreats.map((threat) => Padding(
-                padding: const EdgeInsets.only(bottom: AppSpacing.sm),
-                child: SoftCard(
-                  padding: const EdgeInsets.all(AppSpacing.lg),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          if (threat.type != null)
-                            Expanded(
-                              child: Text(threat.type!,
-                                  style: AppTypography.titleSmall),
-                            ),
-                          if (threat.severity != null)
-                            _SeverityBadge(severity: threat.severity!),
-                        ],
-                      ),
-                      if (threat.description != null &&
-                          threat.description!.isNotEmpty) ...[
-                        const SizedBox(height: 6),
-                        Text(
-                          threat.description!,
-                          style: AppTypography.bodySecondary
-                              .copyWith(fontSize: 13),
-                        ),
-                      ],
-                    ],
-                  ),
-                ),
-              )),
-        ],
-
-        // Safest zones
-        if (city.safestZones.isNotEmpty) ...[
-          const SizedBox(height: AppSpacing.md),
-          SoftCard(
-            padding: const EdgeInsets.all(AppSpacing.lg),
-            color: AppColors.successLight,
-            border: Border.all(
-                color: AppColors.success.withOpacity(0.2), width: 0.5),
-            shadow: const [],
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Icon(Icons.check_circle_rounded,
-                        size: 16, color: AppColors.success),
-                    const SizedBox(width: 6),
-                    Text(l10n.citySafestZones,
-                        style: AppTypography.label
-                            .copyWith(color: AppColors.success)),
-                  ],
-                ),
-                const SizedBox(height: AppSpacing.sm),
-                Wrap(
-                  spacing: AppSpacing.sm,
-                  runSpacing: AppSpacing.sm,
-                  children: city.safestZones.map((zone) {
-                    return Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: AppSpacing.md, vertical: 5),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(AppRadius.sm),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(Icons.check_rounded,
-                              size: 14, color: AppColors.success),
-                          const SizedBox(width: 4),
-                          Text(
-                            zone,
-                            style: AppTypography.caption.copyWith(
-                                color: AppColors.success,
-                                fontWeight: FontWeight.w500),
-                          ),
-                        ],
-                      ),
-                    );
-                  }).toList(),
-                ),
-              ],
-            ),
-          ),
-        ],
-
-        // Emergency contacts
-        if (city.emergencyContacts.isNotEmpty) ...[
-          const SizedBox(height: AppSpacing.md),
-          Text(l10n.cityEmergencyContacts, style: AppTypography.label),
-          const SizedBox(height: AppSpacing.sm),
-          ...city.emergencyContacts.map((contact) => Padding(
-                padding: const EdgeInsets.only(bottom: AppSpacing.sm),
-                child: SoftCard(
-                  padding: const EdgeInsets.all(AppSpacing.lg),
-                  child: Row(
-                    children: [
-                      Container(
-                        width: 36,
-                        height: 36,
-                        decoration: BoxDecoration(
-                          color: AppColors.errorLight,
-                          borderRadius: BorderRadius.circular(AppRadius.sm),
-                        ),
-                        child: Icon(Icons.phone_rounded,
-                            size: 18, color: AppColors.error),
-                      ),
-                      const SizedBox(width: AppSpacing.md),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
+          // Current threats — progressive disclosure (2 when collapsed)
+          if (city.currentThreats.isNotEmpty) ...[
+            const SizedBox(height: AppSpacing.md),
+            ...visibleThreats.map((threat) => Padding(
+                  padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+                  child: SoftCard(
+                    padding: const EdgeInsets.all(AppSpacing.lg),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
                           children: [
-                            if (contact.service != null)
-                              Text(contact.service!,
-                                  style: AppTypography.titleSmall),
-                            if (contact.number != null) ...[
-                              const SizedBox(height: 2),
-                              GestureDetector(
-                                onTap: () async {
-                                  await launchUrl(
-                                    Uri.parse('tel:${contact.number}'),
-                                  );
-                                },
-                                child: Text(
-                                  contact.number!,
-                                  style: AppTypography.caption.copyWith(
-                                    color: AppColors.primary,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
+                            if (threat.type != null)
+                              Expanded(
+                                child: Text(threat.type!,
+                                    style: AppTypography.titleSmall),
                               ),
-                            ],
-                            if (contact.notes != null &&
-                                contact.notes!.isNotEmpty) ...[
-                              const SizedBox(height: 4),
-                              Text(
-                                contact.notes!,
-                                style: AppTypography.caption
-                                    .copyWith(fontSize: 11),
-                              ),
-                            ],
+                            if (threat.severity != null)
+                              _SeverityBadge(severity: threat.severity!),
                           ],
                         ),
-                      ),
-                    ],
-                  ),
-                ),
-              )),
-        ],
-
-        // Travel tips
-        if (city.travelTips != null && city.travelTips!.isNotEmpty) ...[
-          const SizedBox(height: AppSpacing.md),
-          SoftCard(
-            padding: const EdgeInsets.all(AppSpacing.lg),
-            color: AppColors.infoLight,
-            border: Border.all(
-                color: AppColors.info.withOpacity(0.2), width: 0.5),
-            shadow: const [],
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Icon(Icons.lightbulb_rounded,
-                    size: 18, color: AppColors.info),
-                const SizedBox(width: AppSpacing.md),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(l10n.cityTravelTips,
-                          style: AppTypography.titleSmall
-                              .copyWith(color: AppColors.info)),
-                      const SizedBox(height: 4),
-                      Text(
-                        city.travelTips!,
-                        style: AppTypography.body
-                            .copyWith(fontSize: 13, height: 1.5),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-
-        // Curfew info
-        if (city.curfewInfo != null && city.curfewInfo!.isNotEmpty) ...[
-          const SizedBox(height: AppSpacing.md),
-          SoftCard(
-            padding: const EdgeInsets.all(AppSpacing.lg),
-            color: AppColors.warningLight,
-            border: Border.all(
-                color: AppColors.warning.withOpacity(0.2), width: 0.5),
-            shadow: const [],
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Icon(Icons.access_time_rounded,
-                    size: 18, color: AppColors.warning),
-                const SizedBox(width: AppSpacing.md),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(l10n.cityCurfew,
-                          style: AppTypography.titleSmall
-                              .copyWith(color: AppColors.warning)),
-                      const SizedBox(height: 4),
-                      Text(
-                        city.curfewInfo!,
-                        style: AppTypography.body
-                            .copyWith(fontSize: 13, height: 1.5),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-
-        // Population + area description
-        if ((city.population != null) ||
-            (city.areaDescription != null &&
-                city.areaDescription!.isNotEmpty)) ...[
-          const SizedBox(height: AppSpacing.md),
-          SoftCard(
-            padding: const EdgeInsets.all(AppSpacing.lg),
-            child: Row(
-              children: [
-                if (city.population != null)
-                  Expanded(
-                    child: Column(
-                      children: [
-                        Text(
-                          _formatPopulation(city.population!),
-                          style: AppTypography.titleSmall.copyWith(
-                              fontSize: 20),
-                        ),
-                        const SizedBox(height: 2),
-                        Text(l10n.cityPopulation, style: AppTypography.caption),
+                        if (threat.description != null &&
+                            threat.description!.isNotEmpty) ...[
+                          const SizedBox(height: 6),
+                          Text(
+                            threat.description!,
+                            style: AppTypography.bodySecondary
+                                .copyWith(fontSize: 13),
+                          ),
+                        ],
                       ],
                     ),
                   ),
-                if (city.population != null &&
-                    city.areaDescription != null &&
-                    city.areaDescription!.isNotEmpty)
-                  Container(width: 1, height: 40, color: AppColors.divider),
-                if (city.areaDescription != null &&
-                    city.areaDescription!.isNotEmpty)
-                  Expanded(
-                    child: Padding(
-                      padding: const EdgeInsets.only(left: AppSpacing.md),
-                      child: Text(
-                        city.areaDescription!,
-                        style: AppTypography.bodySecondary
-                            .copyWith(fontSize: 12),
-                        maxLines: 3,
-                        overflow: TextOverflow.ellipsis,
+                )),
+            if (city.currentThreats.length > 2) ...[
+              const SizedBox(height: AppSpacing.sm),
+              GestureDetector(
+                onTap: () =>
+                    setState(() => _threatsExpanded = !_threatsExpanded),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: AppSpacing.md, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: AppColors.surfaceVariant,
+                    borderRadius: BorderRadius.circular(AppRadius.sm),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        _threatsExpanded
+                            ? Icons.keyboard_arrow_up_rounded
+                            : Icons.keyboard_arrow_down_rounded,
+                        size: 14,
+                        color: AppColors.textSecondary,
                       ),
+                      const SizedBox(width: 4),
+                      Text(
+                        _threatsExpanded ? l10n.viewLess : l10n.viewMore,
+                        style: AppTypography.caption.copyWith(
+                            color: AppColors.textSecondary,
+                            fontWeight: FontWeight.w500),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ],
+
+          // Safest zones
+          if (city.safestZones.isNotEmpty) ...[
+            const SizedBox(height: AppSpacing.md),
+            SoftCard(
+              padding: const EdgeInsets.all(AppSpacing.lg),
+              color: AppColors.successLight,
+              border: Border.all(
+                  color: AppColors.success.withOpacity(0.2), width: 0.5),
+              shadow: const [],
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Icon(Icons.check_circle_rounded,
+                          size: 16, color: AppColors.success),
+                      const SizedBox(width: 6),
+                      Text(l10n.citySafestZones,
+                          style: AppTypography.label
+                              .copyWith(color: AppColors.success)),
+                    ],
+                  ),
+                  const SizedBox(height: AppSpacing.sm),
+                  Wrap(
+                    spacing: AppSpacing.sm,
+                    runSpacing: AppSpacing.sm,
+                    children: city.safestZones.map((zone) {
+                      return Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: AppSpacing.md, vertical: 5),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(AppRadius.sm),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.check_rounded,
+                                size: 14, color: AppColors.success),
+                            const SizedBox(width: 4),
+                            Flexible(
+                              child: Text(
+                                zone,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: AppTypography.caption.copyWith(
+                                    color: AppColors.success,
+                                    fontWeight: FontWeight.w500),
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    }).toList(),
+                  ),
+                ],
+              ),
+            ),
+          ],
+
+          // Emergency contacts — progressive disclosure (3 when collapsed)
+          if (city.emergencyContacts.isNotEmpty) ...[
+            const SizedBox(height: AppSpacing.md),
+            Text(l10n.cityEmergencyContacts, style: AppTypography.label),
+            const SizedBox(height: AppSpacing.sm),
+            ...visibleContacts.map((contact) => Padding(
+                  padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+                  child: SoftCard(
+                    padding: const EdgeInsets.all(AppSpacing.lg),
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 36,
+                          height: 36,
+                          decoration: BoxDecoration(
+                            color: AppColors.errorLight,
+                            borderRadius: BorderRadius.circular(AppRadius.sm),
+                          ),
+                          child: Icon(Icons.phone_rounded,
+                              size: 18, color: AppColors.error),
+                        ),
+                        const SizedBox(width: AppSpacing.md),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              if (contact.service != null)
+                                Text(contact.service!,
+                                    style: AppTypography.titleSmall),
+                              if (contact.number != null) ...[
+                                const SizedBox(height: 2),
+                                GestureDetector(
+                                  onTap: () async {
+                                    await launchUrl(
+                                      Uri.parse('tel:${contact.number}'),
+                                    );
+                                  },
+                                  child: Text(
+                                    contact.number!,
+                                    style: AppTypography.caption.copyWith(
+                                      color: AppColors.primary,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                              if (contact.notes != null &&
+                                  contact.notes!.isNotEmpty) ...[
+                                const SizedBox(height: 4),
+                                Text(
+                                  contact.notes!,
+                                  style: AppTypography.caption
+                                      .copyWith(fontSize: 11),
+                                ),
+                              ],
+                            ],
+                          ),
+                        ),
+                      ],
                     ),
                   ),
-              ],
+                )),
+            if (city.emergencyContacts.length > 3) ...[
+              const SizedBox(height: AppSpacing.sm),
+              GestureDetector(
+                onTap: () =>
+                    setState(() => _contactsExpanded = !_contactsExpanded),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: AppSpacing.md, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: AppColors.surfaceVariant,
+                    borderRadius: BorderRadius.circular(AppRadius.sm),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        _contactsExpanded
+                            ? Icons.keyboard_arrow_up_rounded
+                            : Icons.keyboard_arrow_down_rounded,
+                        size: 14,
+                        color: AppColors.textSecondary,
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        _contactsExpanded ? l10n.viewLess : l10n.viewMore,
+                        style: AppTypography.caption.copyWith(
+                            color: AppColors.textSecondary,
+                            fontWeight: FontWeight.w500),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ],
+
+          // Travel tips
+          if (city.travelTips != null && city.travelTips!.isNotEmpty) ...[
+            const SizedBox(height: AppSpacing.md),
+            SoftCard(
+              padding: const EdgeInsets.all(AppSpacing.lg),
+              color: AppColors.infoLight,
+              border: Border.all(
+                  color: AppColors.info.withOpacity(0.2), width: 0.5),
+              shadow: const [],
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Icon(Icons.lightbulb_rounded,
+                      size: 18, color: AppColors.info),
+                  const SizedBox(width: AppSpacing.md),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(l10n.cityTravelTips,
+                            style: AppTypography.titleSmall
+                                .copyWith(color: AppColors.info)),
+                        const SizedBox(height: 4),
+                        Text(
+                          city.travelTips!,
+                          style: AppTypography.body
+                              .copyWith(fontSize: 13, height: 1.5),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
             ),
-          ),
+          ],
+
+          // Curfew info
+          if (city.curfewInfo != null && city.curfewInfo!.isNotEmpty) ...[
+            const SizedBox(height: AppSpacing.md),
+            SoftCard(
+              padding: const EdgeInsets.all(AppSpacing.lg),
+              color: AppColors.warningLight,
+              border: Border.all(
+                  color: AppColors.warning.withOpacity(0.2), width: 0.5),
+              shadow: const [],
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Icon(Icons.access_time_rounded,
+                      size: 18, color: AppColors.warning),
+                  const SizedBox(width: AppSpacing.md),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(l10n.cityCurfew,
+                            style: AppTypography.titleSmall
+                                .copyWith(color: AppColors.warning)),
+                        const SizedBox(height: 4),
+                        Text(
+                          city.curfewInfo!,
+                          style: AppTypography.body
+                              .copyWith(fontSize: 13, height: 1.5),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+
+          // Population + area description
+          if ((city.population != null) ||
+              (city.areaDescription != null &&
+                  city.areaDescription!.isNotEmpty)) ...[
+            const SizedBox(height: AppSpacing.md),
+            SoftCard(
+              padding: const EdgeInsets.all(AppSpacing.lg),
+              child: Row(
+                children: [
+                  if (city.population != null)
+                    Expanded(
+                      child: Column(
+                        children: [
+                          Text(
+                            _formatPopulation(city.population!),
+                            style: AppTypography.titleSmall.copyWith(
+                                fontSize: 20),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(l10n.cityPopulation, style: AppTypography.caption),
+                        ],
+                      ),
+                    ),
+                  if (city.population != null &&
+                      city.areaDescription != null &&
+                      city.areaDescription!.isNotEmpty)
+                    Container(width: 1, height: 40, color: AppColors.divider),
+                  if (city.areaDescription != null &&
+                      city.areaDescription!.isNotEmpty)
+                    Expanded(
+                      child: Padding(
+                        padding: const EdgeInsets.only(left: AppSpacing.md),
+                        child: Text(
+                          city.areaDescription!,
+                          style: AppTypography.bodySecondary
+                              .copyWith(fontSize: 12),
+                          maxLines: 3,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          ],
         ],
-      ],
+      ),
     );
   }
 
@@ -1072,57 +1335,124 @@ class _PriceStatsCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
+    // Branch on the category field. null = backwards-compat all-types row:
+    // keep the legacy 2x2 grid + price_per_sqm row.
+    final category = analytics.category;
     return SoftCard(
       padding: const EdgeInsets.all(AppSpacing.lg),
       child: Column(
         children: [
-          Row(
-            children: [
-              Expanded(
-                child: _StatBlock(
-                  label: l10n.neighborhoodStatsMedian,
-                  value: _formatPrice(analytics.medianPrice),
+          if (category == 'Structure') ...[
+            Row(
+              children: [
+                Expanded(
+                  child: _StatBlock(
+                    label: l10n.neighborhoodStatsMin,
+                    value: _formatPrice(analytics.minPrice),
+                  ),
                 ),
-              ),
-              Container(width: 1, height: 50, color: AppColors.divider),
-              Expanded(
-                child: _StatBlock(
-                  label: l10n.neighborhoodStatsAverage,
-                  value: _formatPrice(analytics.averagePrice),
+                Container(width: 1, height: 50, color: AppColors.divider),
+                Expanded(
+                  child: _StatBlock(
+                    label: l10n.neighborhoodStatsAverage,
+                    value: _formatPrice(analytics.averagePrice),
+                  ),
                 ),
-              ),
-            ],
-          ),
-          const Padding(
-            padding: EdgeInsets.symmetric(vertical: AppSpacing.md),
-            child: Divider(height: 1),
-          ),
-          Row(
-            children: [
-              Expanded(
-                child: _StatBlock(
-                  label: l10n.neighborhoodStatsMin,
-                  value: _formatPrice(analytics.minPrice),
+                Container(width: 1, height: 50, color: AppColors.divider),
+                Expanded(
+                  child: _StatBlock(
+                    label: l10n.neighborhoodStatsMax,
+                    value: _formatPrice(analytics.maxPrice),
+                  ),
                 ),
-              ),
-              Container(width: 1, height: 50, color: AppColors.divider),
-              Expanded(
-                child: _StatBlock(
-                  label: l10n.neighborhoodStatsMax,
-                  value: _formatPrice(analytics.maxPrice),
+              ],
+            ),
+          ] else if (category == 'Land') ...[
+            Row(
+              children: [
+                Expanded(
+                  child: _StatBlock(
+                    label: l10n.neighborhoodStatsMinPerSqm,
+                    value: _formatPricePerSqm(analytics.minPricePerSqm),
+                  ),
                 ),
-              ),
-            ],
-          ),
-          if (analytics.pricePerSqm != null) ...[
+                Container(width: 1, height: 50, color: AppColors.divider),
+                Expanded(
+                  child: _StatBlock(
+                    label: l10n.neighborhoodStatsAveragePerSqm,
+                    value: _formatPricePerSqm(analytics.avgPricePerSqm),
+                  ),
+                ),
+                Container(width: 1, height: 50, color: AppColors.divider),
+                Expanded(
+                  child: _StatBlock(
+                    label: l10n.neighborhoodStatsMaxPerSqm,
+                    value: _formatPricePerSqm(analytics.maxPricePerSqm),
+                  ),
+                ),
+              ],
+            ),
+          ] else ...[
+            // Legacy all-types display — unchanged.
+            Row(
+              children: [
+                Expanded(
+                  child: _StatBlock(
+                    label: l10n.neighborhoodStatsMedian,
+                    value: _formatPrice(analytics.medianPrice),
+                  ),
+                ),
+                Container(width: 1, height: 50, color: AppColors.divider),
+                Expanded(
+                  child: _StatBlock(
+                    label: l10n.neighborhoodStatsAverage,
+                    value: _formatPrice(analytics.averagePrice),
+                  ),
+                ),
+              ],
+            ),
             const Padding(
               padding: EdgeInsets.symmetric(vertical: AppSpacing.md),
               child: Divider(height: 1),
             ),
-            _StatBlock(
-              label: l10n.neighborhoodStatsPricePerSqm,
-              value: '${analytics.pricePerSqm!.toStringAsFixed(0)} XAF',
-              centered: true,
+            Row(
+              children: [
+                Expanded(
+                  child: _StatBlock(
+                    label: l10n.neighborhoodStatsMin,
+                    value: _formatPrice(analytics.minPrice),
+                  ),
+                ),
+                Container(width: 1, height: 50, color: AppColors.divider),
+                Expanded(
+                  child: _StatBlock(
+                    label: l10n.neighborhoodStatsMax,
+                    value: _formatPrice(analytics.maxPrice),
+                  ),
+                ),
+              ],
+            ),
+            if (analytics.pricePerSqm != null) ...[
+              const Padding(
+                padding: EdgeInsets.symmetric(vertical: AppSpacing.md),
+                child: Divider(height: 1),
+              ),
+              _StatBlock(
+                label: l10n.neighborhoodStatsPricePerSqm,
+                value: '${analytics.pricePerSqm!.toStringAsFixed(0)} XAF',
+                centered: true,
+              ),
+            ],
+          ],
+          if (analytics.fallbackLevel == 'city') ...[
+            const SizedBox(height: AppSpacing.sm),
+            Text(
+              l10n.neighborhoodCityFallbackCaption,
+              style: AppTypography.caption.copyWith(
+                color: AppColors.textTertiary,
+                fontStyle: FontStyle.italic,
+              ),
+              textAlign: TextAlign.center,
             ),
           ],
         ],
@@ -1139,6 +1469,17 @@ class _PriceStatsCard extends StatelessWidget {
       buf.write(s[i]);
     }
     return '$buf XAF';
+  }
+
+  String _formatPricePerSqm(double? p) {
+    if (p == null) return '-';
+    final s = p.toStringAsFixed(0);
+    final buf = StringBuffer();
+    for (int i = 0; i < s.length; i++) {
+      if (i > 0 && (s.length - i) % 3 == 0) buf.write(' ');
+      buf.write(s[i]);
+    }
+    return '$buf XAF/m²';
   }
 }
 

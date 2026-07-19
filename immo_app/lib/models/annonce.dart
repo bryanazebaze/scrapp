@@ -10,6 +10,8 @@ class Annonce {
   final String? city;
   final String? neighborhood;
   final String? locationSlug;
+  final double? lat;
+  final double? lng;
   final int? bedrooms;
   final int? bathrooms;
   final double? areaSqm;
@@ -35,6 +37,8 @@ class Annonce {
     this.city,
     this.neighborhood,
     this.locationSlug,
+    this.lat,
+    this.lng,
     this.bedrooms,
     this.bathrooms,
     this.areaSqm,
@@ -52,18 +56,20 @@ class Annonce {
 
   factory Annonce.fromJson(Map<String, dynamic> json) {
     return Annonce(
-      id: json['id'] as int,
+      id: (json['id'] as num?)?.toInt() ?? 0,
       title: json['title'] as String? ?? '',
       propertyType: json['property_type'] as String?,
-      price: json['price'] as int?,
+      price: (json['price'] as num?)?.toInt(),
       currency: json['currency'] as String? ?? 'XAF',
       city: json['city'] as String?,
       neighborhood: json['neighborhood'] as String?,
       locationSlug: json['location_slug'] as String?,
-      bedrooms: json['bedrooms'] as int?,
-      bathrooms: json['bathrooms'] as int?,
+      lat: (json['lat'] as num?)?.toDouble(),
+      lng: (json['lng'] as num?)?.toDouble(),
+      bedrooms: (json['bedrooms'] as num?)?.toInt(),
+      bathrooms: (json['bathrooms'] as num?)?.toInt(),
       areaSqm: (json['area_sqm'] as num?)?.toDouble(),
-      images: (json['images'] as List?)?.cast<String>() ?? [],
+      images: (json['images'] as List?)?.map((e) => e.toString()).toList() ?? [],
       bestSource: json['best_source'] as String?,
       description: json['description'] as String?,
       locationRaw: json['location_raw'] as String?,
@@ -119,11 +125,11 @@ class RawListing {
 
   factory RawListing.fromJson(Map<String, dynamic> json) {
     return RawListing(
-      id: json['id'] as int,
+      id: (json['id'] as num?)?.toInt() ?? 0,
       sourceSlug: json['source_slug'] as String?,
       sourceDisplayName: json['source_display_name'] as String?,
-      urlSource: json['url_source'] as String,
-      priceParsed: json['price_parsed'] as int?,
+      urlSource: json['url_source'] as String? ?? '',
+      priceParsed: (json['price_parsed'] as num?)?.toInt(),
       currency: json['currency'] as String?,
       reviewStatus: json['review_status'] as String? ?? 'auto_promoted',
       matchConfidence: (json['match_confidence'] as num?)?.toDouble(),
@@ -157,11 +163,11 @@ class ListingHistoryEvent {
 
   factory ListingHistoryEvent.fromJson(Map<String, dynamic> json) {
     return ListingHistoryEvent(
-      id: json['id'] as int,
-      eventType: json['event_type'] as String,
-      priceObserved: json['price_observed'] as int?,
+      id: (json['id'] as num?)?.toInt() ?? 0,
+      eventType: json['event_type'] as String? ?? '',
+      priceObserved: (json['price_observed'] as num?)?.toInt(),
       availability: json['availability'] as String?,
-      observedAt: DateTime.parse(json['observed_at'] as String),
+      observedAt: DateTime.tryParse(json['observed_at'] as String? ?? '') ?? DateTime.now(),
       diff: json['diff'] as Map<String, dynamic>?,
     );
   }
@@ -200,6 +206,21 @@ class PriceAnalyse {
   final String? verdict; // below_market | around_market | above_market | insufficient_data
   final String summary;
 
+  /// Category-aware analysis (added 2026-07).
+  /// "Structure" | "Land" | null. When "Land", per-m² metrics are authoritative.
+  final String? category;
+  /// "total_price" | "price_per_sqm". Tells which metric the avg/listing/savings use.
+  final String? comparisonMetric;
+  final double? avgComparison;
+  final double? listingComparison;
+  /// Positive = below market. Units: XAF for structures, XAF/m² for lands.
+  final double? savings;
+  /// "neighborhood" | "city" | null. When "city", the comparison fell back to city-level.
+  final String? fallbackLevel;
+  final double? minPricePerSqm;
+  final double? maxPricePerSqm;
+  final double? avgPricePerSqm;
+
   PriceAnalyse({
     required this.listingId,
     this.price,
@@ -213,22 +234,40 @@ class PriceAnalyse {
     this.percentile,
     this.verdict,
     required this.summary,
+    this.category,
+    this.comparisonMetric,
+    this.avgComparison,
+    this.listingComparison,
+    this.savings,
+    this.fallbackLevel,
+    this.minPricePerSqm,
+    this.maxPricePerSqm,
+    this.avgPricePerSqm,
   });
 
   factory PriceAnalyse.fromJson(Map<String, dynamic> json) {
     return PriceAnalyse(
-      listingId: json['listing_id'] as int,
-      price: json['price'] as int?,
+      listingId: (json['listing_id'] as num?)?.toInt() ?? 0,
+      price: (json['price'] as num?)?.toInt(),
       city: json['city'] as String?,
       propertyType: json['property_type'] as String?,
-      sampleSize: json['sample_size'] as int? ?? 0,
-      minPrice: json['min_price'] as int?,
-      maxPrice: json['max_price'] as int?,
-      meanPrice: json['mean_price'] as int?,
-      medianPrice: json['median_price'] as int?,
+      sampleSize: (json['sample_size'] as num?)?.toInt() ?? 0,
+      minPrice: (json['min_price'] as num?)?.toInt(),
+      maxPrice: (json['max_price'] as num?)?.toInt(),
+      meanPrice: (json['mean_price'] as num?)?.toInt(),
+      medianPrice: (json['median_price'] as num?)?.toInt(),
       percentile: (json['percentile'] as num?)?.toDouble(),
       verdict: json['verdict'] as String?,
       summary: json['summary'] as String? ?? '',
+      category: json['category'] as String?,
+      comparisonMetric: json['comparison_metric'] as String?,
+      avgComparison: (json['avg_comparison'] as num?)?.toDouble(),
+      listingComparison: (json['listing_comparison'] as num?)?.toDouble(),
+      savings: (json['savings'] as num?)?.toDouble(),
+      fallbackLevel: json['fallback_level'] as String?,
+      minPricePerSqm: (json['min_price_per_sqm'] as num?)?.toDouble(),
+      maxPricePerSqm: (json['max_price_per_sqm'] as num?)?.toDouble(),
+      avgPricePerSqm: (json['avg_price_per_sqm'] as num?)?.toDouble(),
     );
   }
 

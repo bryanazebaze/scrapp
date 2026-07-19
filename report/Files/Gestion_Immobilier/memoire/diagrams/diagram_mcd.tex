@@ -1,0 +1,66 @@
+% ==============================================================
+%  DIAGRAMME — Modèle Conceptuel des Données (MCD) multi-calques
+%  Fichier externe, appelé via \input dans le chapitre 2
+% ==============================================================
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}[node distance=1.2cm and 1.8cm, scale=0.85, every node/.style={scale=0.85}]
+  % Entité Source
+  \node[node-gold, text width=4.2cm] (src) {
+    \textbf{Entity: Sources}\\
+    \color{ciGreen}\scriptsize PK: id (integer)\\
+    \color{ciDark}\tiny
+    $\bullet$ slug (unique string)\\
+    $\bullet$ display\_name (string)\\
+    $\bullet$ adapter\_kind (string)
+  };
+  % Entité RawListing
+  \node[node-green, below=of src, text width=4.2cm] (raw) {
+    \textbf{Entity: RawListings}\\
+    \color{ciGreen}\scriptsize PK: id (bigint)\\
+    \color{ciDark}\tiny
+    $\bullet$ url\_source (text)\\
+    $\bullet$ url\_hash (unique)\\
+    $\bullet$ title\_raw (string)\\
+    $\bullet$ price\_parsed (bigint)\\
+    \color{ciBlue}FK: source\_id\\
+    \color{ciBlue}FK: canonical\_property\_id
+  };
+  % Entité CanonicalProperty
+  \node[node-green, right=of raw, text width=4.5cm] (canon) {
+    \textbf{Entity: CanonicalProperties}\\
+    \color{ciGreen}\scriptsize PK: id (bigint)\\
+    \color{ciDark}\tiny
+    $\bullet$ match\_key (string)\\
+    $\bullet$ title\_canonical (string)\\
+    $\bullet$ current\_best\_price (bigint)\\
+    \color{ciBlue}FK: location\_id
+  };
+  % Entité Location
+  \node[node-white, above=of canon, text width=4.2cm] (loc) {
+    \textbf{Entity: Locations}\\
+    \color{ciGreen}\scriptsize PK: id (bigint)\\
+    \color{ciDark}\tiny
+    $\bullet$ city (string)\\
+    $\bullet$ neighborhood (string)\\
+    $\bullet$ slug (string)
+  };
+  % Entité ListingHistory
+  \node[node-red, right=of canon, text width=4.2cm] (hist) {
+    \textbf{Entity: ListingHistory}\\
+    \color{ciGreen}\scriptsize PK: id (bigint)\\
+    \color{ciDark}\tiny
+    $\bullet$ event\_type (string)\\
+    $\bullet$ price\_observed (bigint)\\
+    $\bullet$ observed\_at (datetime)
+  };
+  % Relations
+  \draw[flow-arrow, draw=ciGold] (src.south) -- node[label-style, left] {1..N} (raw.north);
+  \draw[flow-arrow, draw=ciGreen] (raw.east) -- node[label-style, above] {N..0-1} (canon.west);
+  \draw[flow-arrow, draw=ciGreen] (loc.south) -- node[label-style, right] {1..N} (canon.north);
+  \draw[flow-arrow, draw=ciRed] (canon.east) -- node[label-style, above] {1..N} (hist.west);
+  \draw[flow-arrow, draw=ciRed, bend right=20] (raw.south) -- ++(0,-0.5cm) -| node[label-style, pos=0.3, below] {1..N} (hist.south);
+\end{tikzpicture}
+\caption{Mod\`ele Conceptuel des Donn\'ees multi-calques (MCD)}
+\label{fig:mcd_db}
+\end{figure}

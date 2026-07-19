@@ -1,0 +1,155 @@
+% ═══════════════════════════════════════════════════════════════
+%  PAGE DE GARDE
+% ═══════════════════════════════════════════════════════════════
+
+\thispagestyle{empty}
+
+% --- Cadre extérieur double en TikZ (vert) ---
+\begin{tikzpicture}[remember picture, overlay]
+  % Cadre extérieur
+  \draw[primaryGreen, line width=1.5pt]
+    ($(current page.north west)+(1.2cm,-1.2cm)$) rectangle
+    ($(current page.south east)+(-1.2cm,1.2cm)$);
+    
+  % Cadre intérieur fin (vert clair)
+  \draw[primaryGreen!50, line width=0.6pt]
+    ($(current page.north west)+(1.35cm,-1.35cm)$) rectangle
+    ($(current page.south east)+(-1.35cm,1.35cm)$);
+
+  % Ornements de coin (vert)
+  \node[anchor=north west, xshift=1.45cm, yshift=-1.45cm] at (current page.north west)
+    {\pgfornament[width=1.0cm, color=primaryGreen!60, symmetry=none]{61}};
+  \node[anchor=north east, xshift=-1.45cm, yshift=-1.45cm] at (current page.north east)
+    {\pgfornament[width=1.0cm, color=primaryGreen!60, symmetry=v]{61}};
+  \node[anchor=south west, xshift=1.45cm, yshift=1.45cm] at (current page.south west)
+    {\pgfornament[width=1.0cm, color=primaryGreen!60, symmetry=h]{61}};
+  \node[anchor=south east, xshift=-1.45cm, yshift=1.45cm] at (current page.south east)
+    {\pgfornament[width=1.0cm, color=primaryGreen!60, symmetry=c]{61}};
+\end{tikzpicture}
+
+\begin{center}
+% ─── EN-TÊTE BILINGUE ET LOGO CENTRAL ────────────────────────
+\begin{tabular}{m{0.38\textwidth} m{0.14\textwidth} m{0.38\textwidth}}
+    \centering
+    \fontsize{7}{9}\selectfont\scshape\bfseries
+    R\'{E}PUBLIQUE DU CAMEROUN\\
+    \textcolor{elegantGray}{Paix -- Travail -- Patrie}\\
+    \rule{1.5cm}{0.3pt}\\
+    UNIVERSIT\'{E} DE YAOUND\'{E} I\\
+    \textcolor{elegantGray}{Facult\'{e} des Sciences}\\
+    D\'{e}partement d'Informatique\\
+    BP 812 Yaound\'{e}
+    &
+    \centering
+    \includegraphics[width=1.8cm]{logo_uy1.png}
+    &
+    \centering
+    \fontsize{7}{9}\selectfont\scshape\bfseries
+    REPUBLIC OF CAMEROON\\
+    \textcolor{elegantGray}{Peace -- Work -- Fatherland}\\
+    \rule{1.5cm}{0.3pt}\\
+    UNIVERSITY OF YAOUNDE I\\
+    \textcolor{elegantGray}{Faculty of Science}\\
+    Department of Computer Science\\
+    PO Box 812 Yaounde
+\end{tabular}
+
+\vspace{0.4cm}
+
+% ─── MINI SÉPARATEUR (vert) ──────────────────────────────────
+\begin{tikzpicture}
+  \draw[primaryGreen!40, line width=0.4pt] (-2,0) -- (-0.5,0);
+  \node[primaryGreen!60] at (0,0) {\pgfornament[width=0.8cm,color=primaryGreen!60]{9}};
+  \draw[primaryGreen!40, line width=0.4pt] (0.5,0) -- (2,0);
+\end{tikzpicture}
+
+\vspace{0.4cm}
+
+% ─── LOGOS FLANQUÉS DE LA LICENCE ────────────────────────────
+\begin{tabular}{c c c}
+    \includegraphics[width=1.4cm]{logo_ict4d.png}
+    &
+    \begin{minipage}{0.64\textwidth}
+        \centering
+        \setlength{\fboxsep}{5pt}
+        \colorbox{primaryGreen}{%
+          \textcolor{white}{\fontsize{10}{12}\selectfont\bfseries\scshape M\'{E}MOIRE DE LICENCE PROFESSIONNELLE}%
+        }
+        \vspace{0.15cm}\\
+        {\fontsize{7.5}{9}\selectfont\bfseries Fili\`{e}re : \textcolor{primaryGreen}{ICT4D} (Technologies de l'Information pour le D\'{e}veloppement)}
+    \end{minipage}
+    &
+    \includegraphics[width=1.4cm]{logo_ict4d.png}
+\end{tabular}
+
+\vspace{0.3cm}
+{\fontsize{8}{10}\selectfont\itshape Pr\'{e}sent\'{e} en vue de l'obtention du dipl\^{o}me de Licence Professionnelle}
+
+\vspace{0.5cm}
+
+% ─── TITRE (fond vert clair transparent) ──────────────────────
+\begin{tikzpicture}
+  \node[draw=primaryGreen, line width=1.2pt, fill=primaryGreen!8, rounded corners=8pt, minimum height=3.2cm, minimum width=0.92\textwidth, text width=0.85\textwidth, align=center] (titlebox) at (0,0) {
+    \vspace{0.2cm}
+    {\fontsize{13}{16}\selectfont\bfseries\color{black}\scshape CONCEPTION ET R\'{E}ALISATION D'UN AGR\'{E}GATEUR DE DONN\'{E}ES IMMOBILI\`{E}RES POUR LE MARCH\'{E} CAMEROUNAIS}\\[0.3cm]
+    {\fontsize{18}{22}\selectfont\bfseries\color{primaryGreen} CENTRAL-IMMO}
+  };
+  % Ornements d'angle (vert)
+  \node[anchor=north west, xshift=0.1cm, yshift=-0.1cm] at (titlebox.north west)
+    {\pgfornament[width=0.5cm, color=primaryGreen!50]{3}};
+  \node[anchor=north east, xshift=-0.1cm, yshift=-0.1cm] at (titlebox.north east)
+    {\pgfornament[width=0.5cm, color=primaryGreen!50, symmetry=v]{3}};
+  \node[anchor=south west, xshift=0.1cm, yshift=0.1cm] at (titlebox.south west)
+    {\pgfornament[width=0.5cm, color=primaryGreen!50, symmetry=h]{3}};
+  \node[anchor=south east, xshift=-0.1cm, yshift=0.1cm] at (titlebox.south east)
+    {\pgfornament[width=0.5cm, color=primaryGreen!50, symmetry=c]{3}};
+\end{tikzpicture}
+
+\vspace{0.5cm}
+
+% ─── RÉDIGÉ ET SOUTENU PAR ──────────────────────────────────
+{\fontsize{9}{11}\selectfont\bfseries R\'{e}dig\'{e} et soutenu par :}\\
+\vspace{0.2cm}
+\begin{tabular}{c @{\hspace{1cm}} c}
+    \textbf{\fontsize{9}{11}\selectfont AZEBAZE BAHEBEG AUREL BRYAN} & \fontsize{8}{10}\selectfont Mat: 23U2290 \\
+    \textbf{\fontsize{9}{11}\selectfont AZEFACK FORNGWENG KELCY} & \fontsize{8}{10}\selectfont Mat: 23U2306 \\
+    \textbf{\fontsize{9}{11}\selectfont MANGOUO JACKY VICTOIRE} & \fontsize{8}{10}\selectfont Mat: 23U2317
+\end{tabular}
+
+\vspace{0.4cm}
+\begin{tikzpicture}
+  \draw[primaryGreen!40, line width=0.4pt] (-1.5,0) -- (1.5,0);
+\end{tikzpicture}
+\vspace{0.3cm}
+
+% ─── SOUS L'ENCADREMENT ──────────────────────────────────────
+{\fontsize{9}{11}\selectfont\bfseries Sous l'encadrement de :}\\
+\vspace{0.25cm}
+\noindent
+\begin{minipage}[t]{0.48\textwidth}
+    \centering
+    \textbf{\fontsize{9}{10}\selectfont Encadrant Acad\'{e}mique :}\\
+    \vspace{0.15cm}
+    {\fontsize{9}{10}\selectfont\textbf{M. FOMEKONG EVARIS}}\\
+    {\small Ing\'{e}nieur en Informatique}
+\end{minipage}
+\hfill
+\begin{minipage}[t]{0.48\textwidth}
+    \centering
+    \textbf{\fontsize{9}{10}\selectfont Encadrant Professionnel :}\\
+    \vspace{0.15cm}
+    {\fontsize{9}{10}\selectfont\textbf{M. NGNITEDEM OLDRICH}}\\
+    {\small Ing\'{e}nieur Logiciel \`{a} SSH}
+\end{minipage}
+
+\vspace{0.5cm}
+\vfill
+
+% ─── PIED DE PAGE : ANNÉE ACADÉMIQUE ─────────────────────────
+\begin{tikzpicture}
+  \node[draw=primaryGreen, fill=primaryGreen, text=white, rounded corners=4pt, thick, minimum width=6cm, minimum height=0.7cm, font=\small\bfseries] 
+    {Ann\'{e}e Acad\'{e}mique 2025-2026};
+\end{tikzpicture}
+\end{center}
+
+\newpage

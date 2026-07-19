@@ -1,0 +1,21 @@
+NOTCH PAY API TEST REPORT
+Generated: 2025-12-13 22:54:09
+Duration: 25.31s
+
+SUMMARY:
+  Total Tests: 18
+  Passed: 9
+  Failed: 9
+  Warnings: []
+
+ERRORS:
+  - Create a Transfer: Failed to create beneficiary: {'code': '422', 'status': 'Unprocessable Content', 'message': 'The account number field is required.', 'errors': {'account_number': ['The account number field is required.']}}
+  - Create a Customer: Status: 500, Response: {'code': '500', 'status': "Whoop's Application Error - Please contact support"}
+  - Create a Beneficiary: Status: 422, Response: {'code': '422', 'status': 'Unprocessable Content', 'message': 'The account number field is required.', 'errors': {'account_number': ['The account number field is required.']}}
+  - Check Balance for Specific Currency: Status: 404, Response: {'code': '404', 'status': 'Not Found', 'message': 'Resource Not Found'}
+  - List Balance History: Status: 404, Response: {'code': '404', 'status': 'Not Found', 'message': 'Resource Not Found'}
+  - List Payment Channels: Status: 404, Response: {'code': '404', 'status': 'Not Found', 'message': 'Resource Not Found'}
+  - List Countries: Status: 404, Response: {'code': '404', 'status': 'Not Found', 'message': 'Resource Not Found'}
+  - List Currencies: Status: 404, Response: {'code': '404', 'status': 'Not Found', 'message': 'Resource Not Found'}
+  - List Banks: Status: 404, Response: {'code': '404', 'status': 'Not Found', 'message': 'Resource Not Found'}
+

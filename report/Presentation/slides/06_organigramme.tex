@@ -1,0 +1,39 @@
+%% slides/06_organigramme.tex
+\begin{frame}{Présentation de la Structure d'Accueil}{Organisation de l'Équipe}
+  \begin{center}
+    \begin{tikzpicture}[
+      scale=0.9, transform shape,
+      edge from parent fork down,
+      level distance=1.6cm,
+      sibling distance=4.2cm,
+      ceoNode/.style={fill=UY1Purple!15, draw=UY1Purple, line width=0.8pt, rounded corners=3pt, font=\bfseries\small, text width=2.6cm, text centered, minimum height=0.8cm},
+      dirNode/.style={fill=UY1Purple!5, draw=UY1Purple!80!black, line width=0.7pt, rounded corners=2pt, font=\bfseries\small, text width=2.6cm, text centered, minimum height=0.8cm},
+      srvNode/.style={fill=white, draw=ciBorder, line width=0.5pt, rounded corners=2pt, font=\scriptsize, text width=2.4cm, text centered, minimum height=0.8cm},
+      edge from parent/.style={draw=ciBorder, line width=0.8pt}
+    ]
+      \node[ceoNode] (ceo) {Direction Générale}
+        child {node[dirNode] {Direction Marketing}
+          child[sibling distance=2.2cm] {node[srvNode] {Communication}}
+          child[sibling distance=2.2cm] {node[srvNode] {Opérations}}
+        }
+        child {node[dirNode] {Direction Technique}
+          child[sibling distance=2.2cm] {node[srvNode] {Design}}
+          child[sibling distance=2.2cm] {node[srvNode] (dev) {Développement}}
+        }
+        child {node[dirNode] {Direction Administrative}
+          child[sibling distance=2.2cm] {node[srvNode] {Financier}}
+          child[sibling distance=2.2cm] {node[srvNode] {Ressources Humaines}}
+        };
+
+      % Mise en évidence du service d'accueil
+      \draw[draw=UY1Accent, thick, dashed, rounded corners=2pt]
+        ([xshift=-2pt,yshift=2pt]dev.north west) rectangle
+        ([xshift=2pt,yshift=-2pt]dev.south east);
+    \end{tikzpicture}
+  \end{center}
+
+  \vspace{0.3cm}
+  \begin{center}
+    \footnotesize \faProjectDiagram\ Notre trinôme a évolué au sein du \textbf{Service de Développement} (encadré en orange), sous méthodologie \textbf{Agile / Scrum}.
+  \end{center}
+\end{frame}

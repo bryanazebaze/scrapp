@@ -74,6 +74,8 @@
   },
   "homeSeenAll": "Vous avez tout vu",
   "@homeSeenAll": {},
+  "homeUnlockMore": "Débloquer plus de biens",
+  "@homeUnlockMore": {},
 
   "homeEmptyTitle": "Aucune annonce pour le moment",
   "@homeEmptyTitle": {},
@@ -294,6 +296,20 @@
   "@mapTitle": {},
   "mapSubtitle": "Explorez par ville",
   "@mapSubtitle": {},
+  "mapRoute": "Itineraire",
+  "@mapRoute": {},
+  "nearbyHint": "Ou etes-vous ? (ex: Bastos)",
+  "@nearbyHint": {},
+  "nearbyEmptyHint": "Recherchez un lieu pour trouver des biens a proximite",
+  "@nearbyEmptyHint": {},
+  "nearbyLocationNotFound": "Localisation introuvable. Soyez plus precis (ex: Bastos).",
+  "@nearbyLocationNotFound": {},
+  "nearbyGpsDisabled": "Veuillez activer le GPS.",
+  "@nearbyGpsDisabled": {},
+  "nearbyGpsDenied": "Permissions GPS refusees.",
+  "@nearbyGpsDenied": {},
+  "nearbyGpsDeniedForever": "GPS desactive en permanence. Activez-le dans les parametres.",
+  "@nearbyGpsDeniedForever": {},
   "mapCityCount": "{count} villes",
   "@mapCityCount": {
     "placeholders": {
@@ -379,8 +395,128 @@
       "area": { "type": "String" }
     }
   },
+  "analysisSavingsPerSqm": "Vous économisez {amount} XAF/m² par rapport au prix moyen au m².",
+  "@analysisSavingsPerSqm": {
+    "placeholders": {
+      "amount": { "type": "String" }
+    }
+  },
+  "analysisExtraCostPerSqm": "Vous payez {amount} XAF/m² de plus par rapport au prix moyen au m².",
+  "@analysisExtraCostPerSqm": {
+    "placeholders": {
+      "amount": { "type": "String" }
+    }
+  },
+  "analysisAveragePricePerSqm": "Prix moyen au m² : {amount} XAF/m².",
+  "@analysisAveragePricePerSqm": {
+    "placeholders": {
+      "amount": { "type": "String" }
+    }
+  },
+  "analysisCityFallbackCaption": "Comparaison basée sur la ville (données insuffisantes au quartier).",
+  "@analysisCityFallbackCaption": {},
+  "neighborhoodCityFallbackCaption": "Données insuffisantes au quartier — basé sur la ville.",
+  "@neighborhoodCityFallbackCaption": {},
+  "neighborhoodStatsMinPerSqm": "Prix min/m²",
+  "@neighborhoodStatsMinPerSqm": {},
+  "neighborhoodStatsAveragePerSqm": "Prix moyen/m²",
+  "@neighborhoodStatsAveragePerSqm": {},
+  "neighborhoodStatsMaxPerSqm": "Prix max/m²",
+  "@neighborhoodStatsMaxPerSqm": {},
   "detailSimilarProperties": "Propriétés similaires dans ce quartier",
   "@detailSimilarProperties": {},
   "detailSourceFallback": "Source",
-  "@detailSourceFallback": {}
+  "@detailSourceFallback": {},
+
+  "viewMore": "Voir plus",
+  "@viewMore": {},
+  "viewLess": "Voir moins",
+  "@viewLess": {},
+  "viewMoreCount": "Voir plus (+{count})",
+  "@viewMoreCount": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "readMore": "Lire plus",
+  "@readMore": {},
+  "readLess": "Lire moins",
+  "@readLess": {},
+  "listen": "Écouter",
+  "@listen": {},
+  "stopVoice": "Arrêter",
+  "@stopVoice": {},
+  "voiceLoading": "Génération audio…",
+  "@voiceLoading": {},
+  "voiceError": "Audio indisponible",
+  "@voiceError": {},
+  "viewAllAmenities": "Voir toutes les aménités",
+  "@viewAllAmenities": {},
+  "viewMoreSources": "Voir {count} autres sources",
+  "@viewMoreSources": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+
+  "chatTitle": "CentralBot",
+  "@chatTitle": {},
+  "chatSubtitle": "Cherchez des biens, comparez les prix, analysez la securite des villes.",
+  "@chatSubtitle": {},
+  "chatInputHint": "Decrivez ce que vous cherchez...",
+  "@chatInputHint": {},
+  "chatSuggestionSafety": "Ville la plus sure ?",
+  "@chatSuggestionSafety": {},
+  "chatSuggestionVillas": "Villas a Douala",
+  "@chatSuggestionVillas": {},
+  "chatSuggestionTrending": "Quartiers tendance",
+  "@chatSuggestionTrending": {},
+  "chatSuggestionApartments": "Appartement 3 ch a Bastos",
+  "@chatSuggestionApartments": {},
+  "chatPropertiesFound": "{count} bien(s) trouve(s)",
+  "@chatPropertiesFound": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "chatTrendingTitle": "Quartiers tendance",
+  "@chatTrendingTitle": {},
+  "chatNeighborhoodsTitle": "Quartiers de {city}",
+  "@chatNeighborhoodsTitle": {
+    "placeholders": {
+      "city": { "type": "String" }
+    }
+  },
+  "chatThreatsLabel": "Menaces:",
+  "@chatThreatsLabel": {},
+  "chatSafeZonesLabel": "Zones sures:",
+  "@chatSafeZonesLabel": {},
+  "chatGoodPrice": "Bon prix",
+  "@chatGoodPrice": {},
+  "chatAboveMarket": "Au-dessus du marche",
+  "@chatAboveMarket": {},
+  "chatAtMarket": "Prix dans le marche",
+  "@chatAtMarket": {},
+  "chatScoreGrowth": "Croissance",
+  "@chatScoreGrowth": {},
+  "chatScoreDemand": "Demande",
+  "@chatScoreDemand": {},
+  "chatScoreActivity": "Activite",
+  "@chatScoreActivity": {},
+  "chatScoreLuxury": "Luxe",
+  "@chatScoreLuxury": {},
+  "chatScorePremium": "Premium",
+  "@chatScorePremium": {},
+  "chatListingsUnit": "biens",
+  "@chatListingsUnit": {},
+  "voiceListening": "Ecoute...",
+  "@voiceListening": {},
+  "voiceTapToSpeak": "Parlez",
+  "@voiceTapToSpeak": {},
+  "voicePermissionDenied": "Permission microphone refusee",
+  "@voicePermissionDenied": {},
+  "voiceSpeechError": "Reconnaissance vocale indisponible",
+  "@voiceSpeechError": {},
+  "voiceSpeechUnavailable": "Saisie vocale non disponible sur cet appareil",
+  "@voiceSpeechUnavailable": {}
 }

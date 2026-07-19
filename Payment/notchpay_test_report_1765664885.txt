@@ -1,0 +1,23 @@
+NOTCH PAY API TEST REPORT
+Generated: 2025-12-13 23:28:05
+Duration: 27.11s
+
+SUMMARY:
+  Total Tests: 12
+  Passed: 9
+  Failed: 3
+  Warnings: ['Check Balance for Specific Currency: Endpoint not found (might not be available)', 'List Balance History: Endpoint not found (might not be available)', 'List Payment Channels: Endpoint not found (might not be available)', 'Get Channel Details: Skipped (channels endpoint not available)', 'List Countries: Endpoint not found (might not be available)', 'List Currencies: Endpoint not found (might not be available)', 'List Banks: Endpoint not found (might not be available)']
+
+ERRORS:
+  - Create a Transfer: Failed to create beneficiary: {'code': '422', 'status': 'Unprocessable Content', 'message': 'The channel field is required. (and 1 more error)', 'errors': {'channel': ['The channel field is required.'], 'account_number': ['The account number field is required.']}}
+  - Create a Customer: Status: 500, Response: {'code': '500', 'status': "Whoop's Application Error - Please contact support"}
+  - Create a Beneficiary: Status: 422, Response: {'code': '422', 'status': 'Unprocessable Content', 'message': 'The channel field is required. (and 1 more error)', 'errors': {'channel': ['The channel field is required.'], 'account_number': ['The account number field is required.']}}
+
+WARNINGS:
+  - Check Balance for Specific Currency: Endpoint not found (might not be available)
+  - List Balance History: Endpoint not found (might not be available)
+  - List Payment Channels: Endpoint not found (might not be available)
+  - Get Channel Details: Skipped (channels endpoint not available)
+  - List Countries: Endpoint not found (might not be available)
+  - List Currencies: Endpoint not found (might not be available)
+  - List Banks: Endpoint not found (might not be available)

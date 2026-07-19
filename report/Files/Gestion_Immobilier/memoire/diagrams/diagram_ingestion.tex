@@ -1,0 +1,30 @@
+% ==============================================================
+%  DIAGRAMME — Pipeline d'ingestion et d'idempotence
+%  Fichier externe, appelé via \input dans le chapitre 2
+% ==============================================================
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}[node distance=8mm, scale=0.88, every node/.style={scale=0.88}]
+  \node[node-gold] (start) {Donn\'ees extraites brutes\\(\texttt{RawListingDraft})};
+  \node[base-node, draw=ciDark, shape=diamond, aspect=2.2, below=6mm of start] (dec1) {L'URL existe en base ?};
+  % --- Branche Gauche (Re-crawl) ---
+  \node[node-white, left=1cm of dec1, text width=3.6cm] (recrawl) {\textbf{D\'ej\`a archiv\'ee}\\Mise \`a jour \texttt{last\_seen\_at}};
+  \node[base-node, draw=ciDark, shape=diamond, aspect=2.2, below=6mm of recrawl] (dec2) {Le prix a chang\'e ?};
+  \node[node-green, below=6mm of dec2, text width=3.6cm] (hist-price) {Ajout d'un point de prix dans \texttt{listing\_history}};
+  % --- Branche Droite (Nouveau) ---
+  \node[node-white, right=1cm of dec1, text width=3.6cm] (new) {\textbf{Inconnu}\\R\'esolution adresse et g\'eographie};
+  \node[node-green, below=8mm of new, text width=3.6cm] (match) {Traitement de d\'eduplication DCS};
+  \node[node-blue, below=8mm of match, text width=3.6cm] (insert) {Insertion PostgreSQL \& Liaisons};
+
+  \draw[flow-arrow] (start) -- (dec1);
+  \draw[flow-arrow] (dec1.west) -- node[label-style, above] {Oui} (recrawl.east);
+  \draw[flow-arrow] (dec1.east) -- node[label-style, above] {Non} (new.west);
+  \draw[flow-arrow] (recrawl) -- (dec2);
+  \draw[flow-arrow] (dec2.south) -- node[label-style, right] {Oui} (hist-price.north);
+  \draw[flow-arrow] (dec2.west) -- node[label-style, above] {Non} ++(-1cm, 0) |- (hist-price.west);
+  \draw[flow-arrow] (new) -- (match);
+  \draw[flow-arrow] (match) -- (insert);
+\end{tikzpicture}
+\caption{Algorithme d\'ecisionnel du pipeline d'ingestion de CentralImmo}
+\label{fig:ingest_pipeline}
+\end{figure}

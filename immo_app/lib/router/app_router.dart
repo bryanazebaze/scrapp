@@ -5,10 +5,16 @@ import '../providers/providers.dart';
 import '../screens/onboarding/onboarding_screen.dart';
 import '../screens/home/home_screen.dart';
 import '../screens/search/search_screen.dart';
+import '../screens/search/ai_chat_screen.dart';
 import '../screens/property/property_detail_screen.dart';
 import '../screens/neighborhood/neighborhood_screen.dart';
 import '../screens/favorites/favorites_screen.dart';
 import '../screens/map/map_screen.dart';
+import '../screens/search/nearby_search_screen.dart';
+import '../screens/auth/login_screen.dart';
+import '../screens/auth/register_screen.dart';
+import '../screens/profile/profile_screen.dart';
+import '../screens/alerts/alerts_screen.dart';
 
 final routerProvider = Provider<GoRouter>((ref) {
   final onboardingDone = ref.watch(onboardingCompletedProvider);
@@ -29,6 +35,10 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (context, state) => const SearchScreen(),
       ),
       GoRoute(
+        path: '/assistant',
+        builder: (context, state) => const AiChatScreen(),
+      ),
+      GoRoute(
         path: '/property/:id',
         builder: (context, state) => PropertyDetailScreen(
           id: int.parse(state.pathParameters['id']!),
@@ -47,6 +57,26 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/map',
         builder: (context, state) => const MapScreen(),
+      ),
+      GoRoute(
+        path: '/nearby',
+        builder: (context, state) => const NearbySearchScreen(),
+      ),
+      GoRoute(
+        path: '/login',
+        builder: (context, state) => const LoginScreen(),
+      ),
+      GoRoute(
+        path: '/register',
+        builder: (context, state) => const RegisterScreen(),
+      ),
+      GoRoute(
+        path: '/profile',
+        builder: (context, state) => const ProfileScreen(),
+      ),
+      GoRoute(
+        path: '/alerts',
+        builder: (context, state) => const AlertsScreen(),
       ),
     ],
   );

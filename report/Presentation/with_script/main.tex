@@ -1,0 +1,57 @@
+%% main.tex — CentralImmo / Version avec script_orateur (notes de présentation)
+%% Compile avec : pdflatex main.tex
+%% Le PDF produit affiche chaque slide avec son script à droite (mode présentateur).
+\documentclass[aspectratio=169,10pt]{beamer}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[french]{babel}
+\usepackage{lmodern}
+\usepackage{tikz}
+\usepackage{fontawesome5}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{tabularx}
+\usepackage{multirow}
+\usepackage{colortbl}
+\usepackage{hyperref}
+\hypersetup{colorlinks=true, linkcolor=UY1Purple, urlcolor=UY1Purple}
+\usepackage{beamerthemeCentralImmo}
+
+% ── Mode présentateur : slide à gauche, notes (script) à droite ─────────────
+\setbeameroption{show notes on second screen=right}
+
+% ── Couleurs des orateurs dans les notes ────────────────────────────────────
+\definecolor{speakerKelcy}{HTML}{1976D2}
+\definecolor{speakerAzebaze}{HTML}{00695C}
+\definecolor{speakerJacky}{HTML}{E65100}
+
+\title{CONCEPTION ET RÉALISATION D'UN AGRÉGATEUR DE DONNÉES IMMOBILIÈRES POUR LE MARCHÉ CAMEROUNAIS}
+\subtitle{CENTRAL-IMMO}
+\author{AZEBAZE B., AZEFACK K., MANGOUO J.}
+\date{Juin 2026}
+
+\begin{document}
+
+\input{slides/01_titlepage}
+\input{slides/02_plan}
+\input{slides/03_introduction}
+\input{slides/04_objectifs}
+\input{slides/05_structure_ssh}
+\input{slides/06_organigramme}
+\input{slides/07_comparatif}
+\input{slides/08_cas_utilisation}
+\input{slides/09_architecture}
+\input{slides/10_mcd}
+\input{slides/11_ingestion}
+\input{slides/12_dcs}
+\input{slides/13_stack}
+\input{slides/14_interfaces}
+\input{slides/15_resultats}
+\input{slides/16_tests_api}
+\input{slides/17_difficultes}
+\input{slides/18_conclusion}
+\input{slides/19_bibliographie}
+\input{slides/20_merci}
+
+\end{document}

@@ -39,6 +39,7 @@
   "homeMoreListingsTitle": "More listings",
   "homeMoreListingsCount": "{count} properties available",
   "homeSeenAll": "You've seen it all",
+  "homeUnlockMore": "Unlock more properties",
 
   "homeEmptyTitle": "No listings yet",
   "homeEmptySubtitle": "Check back soon for new properties",
@@ -137,6 +138,20 @@
 
   "mapTitle": "Map",
   "mapSubtitle": "Explore by city",
+  "mapRoute": "Route",
+  "@mapRoute": {},
+  "nearbyHint": "Where are you? (e.g. Bastos)",
+  "@nearbyHint": {},
+  "nearbyEmptyHint": "Search a location to find nearby properties",
+  "@nearbyEmptyHint": {},
+  "nearbyLocationNotFound": "Location not found. Try being more specific (e.g. Bastos).",
+  "@nearbyLocationNotFound": {},
+  "nearbyGpsDisabled": "Please enable GPS.",
+  "@nearbyGpsDisabled": {},
+  "nearbyGpsDenied": "GPS permissions denied.",
+  "@nearbyGpsDenied": {},
+  "nearbyGpsDeniedForever": "GPS permanently disabled. Enable it in settings.",
+  "@nearbyGpsDeniedForever": {},
   "mapCityCount": "{count} cities",
   "mapListingsCount": "{count} listings",
   "mapCityListingsCount": "{city} • {count} listings",
@@ -160,6 +175,73 @@
   "analysisAtMarket": "This property is at the average price for {area}.",
   "analysisAveragePrice": "Average price in the neighborhood: {amount} FCFA.",
   "analysisInsufficientData": "Not enough data to compare prices in {area}.",
+  "analysisSavingsPerSqm": "You save {amount} XAF/m² compared to the average price per m².",
+  "@analysisSavingsPerSqm": {
+    "placeholders": {
+      "amount": { "type": "String" }
+    }
+  },
+  "analysisExtraCostPerSqm": "You pay {amount} XAF/m² more than the average price per m².",
+  "@analysisExtraCostPerSqm": {
+    "placeholders": {
+      "amount": { "type": "String" }
+    }
+  },
+  "analysisAveragePricePerSqm": "Average price per m²: {amount} XAF/m².",
+  "@analysisAveragePricePerSqm": {
+    "placeholders": {
+      "amount": { "type": "String" }
+    }
+  },
+  "analysisCityFallbackCaption": "Comparison based on the city (insufficient data at the neighborhood level).",
+  "@analysisCityFallbackCaption": {},
+  "neighborhoodCityFallbackCaption": "Insufficient data at the neighborhood level — based on the city.",
+  "@neighborhoodCityFallbackCaption": {},
+  "neighborhoodStatsMinPerSqm": "Min price/m²",
+  "@neighborhoodStatsMinPerSqm": {},
+  "neighborhoodStatsAveragePerSqm": "Avg price/m²",
+  "@neighborhoodStatsAveragePerSqm": {},
+  "neighborhoodStatsMaxPerSqm": "Max price/m²",
+  "@neighborhoodStatsMaxPerSqm": {},
   "detailSimilarProperties": "Similar properties in this neighborhood",
-  "detailSourceFallback": "Source"
+  "detailSourceFallback": "Source",
+
+  "viewMore": "View more",
+  "viewLess": "View less",
+  "viewMoreCount": "View more (+{count})",
+  "readMore": "Read more",
+  "readLess": "Read less",
+  "listen": "Listen",
+  "stopVoice": "Stop",
+  "voiceLoading": "Generating audio…",
+  "voiceError": "Audio unavailable",
+  "viewAllAmenities": "View all amenities",
+  "viewMoreSources": "View {count} more sources",
+
+  "chatTitle": "CentralBot",
+  "chatSubtitle": "Search properties, compare prices, analyze city safety.",
+  "chatInputHint": "Describe what you're looking for...",
+  "chatSuggestionSafety": "Safest city?",
+  "chatSuggestionVillas": "Villas in Douala",
+  "chatSuggestionTrending": "Trending neighborhoods",
+  "chatSuggestionApartments": "3-bed apartment in Bastos",
+  "chatPropertiesFound": "{count} property(ies) found",
+  "chatTrendingTitle": "Trending neighborhoods",
+  "chatNeighborhoodsTitle": "Neighborhoods in {city}",
+  "chatThreatsLabel": "Threats:",
+  "chatSafeZonesLabel": "Safe zones:",
+  "chatGoodPrice": "Good price",
+  "chatAboveMarket": "Above market",
+  "chatAtMarket": "At market price",
+  "chatScoreGrowth": "Growth",
+  "chatScoreDemand": "Demand",
+  "chatScoreActivity": "Activity",
+  "chatScoreLuxury": "Luxury",
+  "chatScorePremium": "Premium",
+  "chatListingsUnit": "listings",
+  "voiceListening": "Listening...",
+  "voiceTapToSpeak": "Speak",
+  "voicePermissionDenied": "Microphone permission denied",
+  "voiceSpeechError": "Speech recognition unavailable",
+  "voiceSpeechUnavailable": "Voice input not available on this device"
 }

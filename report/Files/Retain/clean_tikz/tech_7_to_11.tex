@@ -1,0 +1,123 @@
+% ============================================================
+% DIAGRAM 7 — RÉSOLUTION DES DOUBLONS (DCS)
+% ============================================================
+\clearpage
+\section*{Diagramme 7 — Résolution des Doublons (DCS)}
+\begin{center}
+\begin{tikzpicture}[node distance=1.5cm and 2.5cm]
+
+\node[comp, compBlue] (start) {Nouveau Bien +\\Candidats};
+\node[diamondShape, below=of start] (sim) {Titre\\similaire ?};
+
+\node[comp, compGreen, right=of sim] (conf1) {Match\\Confirmé};
+\node[comp, compOrange, below=of sim] (dcs) {Calcul DCS\\(7 critères)};
+\node[diamondShape, below=of dcs] (score) {Score\\DCS ?};
+
+\node[comp, compGreen, right=of score] (conf2) {Match\\Confirmé};
+\node[comp, compPurple, left=of score] (prob) {Match\\Probable};
+\node[comp, compBlue, below=of score] (new) {Nouveau\\Bien};
+
+\draw[flow] (start) -- node[lbl] {comparaison} (sim);
+\draw[flow] (sim) -- node[lbl] {$\geq$ 80\%} (conf1);
+\draw[flow] (sim) -- node[lbl] {$<$ 80\%} (dcs);
+\draw[flow] (dcs) -- node[lbl] {évalue} (score);
+\draw[flow] (score) -- node[lbl] {$\geq$ 85\%} (conf2);
+\draw[flow] (score) -- node[lbl] {65\% - 84\%} (prob);
+\draw[flow] (score) -- node[lbl] {$<$ 65\%} (new);
+
+\end{tikzpicture}
+\end{center}
+
+% ============================================================
+% DIAGRAM 8 — SCRAPER UNIVERSEL (4 ÉTAPES)
+% ============================================================
+\clearpage
+\section*{Diagramme 8 — Scraper Universel}
+\begin{center}
+\begin{tikzpicture}[node distance=1.5cm and 2cm]
+
+\node[comp, compBlue] (e1) {1. Découverte\\(Sitemap/Liens)};
+\node[comp, compBlue, right=of e1] (e2) {2. Détection\\des Cartes};
+\node[comp, compBlue, right=of e2] (e3) {3. Extraction\\des Champs};
+\node[comp, compBlue, right=of e3] (e4) {4. Score de\\Confiance};
+
+\node[comp, compGreen, below right=1cm and -1.5cm of e4] (ok) {Auto-Approuvé\\($\geq$ 0.75)};
+\node[comp, compOrange, below=of e4] (wait) {En Attente\\(0.40 - 0.74)};
+\node[comp, compPurple, below left=1cm and -1.5cm of e4] (rej) {Rejeté\\($<$ 0.40)};
+
+\draw[flow] (e1) -- node[lbl] {filtre} (e2);
+\draw[flow] (e2) -- node[lbl] {parse} (e3);
+\draw[flow] (e3) -- node[lbl] {données brutes} (e4);
+\draw[flow] (e4) -- (ok);
+\draw[flow] (e4) -- (wait);
+\draw[flow] (e4) -- (rej);
+
+\end{tikzpicture}
+\end{center}
+
+% ============================================================
+% DIAGRAM 9 — PIPELINE ANALYTIQUE
+% ============================================================
+\clearpage
+\section*{Diagramme 9 — Pipeline Analytique}
+\begin{center}
+\begin{tikzpicture}[node distance=2cm and 3cm]
+
+\node[db] (in) {Données\\Brutes};
+\node[comp, compOrange, right=of in] (agg) {Agrégation\\Statistique};
+\node[comp, compPurple, right=of agg] (scores) {Calcul des\\5 Scores};
+\node[db, right=of scores] (out) {Cache\\Analytique};
+
+\draw[flow] (in) -- node[lbl] {lit} (agg);
+\draw[flow] (agg) -- node[lbl] {agrège} (scores);
+\draw[flow] (scores) -- node[lbl] {sauvegarde} (out);
+
+\end{tikzpicture}
+\end{center}
+
+% ============================================================
+% DIAGRAM 10 — FLUX DE REQUÊTES API
+% ============================================================
+\clearpage
+\section*{Diagramme 10 — Flux de Requêtes API}
+\begin{center}
+\begin{tikzpicture}[node distance=2cm and 2cm]
+
+\node[comp, compPurple] (ui) {Interface Flutter};
+\node[comp, compBlue, right=of ui] (dio) {ApiClient (Dio)};
+\node[comp, compOrange, right=of dio] (api) {FastAPI Router};
+\node[comp, compGreen, right=of api] (orm) {SQLAlchemy ORM};
+\node[db, right=of orm] (db) {PostgreSQL};
+
+\draw[flow, <->] (ui) -- node[lbl] {Provider} (dio);
+\draw[flow, <->] (dio) -- node[lbl] {HTTP JSON} (api);
+\draw[flow, <->] (api) -- node[lbl] {Objets} (orm);
+\draw[flow, <->] (orm) -- node[lbl] {SQL} (db);
+
+\end{tikzpicture}
+\end{center}
+
+% ============================================================
+% DIAGRAM 11 — MACHINE À ÉTATS DU REVIEW
+% ============================================================
+\clearpage
+\section*{Diagramme 11 — Machine à États (Validation)}
+\begin{center}
+\begin{tikzpicture}[node distance=2.5cm and 3cm]
+
+\node[circle, draw=gray!80, fill=gray!20, thick, inner sep=5pt] (start) {};
+\node[comp, compOrange, right=of start] (pend) {En Attente\\(Pending)};
+\node[comp, compGreen, above right=1cm and 2cm of pend] (auto) {Auto-Approuvé};
+\node[comp, compPurple, below right=1cm and 2cm of pend] (rej) {Rejeté};
+\node[comp, compBlue, right=4cm of pend] (hum) {Approuvé\\(Humain)};
+
+\draw[flow] (start) -- node[lbl] {score moyen} (pend);
+\draw[flow] (start) |- node[lbl, near start] {score élevé} (auto);
+\draw[flow] (start) |- node[lbl, near start] {score faible} (rej);
+
+\draw[flow] (pend) -- node[lbl] {action admin} (hum);
+\draw[flow] (pend) -- node[lbl] {action admin} (rej);
+\draw[flow] (auto) -- node[lbl] {re-validation} (hum);
+
+\end{tikzpicture}
+\end{center}

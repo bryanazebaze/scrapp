@@ -1,0 +1,171 @@
+% ============================================================
+% DIAGRAM 1 — ARCHITECTURE GÉNÉRALE
+% ============================================================
+\clearpage
+\section*{Diagramme 1 — Architecture Générale}
+\begin{center}
+\begin{tikzpicture}[node distance=2cm and 3cm]
+
+% Nodes
+\node[comp, compPurple] (client) {Flutter App\\(Client)};
+\node[comp, compOrange, right=of client] (api) {FastAPI\\(Serveur API)};
+\node[comp, compOrange, above=of api] (sched) {APScheduler\\(Tâches)};
+\node[db, right=of api] (db) {PostgreSQL\\(Base de données)};
+\node[comp, compGreen, above=of db] (ingest) {Pipeline\\d'Ingestion};
+\node[comp, compBlue, right=of ingest] (scrap) {Scrapers\\(Adaptateurs)};
+\node[comp, draw=gray!80, fill=gray!5, right=of scrap] (web) {Sites Immobiliers};
+
+% Background Groups
+\begin{scope}[on background layer]
+    \node[group, fit=(api)(sched), label={[font=\bfseries, text=gray!80]above:APPLICATION}] {};
+    \node[group, fit=(scrap)(ingest), label={[font=\bfseries, text=gray!80]above:COLLECTE}] {};
+\end{scope}
+
+% Arrows
+\draw[flow, <->] (client) -- node[lbl] {requêtes HTTP} (api);
+\draw[flow, <->] (api) -- node[lbl] {requêtes SQL} (db);
+\draw[flow] (sched) -- node[lbl] {déclenche} (scrap);
+\draw[flow] (scrap) -- node[lbl] {crawle} (web);
+\draw[flow] (scrap) -- node[lbl] {transmet RawData} (ingest);
+\draw[flow] (ingest) -- node[lbl] {insère/met à jour} (db);
+\draw[flow, dashed] (client) |- node[lbl, pos=0.8] {charge photos directes} (web);
+
+\end{tikzpicture}
+\end{center}
+
+% ============================================================
+% DIAGRAM 2 — DÉPLOIEMENT AWS
+% ============================================================
+\clearpage
+\section*{Diagramme 2 — Déploiement AWS}
+\begin{center}
+\begin{tikzpicture}[node distance=1.5cm and 2.5cm]
+
+\node[comp, draw=gray!80, fill=gray!5] (users) {Utilisateurs};
+\node[comp, compBlue, right=of users] (r53) {Route 53\\(DNS)};
+\node[comp, compBlue, right=of r53] (cf) {CloudFront\\(CDN)};
+\node[comp, compOrange, right=of cf] (ec2) {EC2 t3.medium\\(API + Scrapers)};
+\node[db, right=of ec2] (rds) {RDS PostgreSQL\\(Primary/Standby)};
+
+\node[comp, compGreen, below=of cf] (s3) {S3 Bucket\\(Assets Web)};
+\node[comp, draw=gray!80, fill=gray!5, above=of rds] (sites) {Sites Web\\Cibles};
+
+\draw[flow] (users) -- node[lbl] {accède} (r53);
+\draw[flow] (r53) -- node[lbl] {résout} (cf);
+\draw[flow] (cf) -- node[lbl] {route API} (ec2);
+\draw[flow] (cf) -- node[lbl] {sert statique} (s3);
+\draw[flow] (ec2) -- node[lbl] {connexion SQL} (rds);
+\draw[flow] (ec2) |- node[lbl, near start] {crawl sortant} (sites);
+
+\begin{scope}[on background layer]
+    \node[group, fit=(r53)(cf)(ec2)(rds)(s3), label={[font=\bfseries, text=gray!80]above:AWS CLOUD}] {};
+\end{scope}
+
+\end{tikzpicture}
+\end{center}
+
+% ============================================================
+% DIAGRAM 3 — MODÈLE DE DONNÉES (ER)
+% ============================================================
+\clearpage
+\section*{Diagramme 3 — Modèle de Données (Relations Clés)}
+\begin{center}
+\begin{tikzpicture}[node distance=2.5cm and 3cm]
+
+\node[comp, compOrange] (sources) {Sources};
+\node[comp, compBlue, right=of sources] (raw) {Raw\_Listings};
+\node[comp, compBlue, right=of raw] (canon) {Canonical\_Properties};
+\node[comp, compGreen, above=of canon] (loc) {Locations};
+\node[comp, compBlue, below=1.5cm of raw] (hist) {Listing\_History};
+\node[comp, compGreen, right=of canon] (analyt) {Neighborhood\_Analytics};
+
+\draw[flow] (sources) -- node[lbl] {1 : N} (raw);
+\draw[flow] (canon) -- node[lbl] {1 : N} (raw);
+\draw[flow] (canon) -- node[lbl] {1 : N} (hist);
+\draw[flow] (raw) -- node[lbl] {1 : N} (hist);
+\draw[flow] (loc) -- node[lbl] {1 : N} (canon);
+\draw[flow] (loc) -| node[lbl, near start] {1 : N} (analyt);
+
+\end{tikzpicture}
+\end{center}
+
+% ============================================================
+% DIAGRAM 4 — FRAMEWORK DE SCRAPING
+% ============================================================
+\clearpage
+\section*{Diagramme 4 — Framework de Scraping}
+\begin{center}
+\begin{tikzpicture}[node distance=1.5cm and 2.5cm]
+
+\node[comp, compBlue] (sabc) {SourceAdapter\\(Interface Abstraite)};
+\node[comp, compBlue, left=of sabc] (bfm) {BaseFetchMixin\\(Anti-bot \& Résilience)};
+
+\node[comp, compOrange, below left=2cm and -1cm of sabc] (mapi) {MapioleAdapter};
+\node[comp, compOrange, below=2cm of sabc] (kasa) {KasastayAdapter};
+\node[comp, compPurple, below right=2cm and -1cm of sabc] (univ) {UniversalAdapter};
+
+\draw[flow, dashed] (mapi) |- node[lbl, pos=0.8] {utilise} (bfm);
+\draw[flow, dashed] (kasa) |- (bfm);
+\draw[flow, dashed] (univ) |- (bfm);
+
+\draw[flow] (mapi) -- node[lbl] {hérite} (sabc);
+\draw[flow] (kasa) -- (sabc);
+\draw[flow] (univ) -- (sabc);
+
+\end{tikzpicture}
+\end{center}
+
+% ============================================================
+% DIAGRAM 5 — PIPELINE D'INGESTION
+% ============================================================
+\clearpage
+\section*{Diagramme 5 — Pipeline d'Ingestion}
+\begin{center}
+\begin{tikzpicture}[node distance=1.5cm and 2cm]
+
+\node[comp, compBlue] (start) {Données Brutes};
+\node[diamondShape, below=of start] (check) {Existe\\déjà ?};
+
+\node[comp, compOrange, right=of check] (recrawl) {Mise à jour\\Historique};
+\node[diamondShape, below=of check] (match) {Doublon\\identifié ?};
+
+\node[comp, compGreen, right=of match] (link) {Lier au\\Canonical};
+\node[comp, compGreen, below=of match] (create) {Créer\\Canonical};
+
+\node[db, right=of link] (db) {PostgreSQL};
+
+\draw[flow] (start) -- node[lbl] {hachage URL} (check);
+\draw[flow] (check) -- node[lbl] {OUI} (recrawl);
+\draw[flow] (check) -- node[lbl] {NON} (match);
+\draw[flow] (match) -- node[lbl] {OUI} (link);
+\draw[flow] (match) -- node[lbl] {NON} (create);
+
+\draw[flow] (recrawl) -| node[lbl, near start] {sauvegarde} (db);
+\draw[flow] (link) -- (db);
+\draw[flow] (create) -| (db);
+
+\end{tikzpicture}
+\end{center}
+
+% ============================================================
+% DIAGRAM 6 — ORCHESTRATION DES CRAWLS
+% ============================================================
+\clearpage
+\section*{Diagramme 6 — Orchestration des Crawls}
+\begin{center}
+\begin{tikzpicture}[node distance=2cm and 2.5cm]
+
+\node[comp, compPurple] (cron) {APScheduler};
+\node[comp, compBlue, right=of cron] (main) {Orchestrateur\\(main.py)};
+\node[comp, compOrange, right=of main] (scrap) {Scraper};
+\node[comp, compGreen, below=of main] (ingest) {Ingestion};
+\node[db, right=of ingest] (db) {Base de\\Données};
+
+\draw[flow] (cron) -- node[lbl] {déclenche (02h00)} (main);
+\draw[flow] (main) -- node[lbl] {lance crawl} (scrap);
+\draw[flow] (scrap) |- node[lbl, near start] {retourne données} (ingest);
+\draw[flow] (ingest) -- node[lbl] {insère / met à jour} (db);
+\draw[flow] (main) -- node[lbl] {déclenche} (ingest);
+
+\end{tikzpicture}
+\end{center}

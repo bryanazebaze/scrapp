@@ -30,11 +30,13 @@ from core.models import Source
 from core.ingest import ingest, mark_removed, recompute_canonical_prices
 from scrapers.mapiole import MapioleAdapter
 from scrapers.kasastay import KasastayAdapter
+from scrapers.nyetapiole import NyetapioleAdapter
 
 
 DEDICATED_ADAPTERS = {
     "mapiole": MapioleAdapter,
     "kasastay": KasastayAdapter,
+    "nyetapiole": NyetapioleAdapter,
 }
 
 

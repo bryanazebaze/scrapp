@@ -1,43 +1,51 @@
 import 'package:flutter/material.dart';
 
-/// CentralImmo color palette — modern iOS-inspired, premium feel.
-/// Reference: Airbnb / Apple iOS 18 / Zillow premium quality.
+/// CentralImmo color palette — warm-cohesive light mode.
+/// Single temperature family (warm) across brand, neutrals, semantics.
+/// Reference: Airbnb (warm off-white #F7F6F2), Notion (warm #F7F7F5),
+/// Apple iOS 18, Zillow premium. No cool grays — they clash with terracotta.
 class AppColors {
   AppColors._();
 
   // Primary brand — warm terracotta orange (from logo)
   static const Color primary = Color(0xFFE85D2C);
-  static const Color primaryDark = Color(0xFFC8410E);
-  static const Color primaryLight = Color(0xFFFFF1EA);
+  static const Color primaryDark = Color(0xFFC2410C);
+  static const Color primaryLight = Color(0xFFFDE8D4);
   static const Color primarySofter = Color(0xFFFFF8F4);
 
-  // Accent — subtle gold (used sparingly for highlights)
-  static const Color accent = Color(0xFFE8A53A);
+  // Accent — deep warm amber (premium highlights, used sparingly)
+  static const Color accent = Color(0xFFD97706);
 
-  // Backgrounds — soft, off-white for depth
-  static const Color background = Color(0xFFFAFAF7);
-  static const Color surface = Colors.white;
-  static const Color surfaceVariant = Color(0xFFF3F4F6);
-  static const Color surfaceElevated = Color(0xFFFCFCFA);
+  // Backgrounds — warm off-white scale (no cool grays)
+  static const Color background = Color(0xFFFAFAF7); // page
+  static const Color surface = Colors.white; // cards lift off the cream page
+  static const Color surfaceVariant = Color(0xFFF5F3EE); // inputs, chips (warm)
+  static const Color surfaceElevated = Color(0xFFFCFBF8); // raised cards
 
-  // Text — refined hierarchy
-  static const Color textPrimary = Color(0xFF111418);
-  static const Color textSecondary = Color(0xFF5F6671);
-  static const Color textTertiary = Color(0xFF9CA3AF);
+  // Text — warm ink hierarchy on warm-white (WCAG: 16.8 / 6.0 / 3.2 :1)
+  static const Color textPrimary = Color(0xFF1A1A17);
+  static const Color textSecondary = Color(0xFF6B6660);
+  static const Color textTertiary = Color(0xFF9A948C);
+  static const Color textDisabled = Color(0xFFC9C3BA);
 
-  // Semantic
-  static const Color success = Color(0xFF10B981);
-  static const Color successLight = Color(0xFFD1FAE5);
-  static const Color warning = Color(0xFFF59E0B);
-  static const Color warningLight = Color(0xFFFEF3C7);
-  static const Color error = Color(0xFFEF4444);
-  static const Color errorLight = Color(0xFFFEE2E2);
-  static const Color info = Color(0xFF3B82F6);
-  static const Color infoLight = Color(0xFFDBEAFE);
+  // Semantic — warm-cohesive strong colors + warm cream tints
+  static const Color success = Color(0xFF1F8A4C);
+  static const Color successLight = Color(0xFFEEF7EF);
+  static const Color warning = Color(0xFFD97706);
+  static const Color warningLight = Color(0xFFFEF5E7);
+  static const Color error = Color(0xFFC8322B);
+  static const Color errorLight = Color(0xFFFDEDEB);
+  static const Color info = Color(0xFF2E6FB7);
+  static const Color infoLight = Color(0xFFEAF1F9);
 
-  // Borders & dividers
-  static const Color border = Color(0xFFE8E8E5);
-  static const Color divider = Color(0xFFF2F2EE);
+  // Premium accent — deep plum for featured/luxury tier (warm-adjacent)
+  static const Color premium = Color(0xFF6B2D5C);
+  static const Color premiumLight = Color(0xFFF4ECF0);
+
+  // Borders & dividers — warm (no blue-undertone grays)
+  static const Color border = Color(0xFFE8E5DE);
+  static const Color borderStrong = Color(0xFFD6D2C9);
+  static const Color divider = Color(0xFFF0EEE8);
 
   // Gradients (used in hero headers, image overlays)
   static const LinearGradient primaryGradient = LinearGradient(
@@ -49,27 +57,27 @@ class AppColors {
   static const LinearGradient darkOverlay = LinearGradient(
     begin: Alignment.topCenter,
     end: Alignment.bottomCenter,
-    colors: [Colors.transparent, Color(0xCC000000)],
+    colors: [Colors.transparent, Color(0xCC1A1A17)],
   );
 
   static const LinearGradient subtleOverlay = LinearGradient(
     begin: Alignment.topCenter,
     end: Alignment.bottomCenter,
-    colors: [Colors.transparent, Color(0x33000000)],
+    colors: [Colors.transparent, Color(0x331A1A17)],
   );
 
-  // Score colors (0-10 scale)
+  // Score colors (0-10 scale) — warm-cohesive
   static Color scoreColor(double score) {
-    if (score >= 8.0) return const Color(0xFF10B981);
-    if (score >= 6.0) return const Color(0xFF22C55E);
-    if (score >= 4.0) return const Color(0xFFF59E0B);
-    return const Color(0xFFEF4444);
+    if (score >= 8.0) return const Color(0xFF1F8A4C);
+    if (score >= 6.0) return const Color(0xFF3FA866);
+    if (score >= 4.0) return const Color(0xFFD97706);
+    return const Color(0xFFC8322B);
   }
 
-  // iOS-style shadow tints
+  // iOS-style shadow tints — warm ink, not cool black
   static List<BoxShadow> softShadow({double opacity = 0.06}) => [
         BoxShadow(
-          color: Color(0xFF111418).withOpacity(opacity),
+          color: const Color(0xFF1A1A17).withOpacity(opacity),
           blurRadius: 16,
           offset: const Offset(0, 4),
           spreadRadius: -2,
@@ -78,13 +86,13 @@ class AppColors {
 
   static List<BoxShadow> cardShadow = [
     BoxShadow(
-      color: const Color(0xFF111418).withOpacity(0.04),
+      color: const Color(0xFF1A1A17).withOpacity(0.05),
       blurRadius: 12,
       offset: const Offset(0, 2),
       spreadRadius: -2,
     ),
     BoxShadow(
-      color: const Color(0xFF111418).withOpacity(0.03),
+      color: const Color(0xFF1A1A17).withOpacity(0.03),
       blurRadius: 4,
       offset: const Offset(0, 1),
     ),
@@ -92,13 +100,13 @@ class AppColors {
 
   static List<BoxShadow> elevatedShadow = [
     BoxShadow(
-      color: const Color(0xFF111418).withOpacity(0.08),
+      color: const Color(0xFF1A1A17).withOpacity(0.08),
       blurRadius: 24,
       offset: const Offset(0, 8),
       spreadRadius: -4,
     ),
     BoxShadow(
-      color: const Color(0xFF111418).withOpacity(0.04),
+      color: const Color(0xFF1A1A17).withOpacity(0.04),
       blurRadius: 8,
       offset: const Offset(0, 2),
     ),

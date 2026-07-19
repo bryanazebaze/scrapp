@@ -1,0 +1,17 @@
+% ═══════════════════════════════════════════════════════════════
+%  RÉSUMÉ — CENTRAL-IMMO
+% ═══════════════════════════════════════════════════════════════
+
+\chapter*{Résumé}
+\addcontentsline{toc}{chapter}{Résumé}
+
+Le marché immobilier camerounais souffre d'une forte fragmentation de l'information : les annonces sont éparpillées sur plusieurs plateformes sans centralisation ni vérification, générant doublons, incohérences tarifaires et opacité \hyperref[ref:ins]{[18]}. La question de recherche : dans quelle mesure la collecte, la déduplication et la centralisation automatiques des annonces peuvent-elles réduire cette fragmentation et offrir une information fiable via une application mobile et web ?
+
+Les concepts clés mobilisés sont l'agrégation de données, la déduplication intelligente, le web scraping et les API REST. Les plateformes existantes (Mapiole, Kasastay, KEUR-IMMO, Nyè Ta Piole) reposent sur la publication manuelle et n'intègrent pas, à notre connaissance, de déduplication entre sources ni d'historique des prix. CentralImmo adopte un pipeline à trois niveaux : trois adaptateurs dédiés (Mapiole, Kasastay, Nyè Ta Piole) et un adaptateur universel à score de confiance, alimentant un algorithme DCS combinant similarité textuelle (RapidFuzz), proximité de prix et correspondance de caractéristiques.
+
+Ce travail a été réalisé dans le cadre d'un stage de six mois au sein de la startup Smart Service Hub (SSH), du 5 janvier au 30 juin 2026. Les technologies utilisées sont Python/BeautifulSoup pour la collecte, FastAPI/APScheduler pour le back-end, PostgreSQL multi-calques pour la persistance, et Flutter/Riverpod pour l'application mobile. La troisième source (Nyè Ta Piole) a été intégrée le 16 juillet 2026, après la fin du stage, dans le cadre du prolongement du projet.
+
+Au moment de la rédaction, la plateforme agrège 265 annonces issues de trois sources, produit 227 fiches canoniques après déduplication et conserve 506 entrées d'historique (dont 124 changements de prix). Un test de charge sur l'endpoint principal (100 requêtes, 10 connexions concurrentes) a atteint 100\,\% de réussite avec un temps de réponse moyen d'environ 0{,}77 seconde.
+
+\vspace{0.3cm}
+\textbf{Mots-clés :} Agrégation de données, Déduplication, Web scraping, API REST, Flutter, Immobilier camerounais, Historique des prix.

@@ -52,6 +52,16 @@ class NeighborhoodAnalytics {
   final String? trendDirection;
   final double? trendPct;
 
+  /// Category-aware analytics (added 2026-07).
+  /// "Structure" | "Land" | null (null = backwards-compat all-types row).
+  final String? category;
+  final double? minPricePerSqm;
+  final double? maxPricePerSqm;
+  final double? avgPricePerSqm;
+  /// "neighborhood" | "city" | null. When "city", the stats are a fallback
+  /// computed at the city level because the neighborhood had too few listings.
+  final String? fallbackLevel;
+
   NeighborhoodAnalytics({
     required this.locationId,
     required this.city,
@@ -71,6 +81,11 @@ class NeighborhoodAnalytics {
     this.luxuryScore,
     this.trendDirection,
     this.trendPct,
+    this.category,
+    this.minPricePerSqm,
+    this.maxPricePerSqm,
+    this.avgPricePerSqm,
+    this.fallbackLevel,
   });
 
   factory NeighborhoodAnalytics.fromJson(Map<String, dynamic> json) {
@@ -93,6 +108,11 @@ class NeighborhoodAnalytics {
       luxuryScore: (json['luxury_score'] as num?)?.toDouble(),
       trendDirection: json['trend_direction'] as String?,
       trendPct: (json['trend_pct'] as num?)?.toDouble(),
+      category: json['category'] as String?,
+      minPricePerSqm: (json['min_price_per_sqm'] as num?)?.toDouble(),
+      maxPricePerSqm: (json['max_price_per_sqm'] as num?)?.toDouble(),
+      avgPricePerSqm: (json['avg_price_per_sqm'] as num?)?.toDouble(),
+      fallbackLevel: json['fallback_level'] as String?,
     );
   }
 

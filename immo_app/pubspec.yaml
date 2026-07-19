@@ -1,4 +1,4 @@
-name: immo_app
+name: centralimmo
 description: "CentralImmo — Plateforme d'agrégation et d'intelligence immobilière du Cameroun"
 publish_to: 'none'
 version: 3.0.0+1
@@ -29,18 +29,48 @@ dependencies:
   url_launcher: ^6.3.2
   shared_preferences: ^2.3.3
   intl: ^0.20.2
+  geolocator: ^14.0.2
+
+  # Audio (ElevenLabs voice mode)
+  audioplayers: ^6.0.0
+
+  # Speech-to-text (on-device voice input)
+  speech_to_text: ^7.4.0
 
   # Localization
   flutter_localizations:
     sdk: flutter
+  lottie: ^3.3.3
+
+  # Auth & Payments
+  firebase_core: ^3.6.0
+  firebase_auth: ^5.7.0
+  google_sign_in: ^6.2.1
+  flutter_local_notifications: ^17.2.2
+  flutter_svg: ^2.3.0
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^5.0.0
+  flutter_launcher_icons: ^0.14.3
+  flutter_native_splash: ^2.4.6
+
+flutter_launcher_icons:
+  android: true
+  ios: true
+  image_path: assets/logo.png
+
+flutter_native_splash:
+  color: "#FFFFFF"
+  image: assets/logo.png
+  android_12:
+    image: assets/logo.png
+    color: "#FFFFFF"
 
 flutter:
   uses-material-design: true
   generate: true
   assets:
     - assets/
+    - assets/animations/

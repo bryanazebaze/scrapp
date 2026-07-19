@@ -3,7 +3,7 @@
 Populates the *_en mirror columns added by migration 0005. The French
 translation script (translate_profiles_to_french.py) destructively overwrote
 the original English text; this restores English by translating the current
-French content via Qwen (DashScope). Idempotent — re-running re-translates.
+French content via DeepSeek. Idempotent — re-running re-translates.
 
 English security_rating is NOT stored (handled in code via core/i18n.py); only
 text + JSONB fields are written here.
@@ -24,10 +24,10 @@ from sqlalchemy.orm import sessionmaker
 
 from core.config import settings
 
-# Qwen client (same setup as the French script)
-qwen = AsyncOpenAI(
-    api_key=settings.dashscope_api_key,
-    base_url=settings.qwen_base_url,
+# DeepSeek client (same setup as the French script)
+deepseek = AsyncOpenAI(
+    api_key=settings.deepseek_api_key,
+    base_url=settings.deepseek_base_url,
 )
 
 SYSTEM_PROMPT = (
@@ -45,15 +45,15 @@ SYSTEM_PROMPT = (
 
 
 async def translate_fields(fields: dict) -> dict:
-    """Send a dict of fields to Qwen, get back translated dict. Retries on failure."""
+    """Send a dict of fields to DeepSeek, get back translated dict. Retries on failure."""
     to_translate = {k: v for k, v in fields.items() if v}
     if not to_translate:
         return {}
 
     for attempt in range(4):
         try:
-            resp = await qwen.chat.completions.create(
-                model=settings.qwen_model,
+            resp = await deepseek.chat.completions.create(
+                model=settings.deepseek_model,
                 messages=[
                     {"role": "system", "content": SYSTEM_PROMPT},
                     {"role": "user", "content": json.dumps(to_translate, ensure_ascii=False)},

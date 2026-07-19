@@ -104,6 +104,9 @@ class AppLocalizationsFr extends AppLocalizations {
   String get homeSeenAll => 'Vous avez tout vu';
 
   @override
+  String get homeUnlockMore => 'Débloquer plus de biens';
+
+  @override
   String get homeEmptyTitle => 'Aucune annonce pour le moment';
 
   @override
@@ -379,6 +382,30 @@ class AppLocalizationsFr extends AppLocalizations {
   String get mapSubtitle => 'Explorez par ville';
 
   @override
+  String get mapRoute => 'Itineraire';
+
+  @override
+  String get nearbyHint => 'Ou etes-vous ? (ex: Bastos)';
+
+  @override
+  String get nearbyEmptyHint =>
+      'Recherchez un lieu pour trouver des biens a proximite';
+
+  @override
+  String get nearbyLocationNotFound =>
+      'Localisation introuvable. Soyez plus precis (ex: Bastos).';
+
+  @override
+  String get nearbyGpsDisabled => 'Veuillez activer le GPS.';
+
+  @override
+  String get nearbyGpsDenied => 'Permissions GPS refusees.';
+
+  @override
+  String get nearbyGpsDeniedForever =>
+      'GPS desactive en permanence. Activez-le dans les parametres.';
+
+  @override
   String mapCityCount(int count) {
     return '$count villes';
   }
@@ -468,9 +495,162 @@ class AppLocalizationsFr extends AppLocalizations {
   }
 
   @override
+  String analysisSavingsPerSqm(String amount) {
+    return 'Vous économisez $amount XAF/m² par rapport au prix moyen au m².';
+  }
+
+  @override
+  String analysisExtraCostPerSqm(String amount) {
+    return 'Vous payez $amount XAF/m² de plus par rapport au prix moyen au m².';
+  }
+
+  @override
+  String analysisAveragePricePerSqm(String amount) {
+    return 'Prix moyen au m² : $amount XAF/m².';
+  }
+
+  @override
+  String get analysisCityFallbackCaption =>
+      'Comparaison basée sur la ville (données insuffisantes au quartier).';
+
+  @override
+  String get neighborhoodCityFallbackCaption =>
+      'Données insuffisantes au quartier — basé sur la ville.';
+
+  @override
+  String get neighborhoodStatsMinPerSqm => 'Prix min/m²';
+
+  @override
+  String get neighborhoodStatsAveragePerSqm => 'Prix moyen/m²';
+
+  @override
+  String get neighborhoodStatsMaxPerSqm => 'Prix max/m²';
+
+  @override
   String get detailSimilarProperties =>
       'Propriétés similaires dans ce quartier';
 
   @override
   String get detailSourceFallback => 'Source';
+
+  @override
+  String get viewMore => 'Voir plus';
+
+  @override
+  String get viewLess => 'Voir moins';
+
+  @override
+  String viewMoreCount(int count) {
+    return 'Voir plus (+$count)';
+  }
+
+  @override
+  String get readMore => 'Lire plus';
+
+  @override
+  String get readLess => 'Lire moins';
+
+  @override
+  String get listen => 'Écouter';
+
+  @override
+  String get stopVoice => 'Arrêter';
+
+  @override
+  String get voiceLoading => 'Génération audio…';
+
+  @override
+  String get voiceError => 'Audio indisponible';
+
+  @override
+  String get viewAllAmenities => 'Voir toutes les aménités';
+
+  @override
+  String viewMoreSources(int count) {
+    return 'Voir $count autres sources';
+  }
+
+  @override
+  String get chatTitle => 'CentralBot';
+
+  @override
+  String get chatSubtitle =>
+      'Cherchez des biens, comparez les prix, analysez la securite des villes.';
+
+  @override
+  String get chatInputHint => 'Decrivez ce que vous cherchez...';
+
+  @override
+  String get chatSuggestionSafety => 'Ville la plus sure ?';
+
+  @override
+  String get chatSuggestionVillas => 'Villas a Douala';
+
+  @override
+  String get chatSuggestionTrending => 'Quartiers tendance';
+
+  @override
+  String get chatSuggestionApartments => 'Appartement 3 ch a Bastos';
+
+  @override
+  String chatPropertiesFound(int count) {
+    return '$count bien(s) trouve(s)';
+  }
+
+  @override
+  String get chatTrendingTitle => 'Quartiers tendance';
+
+  @override
+  String chatNeighborhoodsTitle(String city) {
+    return 'Quartiers de $city';
+  }
+
+  @override
+  String get chatThreatsLabel => 'Menaces:';
+
+  @override
+  String get chatSafeZonesLabel => 'Zones sures:';
+
+  @override
+  String get chatGoodPrice => 'Bon prix';
+
+  @override
+  String get chatAboveMarket => 'Au-dessus du marche';
+
+  @override
+  String get chatAtMarket => 'Prix dans le marche';
+
+  @override
+  String get chatScoreGrowth => 'Croissance';
+
+  @override
+  String get chatScoreDemand => 'Demande';
+
+  @override
+  String get chatScoreActivity => 'Activite';
+
+  @override
+  String get chatScoreLuxury => 'Luxe';
+
+  @override
+  String get chatScorePremium => 'Premium';
+
+  @override
+  String get chatListingsUnit => 'biens';
+
+  @override
+  String get voiceListening => 'Ecoute...';
+
+  @override
+  String get voiceTapToSpeak => 'Parlez';
+
+  @override
+  String get voicePermissionDenied => 'Permission microphone refusee';
+
+  @override
+  String get voiceSpeechError => 'Reconnaissance vocale indisponible';
+
+  @override
+  String get voiceSpeechUnavailable =>
+      'Saisie vocale non disponible sur cet appareil';
 }

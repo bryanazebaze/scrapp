@@ -1,0 +1,49 @@
+%% slides/09_architecture.tex
+\begin{frame}{Travaux Réalisés}{Architecture Multi-couches de CentralImmo}
+  \begin{center}
+    \begin{tikzpicture}[node distance=6mm and 8mm, scale=0.82, every node/.style={scale=0.82}]
+      % --- Plan Collecte ---
+      \node[node-gold] (mapiole) {Scraper Dédié\\Mapiole (Python)};
+      \node[node-gold, right=8mm of mapiole] (kasastay) {Scraper Dédié\\Kasastay (Python)};
+      \node[node-gold, right=8mm of kasastay] (universal) {Scraper Universel\\(Heuristiques)};
+      % --- Plan API ---
+      \node[node-green, below=12mm of kasastay, text width=6cm] (fastapi) {
+        \textbf{Serveur Backend (FastAPI)}\\
+        \footnotesize
+        $\bullet$ Ingestion \& déduplication (DCS)\\
+        $\bullet$ API de recherche naturelle \& isochrone
+      };
+      % --- Plan Persistance ---
+      \node[node-white, right=12mm of fastapi, text width=4.5cm] (db) {
+        \textbf{Base PostgreSQL}\\
+        \color{ciDark}\scriptsize
+        $\bullet$ \texttt{raw\_listings}\\
+        $\bullet$ \texttt{canonical\_properties}\\
+        $\bullet$ \texttt{listing\_history}\\
+        $\bullet$ \texttt{locations}
+      };
+      % --- Plan Présentation ---
+      \node[node-blue, below=12mm of fastapi, text width=5cm] (client) {
+        \textbf{Application Mobile (Flutter)}\\
+        \footnotesize Interface unifiée Trivago-style
+      };
+      % --- Groupe collecte ---
+      \begin{scope}[on background layer]
+        \node[group-box, fit=(mapiole) (kasastay) (universal),
+              label={[font=\footnotesize\bfseries\sffamily, text=ciGold!80!black]above:1. PHASE DE COLLECTE ET EXTRACTION}] {};
+      \end{scope}
+      % --- Liaisons ---
+      \draw[flow-arrow] (mapiole.south) -- ++(0,-4mm) -| ([xshift=-1.5cm]fastapi.north);
+      \draw[flow-arrow] (kasastay.south) -- (fastapi.north);
+      \draw[flow-arrow] (universal.south) -- ++(0,-4mm) -| ([xshift=1.5cm]fastapi.north);
+      \draw[<->, line width=1.1pt, draw=ciGreen] (fastapi) -- node[label-style, above] {SQL} (db);
+      \draw[<->, line width=1.1pt, draw=ciBlue] (client) -- node[label-style, right] {HTTP/REST} (fastapi);
+    \end{tikzpicture}
+  \end{center}
+\note{
+\textbf{\textcolor{speakerKelcy}{[EN] AZEFACK K.}}\\
+``Now the technical core. CentralImmo is built in three layers, top to bottom.''\\[6pt]
+\textbf{\textcolor{speakerJacky}{[FR] MANGOUO J. — explique l'architecture}}\\
+``En haut, la \textbf{phase de collecte} : trois adaptateurs — Mapiole, Kasastay, et un scraper universel. Au centre, le \textbf{serveur FastAPI} : ingestion, DCS, recherche naturelle et isochrone. À droite, la \textbf{base PostgreSQL} : raw\_listings, canonical\_properties, listing\_history, locations. En bas, l'\textbf{application Flutter} en HTTP/REST. L'application est volontairement agnostique de la source — esprit Trivago.'' ~|~ \textbf{$\approx$1 min 30}
+}
+\end{frame}

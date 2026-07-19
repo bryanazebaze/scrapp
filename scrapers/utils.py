@@ -183,6 +183,7 @@ CAMEROON_CITIES = [
     "Ngaoundéré", "Bertoua", "Ebolowa", "Kribi", "Limbe", "Buea",
     "Nkongsamba", "Nkongssamba", "Edéa", "Kumba",
     "Mbalmayo", "Okola", "Dschang", "Fontong", "Tiko", "Mutengene",
+    "Mfou",
 ]
 
 # Neighborhood database: (display_name, city, lat, lng).
@@ -213,6 +214,8 @@ _NEIGHBORHOODS: list[tuple[str, str, float, float]] = [
     ("Logpom", "Douala", 4.0750, 9.7167),
     ("Japoma", "Douala", 4.0167, 9.7833),
     ("Bonabéri", "Douala", 4.0750, 9.6833),
+    ("Village", "Douala", 4.0500, 9.7167),
+    ("PK 21", "Douala", 4.0167, 9.7833),
     # Yaoundé (~3.87N, 11.52E)
     ("Bastos", "Yaoundé", 3.8833, 11.5167),
     ("Mvog-Mbi", "Yaoundé", 3.8500, 11.5000),
@@ -241,6 +244,22 @@ _NEIGHBORHOODS: list[tuple[str, str, float, float]] = [
     ("Odja", "Yaoundé", 3.8333, 11.5167),
     ("Nkoabang", "Yaoundé", 3.8833, 11.5500),
     ("Centre", "Yaoundé", 3.8667, 11.5167),
+    # --- Neighborhoods discovered from Nyetapiole data ---
+    ("Jouvence", "Yaoundé", 3.8500, 11.5167),
+    ("Santa Barbara", "Yaoundé", 3.8667, 11.5000),
+    ("TKC", "Yaoundé", 3.8667, 11.5167),
+    ("Abom", "Yaoundé", 3.8333, 11.5167),
+    ("Nkolanga - IAI", "Yaoundé", 3.8333, 11.5333),
+    ("Awae IAI", "Yaoundé", 3.8167, 11.5500),
+    ("Tamtam", "Yaoundé", 3.8833, 11.5167),
+    ("Damas dépôt de bois", "Yaoundé", 3.8333, 11.5167),
+    ("Cradat", "Yaoundé", 3.8667, 11.5000),
+    ("Mimboman", "Yaoundé", 3.8667, 11.5333),
+    ("Mvan-Sud", "Yaoundé", 3.8333, 11.5000),
+    ("Bata nlonkak", "Yaoundé", 3.8500, 11.5000),
+    ("Cité u", "Yaoundé", 3.8667, 11.5000),
+    # Mfou (town ~50km SE of Yaoundé, capital of Mfou district)
+    ("Mfou", "Mfou", 3.7833, 11.8167),
 ]
 
 CAMEROON_NEIGHBORHOODS = [n[0] for n in _NEIGHBORHOODS]

@@ -1,0 +1,109 @@
+% ============================================================
+% DIAGRAM S1 — MOTEUR DE SCRAPING
+% ============================================================
+\clearpage
+\section*{Diagramme S1 — Le Moteur de Scraping}
+\begin{center}
+\begin{tikzpicture}[node distance=1.5cm and 2cm]
+
+\node[comp, compOrange] (site) {Site Immobilier};
+\node[comp, compBlue, right=of site] (extr) {Extraction\\(Robot)};
+\node[comp, compPurple, right=of extr] (clean) {Nettoyage\\\& Formatage};
+\node[comp, compGreen, right=of clean] (comp) {Comparaison\\(Doublons)};
+\node[db, right=of comp] (db) {Stockage\\Central};
+
+\draw[flow] (site) -- node[lbl] {lit les pages} (extr);
+\draw[flow] (extr) -- node[lbl] {données brutes} (clean);
+\draw[flow] (clean) -- node[lbl] {données propres} (comp);
+\draw[flow] (comp) -- node[lbl] {sauvegarde} (db);
+
+\end{tikzpicture}
+\end{center}
+
+% ============================================================
+% DIAGRAM S2 — ARCHITECTURE GLOBALE
+% ============================================================
+\clearpage
+\section*{Diagramme S2 — Architecture Globale}
+\begin{center}
+\begin{tikzpicture}[node distance=2cm and 2.5cm]
+
+\node[comp, compPurple] (app) {Application\\(Mobile \& Web)};
+\node[comp, compOrange, right=of app] (srv) {Serveur\\Central (API)};
+\node[db, right=of srv] (db) {Base de\\Données};
+\node[comp, draw=gray!80, fill=gray!5, below=of srv] (web) {Sites\\Immobiliers};
+
+\draw[flow, <->] (app) -- node[lbl] {requêtes \& réponses} (srv);
+\draw[flow, <->] (srv) -- node[lbl] {lit / écrit} (db);
+\draw[flow] (srv) -- node[lbl] {collecte (scraping)} (web);
+\draw[flow, dashed] (app) |- node[lbl, pos=0.8] {affiche les photos} (web);
+
+\end{tikzpicture}
+\end{center}
+
+% ============================================================
+% DIAGRAM S3 — USE CASE RECHERCHE
+% ============================================================
+\clearpage
+\section*{Diagramme S3 — Scénario: Recherche}
+\begin{center}
+\begin{tikzpicture}[node distance=2cm and 2.5cm]
+
+\node[comp, draw=gray!80, fill=gray!5] (user) {Utilisateur};
+\node[comp, compPurple, right=of user] (app) {Application};
+\node[comp, compOrange, right=of app] (srv) {Serveur API};
+\node[db, right=of srv] (db) {Base de Données};
+
+\draw[flow] (user) -- node[lbl] {tape sa recherche} (app);
+\draw[flow, transform canvas={yshift=5pt}] (app) -- node[lbl] {envoie critères} (srv);
+\draw[flow, transform canvas={yshift=5pt}] (srv) -- node[lbl] {requête filtrée} (db);
+\draw[flow, transform canvas={yshift=-5pt}] (db) -- node[lbl] {liste de biens} (srv);
+\draw[flow, transform canvas={yshift=-5pt}] (srv) -- node[lbl] {résultats JSON} (app);
+\draw[flow, transform canvas={yshift=-15pt}] (app) -- node[lbl] {affiche les cartes} (user);
+
+\end{tikzpicture}
+\end{center}
+
+% ============================================================
+% DIAGRAM S4 — USE CASE DÉTAIL BIEN
+% ============================================================
+\clearpage
+\section*{Diagramme S4 — Scénario: Détail d'un Bien}
+\begin{center}
+\begin{tikzpicture}[node distance=2cm and 2.5cm]
+
+\node[comp, compPurple] (app) {Application};
+\node[comp, compOrange, right=of app] (srv) {Serveur API};
+\node[comp, compBlue, right=of srv] (agg) {Agrégation};
+\node[db, right=of agg] (db) {Base de Données};
+
+\draw[flow, transform canvas={yshift=5pt}] (app) -- node[lbl] {clic sur annonce} (srv);
+\draw[flow, transform canvas={yshift=5pt}] (srv) -- node[lbl] {demande détails} (agg);
+\draw[flow, transform canvas={yshift=5pt}] (agg) -- node[lbl] {récupère infos} (db);
+
+\draw[flow, transform canvas={yshift=-5pt}] (db) -- node[lbl] {historique \& sources} (agg);
+\draw[flow, transform canvas={yshift=-5pt}] (agg) -- node[lbl] {assemble le tout} (srv);
+\draw[flow, transform canvas={yshift=-5pt}] (srv) -- node[lbl] {affichage complet} (app);
+
+\end{tikzpicture}
+\end{center}
+
+% ============================================================
+% DIAGRAM S5 — ÉVITER LES DOUBLONS
+% ============================================================
+\clearpage
+\section*{Diagramme S5 — Comment éviter les Doublons}
+\begin{center}
+\begin{tikzpicture}[node distance=1.5cm and 2.5cm]
+
+\node[comp, compOrange] (a1) {Annonce A\\(Mapiole)};
+\node[comp, compBlue, below=of a1] (a2) {Annonce B\\(Kasastay)};
+\node[comp, compPurple, right=1.5cm of $(a1)!0.5!(a2)$] (comp) {Comparateur\\Intelligent};
+\node[comp, compGreen, right=of comp] (final) {Annonce Unique\\(Meilleur Prix)};
+
+\draw[flow] (a1) -- node[lbl] {soumet} (comp);
+\draw[flow] (a2) -- node[lbl] {soumet} (comp);
+\draw[flow] (comp) -- node[lbl] {fusionne si similaire} (final);
+
+\end{tikzpicture}
+\end{center}

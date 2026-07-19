@@ -30,6 +30,7 @@ from sqlalchemy import (
     Float, DateTime, ForeignKey, Index, UniqueConstraint,
 )
 from sqlalchemy.dialects.postgresql import JSONB, UUID
+# JSONB is reused by PaymentRecord.notchpay_response
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 
@@ -203,6 +204,10 @@ class CanonicalProperty(Base):
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     last_seen_at = Column(DateTime(timezone=True), nullable=True)
     is_active = Column(Boolean, nullable=False, default=True)
+    # 'rent' (à louer / meublé) vs 'sale' (à vendre / terrain). NULL = unknown
+    # (treated as sale for analytics). Used to keep monthly rents out of
+    # sale-price averages.
+    listing_purpose = Column(String(10), nullable=True, index=True)
 
     location = relationship("Location", back_populates="canonical_properties")
     raw_listings = relationship("RawListing", back_populates="canonical_property")
@@ -276,6 +281,13 @@ class SchedulerJob(Base):
     next_run = Column(DateTime(timezone=True), nullable=True)
     status = Column(String(20), nullable=False, default="scheduled")  # scheduled|running|succeeded|failed
     last_error = Column(Text, nullable=True)
+    # APScheduler job id (stable mapping row<->apscheduler entry). Hardcoded
+    # defaults are "crawl_all", "refresh", "analytics". Per-source crawl_source
+    # rows leave this null (manually triggered, not scheduled).
+    job_aps_id = Column(String(60), nullable=True, index=True)
+    # When True the scheduler pauses the corresponding APScheduler job on startup
+    # and apply_job_config refuses to resume it until paused is flipped back.
+    paused = Column(Boolean, nullable=False, default=False)
     updated_at = Column(DateTime(timezone=True), server_default=func.now(),
                          onupdate=func.now(), nullable=False)
 
@@ -299,11 +311,19 @@ class NeighborhoodAnalytics(Base):
     period = Column(String(20), nullable=False, default="current")
 
     listing_count = Column(Integer, nullable=False, default=0)
+    # 'Structure' = building (Appartement/Maison/Villa/...); 'Land' = Terrain;
+    # NULL = all-types pooled row (legacy / trending).
+    category = Column(String(12), nullable=True)
     average_price = Column(BigInteger, nullable=True)
     median_price = Column(BigInteger, nullable=True)
     min_price = Column(BigInteger, nullable=True)
     max_price = Column(BigInteger, nullable=True)
     price_per_sqm = Column(Float, nullable=True)
+    # Category-aware price-per-m2 stats (populated for Land rows; NULL for
+    # Structure rows where total price is the comparison metric).
+    min_price_per_sqm = Column(Float, nullable=True)
+    max_price_per_sqm = Column(Float, nullable=True)
+    avg_price_per_sqm = Column(Float, nullable=True)
 
     # Scores 0..10
     premium_score = Column(Float, nullable=True)
@@ -404,3 +424,90 @@ class NeighborhoodProfile(Base):
                         onupdate=func.now(), nullable=False)
 
     location = relationship("Location")
+
+
+# --------------------------------------------------------------------------- #
+# Payments
+# --------------------------------------------------------------------------- #
+class PaymentRecord(Base):
+    """One row per Notch Pay transaction attempt (audit trail).
+
+    Inserted when the status endpoint reports a terminal state
+    (complete | failed | canceled | expired).  ``reference`` is unique
+    because it is the Notch Pay payment reference we generated.
+    """
+    __tablename__ = "payment_records"
+    __table_args__ = (
+        Index("idx_payment_records_uid", "firebase_uid"),
+        Index("idx_payment_records_reference", "reference"),
+    )
+
+    id = Column(Integer, primary_key=True, index=True)
+    firebase_uid = Column(String(128), nullable=False, index=True)
+    email = Column(String(256), nullable=True)
+    amount = Column(Integer, nullable=False)  # XAF
+    reference = Column(String(128), nullable=False, unique=True, index=True)
+    status = Column(String(32), nullable=False)  # complete | failed | canceled | expired
+    notchpay_response = Column(JSONB, nullable=True)  # raw Notch Pay transaction payload for audit
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    paid_at = Column(DateTime(timezone=True), nullable=True)
+
+
+# --------------------------------------------------------------------------- #
+# End-user auth (email/password + Google)
+# --------------------------------------------------------------------------- #
+class User(Base):
+    """End-user account.
+
+    Email/password users have ``password_hash`` set and ``firebase_uid`` NULL.
+    Google-only users (signed in via Firebase) have ``password_hash`` NULL and
+    ``firebase_uid`` set. A hybrid user (Google sign-in then set a password)
+    has both populated.
+
+    ``email`` is unique but nullable: Google users may have no email attached
+    to their Firebase account (rare but possible). Password users MUST have an
+    email — enforced at the API layer, not the DB.
+    """
+    __tablename__ = "users"
+    __table_args__ = (
+        UniqueConstraint("email", name="uq_users_email"),
+        UniqueConstraint("firebase_uid", name="uq_users_firebase_uid"),
+        Index("idx_users_email", "email"),
+    )
+
+    id = Column(Integer, primary_key=True, index=True)
+    email = Column(String(256), nullable=True, unique=True)
+    password_hash = Column(String(255), nullable=True)
+    display_name = Column(String(120), nullable=True)
+    phone = Column(String(40), nullable=True)
+    firebase_uid = Column(String(128), nullable=True, unique=True)
+    is_active = Column(Boolean, nullable=False, default=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+
+
+# --------------------------------------------------------------------------- #
+# Admin auth (separate table, separate JWT issuance)
+# --------------------------------------------------------------------------- #
+class AdminUser(Base):
+    """Admin account. Login is by username OR email plus password.
+
+    Two superadmins are seeded on first startup via
+    ``core.admin_auth.seed_admins_if_empty``. Username may be null if the
+    admin logs in by email only; email may be null if by username only.
+    At least one of the two must be set.
+    """
+    __tablename__ = "admin_users"
+    __table_args__ = (
+        UniqueConstraint("username", name="uq_admin_users_username"),
+        UniqueConstraint("email", name="uq_admin_users_email"),
+    )
+
+    id = Column(Integer, primary_key=True, index=True)
+    username = Column(String(80), nullable=True, unique=True, index=True)
+    email = Column(String(256), nullable=True, unique=True, index=True)
+    password_hash = Column(String(255), nullable=False)
+    is_active = Column(Boolean, nullable=False, default=True)
+    is_superadmin = Column(Boolean, nullable=False, default=False)
+    created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(),
+                        onupdate=func.now(), nullable=False)
