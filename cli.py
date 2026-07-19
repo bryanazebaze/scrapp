@@ -125,6 +125,66 @@ def cmd_universal(args: argparse.Namespace) -> None:
         db.close()
 
 
+def cmd_ai_scrape(args: argparse.Namespace) -> None:
+    """Crawl a URL with AI-powered scraper (DeepSeek)."""
+    from urllib.parse import urlparse
+    from core.config import settings
+    from scrapers.ai_scraper import AIScraper
+
+    api_key = getattr(settings, "deepseek_api_key", "")
+    if not api_key:
+        print("[ai-scrape] ERROR: DEEPSEEK_API_KEY not set in .env")
+        sys.exit(1)
+
+    netloc = urlparse(args.url).netloc
+    print(f"[ai-scrape] Target: {args.url} ({netloc})")
+    print(f"[ai-scrape] Max pages: {args.max_pages} | Dry run: {args.dry_run}")
+
+    scraper = AIScraper(
+        source_id=-1,
+        crawl_config={"seed_url": args.url},
+        api_key=api_key,
+    )
+    drafts = scraper.fetch_listings(max_pages=args.max_pages)
+
+    print(f"\n[ai-scrape] === {len(drafts)} listings extracted ===\n")
+    for i, d in enumerate(drafts):
+        print(f"[{i+1}] {d.title_raw[:80]}")
+        print(f"    Price: {d.price_parsed} {d.currency}")
+        print(f"    Location: {d.location_raw}")
+        print(f"    Type: {d.property_type_raw} | Beds: {d.bedrooms} | Baths: {d.bathrooms} | Area: {d.area_sqm}m²")
+        print(f"    Confidence: {d.confidence}")
+        print(f"    Images: {len(d.images_raw or [])}")
+        print(f"    URL: {d.url_source[:100]}")
+        print()
+
+    if not args.dry_run and drafts:
+        db = SessionLocal()
+        try:
+            slug = f"ai:{netloc}"
+            src = db.query(Source).filter(Source.slug == slug).first()
+            if src is None:
+                src = Source(
+                    slug=slug,
+                    display_name=netloc,
+                    site_url=args.url,
+                    adapter_kind="universal",
+                    is_active=False,
+                    crawl_config={"ai_scraped": True},
+                )
+                db.add(src)
+                db.flush()
+                print(f"[ai-scrape] created source {slug} (id={src.id})")
+
+            crawl_session_id = uuid.uuid4()
+            stats = ingest(db, drafts, src.id, crawl_session_id, adapter_kind="universal")
+            removed = mark_removed(db, src.id, crawl_session_id)
+            stats["removed"] = removed
+            print(f"[ai-scrape] ingested: {stats}")
+        finally:
+            db.close()
+
+
 def main() -> None:
     p = argparse.ArgumentParser(prog="cli.py", description="CentralImmo CLI")
     sub = p.add_subparsers(dest="cmd", required=True)
@@ -155,6 +215,13 @@ def main() -> None:
     p_uni.add_argument("--url", required=True, help="Seed URL to crawl")
     p_uni.add_argument("--max-pages", type=int, default=20)
     p_uni.set_defaults(func=cmd_universal)
+
+    p_ai = sub.add_parser("ai-scrape", help="Crawl a URL with AI-powered scraper (DeepSeek)")
+    p_ai.add_argument("--url", required=True, help="Seed URL to crawl")
+    p_ai.add_argument("--max-pages", type=int, default=5)
+    p_ai.add_argument("--dry-run", action="store_true",
+                      help="Analyze and print without saving to database")
+    p_ai.set_defaults(func=cmd_ai_scrape)
 
     args = p.parse_args()
     args.func(args)

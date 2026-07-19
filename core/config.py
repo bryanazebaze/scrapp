@@ -63,6 +63,7 @@ class Settings(BaseSettings):
     # Default password for the two seeded admin accounts (changed on first login
     # in a real deployment). Override via .env.
     admin_seed_password: str = "Test123*#"
+    deepseek_api_key: str = ""  # DeepSeek API key for AI-powered scraper
 
     @property
     def cors_origin_list(self) -> list[str]:
