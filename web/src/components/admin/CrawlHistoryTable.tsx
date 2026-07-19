@@ -1,13 +1,12 @@
 /**
  * CrawlHistoryTable — displays recent crawl sessions for a source.
  */
-import { CheckCircle2, Clock3, Globe, Search, Timer, XCircle } from 'lucide-react'
+import { CheckCircle2, Clock3, Globe, Search, Timer } from 'lucide-react'
 import type { CrawlSessionSummary } from '@/lib/types'
 import { useCrawlSessions } from '@/hooks/useAdmin'
 import { relativeTime } from '@/lib/utils'
 import GlassCard from '@/components/ui/GlassCard'
 import Spinner from '@/components/ui/Spinner'
-import EmptyState from '@/components/ui/EmptyState'
 
 interface CrawlHistoryTableProps {
   sourceSlug: string | null
@@ -36,33 +35,9 @@ export default function CrawlHistoryTable({ sourceSlug }: CrawlHistoryTableProps
     )
   }
 
-  if (sessionsQ.isError) {
-    return (
-      <GlassCard>
-        <EmptyState
-          icon={XCircle}
-          title="Erreur"
-          description="Impossible de charger l'historique des crawls."
-        />
-      </GlassCard>
-    )
-  }
+const sessions = sessionsQ.data ?? []
 
-  const sessions = sessionsQ.data ?? []
-
-  if (sessions.length === 0) {
-    return (
-      <GlassCard>
-        <EmptyState
-          icon={Clock3}
-          title="Aucun historique"
-          description={`Aucune session de crawl trouvée pour ${sourceSlug}. Lancez un crawl.`}
-        />
-      </GlassCard>
-    )
-  }
-
-  return (
+return (
     <GlassCard>
       <div className="mb-4 flex items-center gap-2">
         <Clock3 className="h-5 w-5 text-white/50" />

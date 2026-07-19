@@ -22,7 +22,7 @@ from sqlalchemy.orm import Session
 from core.admin_auth import require_admin
 from core.database import get_db, SessionLocal
 from core.models import Source, RawListing, CanonicalProperty, Location, SchedulerJob, AdminUser
-from core.ingest import promote_raw_listing
+from core.ingest import promote_raw_listing, create_canonical, resolve_location, explanation_dict
 from core.scheduler import (
     job_crawl_source, job_recompute_analytics, list_jobs,
     apply_job_config, job_crawl_source_streaming, get_scheduler,
@@ -221,6 +221,211 @@ def review_listing(
     if not result.get("ok"):
         raise HTTPException(400, result.get("error", "unknown error"))
     return result
+
+
+@router.get("/review/duplicates")
+def list_duplicates(
+    skip: int = Query(0, ge=0),
+    limit: int = Query(50, ge=1, le=200),
+    db: Session = Depends(get_db),
+    _admin: AdminUser = Depends(require_admin),
+):
+    """List auto-promoted listings flagged as duplicates, with matched
+    canonical data for side-by-side human validation."""
+    rows = (
+        db.query(RawListing)
+        .filter(
+            RawListing.review_status == "auto_promoted",
+            RawListing.match_explanation.isnot(None),
+            RawListing.canonical_property_id.isnot(None),
+            RawListing.match_explanation["classification"].astext.in_(
+                ["Confirmed Match", "Probable Match"]
+            ),
+        )
+        .order_by(RawListing.crawled_at.desc())
+        .offset(skip)
+        .limit(limit)
+        .all()
+    )
+    result = []
+    for r in rows:
+        me = r.match_explanation or {}
+
+        canon = None
+        if r.canonical_property_id:
+            canon = (
+                db.query(CanonicalProperty)
+                .filter(CanonicalProperty.id == r.canonical_property_id)
+                .first()
+            )
+
+        # Main image from this listing
+        listing_image = None
+        if r.images_raw and isinstance(r.images_raw, list) and len(r.images_raw) > 0:
+            listing_image = r.images_raw[0]
+
+        # Main image from another listing on the same canonical (for comparison)
+        canon_image = None
+        canon_bedrooms = None
+        canon_bathrooms = None
+        canon_area_sqm = None
+        if canon:
+            canon_bedrooms = canon.bedrooms
+            canon_bathrooms = canon.bathrooms
+            canon_area_sqm = canon.area_sqm
+            other = (
+                db.query(RawListing)
+                .filter(
+                    RawListing.canonical_property_id == canon.id,
+                    RawListing.id != r.id,
+                    RawListing.images_raw.isnot(None),
+                )
+                .first()
+            )
+            if other and other.images_raw and isinstance(other.images_raw, list) and len(other.images_raw) > 0:
+                canon_image = other.images_raw[0]
+            if not canon_image:
+                # Fallback: any other listing on this canonical
+                any_other = (
+                    db.query(RawListing)
+                    .filter(
+                        RawListing.canonical_property_id == canon.id,
+                        RawListing.id != r.id,
+                    )
+                    .first()
+                )
+                if any_other and any_other.images_raw and isinstance(any_other.images_raw, list) and len(any_other.images_raw) > 0:
+                    canon_image = any_other.images_raw[0]
+
+        result.append(
+            {
+                "id": r.id,
+                "title_raw": r.title_raw,
+                "price_parsed": r.price_parsed,
+                "currency": r.currency,
+                "location_raw": r.location_raw,
+                "url_source": r.url_source,
+                "match_confidence": r.match_confidence,
+                "match_explanation": me,
+                "image_main": listing_image,
+                "crawled_at": r.crawled_at.isoformat() if r.crawled_at else None,
+                "canonical": {
+                    "id": canon.id,
+                    "title": canon.title_canonical,
+                    "price": canon.current_best_price,
+                    "bedrooms": canon_bedrooms,
+                    "bathrooms": canon_bathrooms,
+                    "area_sqm": canon_area_sqm,
+                    "image_main": canon_image,
+                }
+                if canon
+                else None,
+            }
+        )
+    return result
+
+
+@router.post("/review/duplicates/{raw_listing_id}", response_model=dict)
+def review_duplicate(
+    raw_listing_id: int,
+    body: ReviewAction = Body(...),
+    db: Session = Depends(get_db),
+    _admin: AdminUser = Depends(require_admin),
+):
+    """Validate a duplicate match.
+
+    confirm_duplicate: keep the existing link, mark as human-validated.
+    not_duplicate: unlink from the current canonical, create a brand-new
+                   canonical property for this listing.
+    """
+    from scrapers.drafts import RawListingDraft
+
+    raw = db.query(RawListing).filter(RawListing.id == raw_listing_id).first()
+    if raw is None:
+        raise HTTPException(404, "raw_listing not found")
+    if raw.canonical_property_id is None:
+        raise HTTPException(400, "listing is not linked to a canonical property")
+
+    action = body.action
+
+    if action == "confirm_duplicate":
+        me = dict(raw.match_explanation or {})
+        me["human_validated"] = True
+        raw.match_explanation = me
+        db.commit()
+        return {"ok": True, "action": "confirm_duplicate",
+                "canonical_property_id": raw.canonical_property_id}
+
+    if action == "not_duplicate":
+        # Rebuild draft and create a fresh canonical property
+        payload = raw.payload or {}
+        draft = RawListingDraft(
+            url_source=raw.url_source,
+            title_raw=raw.title_raw,
+            price_raw=raw.price_raw,
+            price_parsed=raw.price_parsed,
+            currency=raw.currency or "XAF",
+            location_raw=raw.location_raw,
+            description_raw=raw.description_raw,
+            property_type_raw=raw.property_type_raw,
+            images_raw=raw.images_raw or [],
+            bedrooms=payload.get("bedrooms"),
+            bathrooms=payload.get("bathrooms"),
+            area_sqm=payload.get("area_sqm"),
+            confidence=raw.match_confidence or 0.0,
+            payload=payload,
+        )
+        location_id = resolve_location(db, raw.location_raw)
+        canon = create_canonical(db, draft, location_id)
+        db.flush()
+
+        old_canon_id = raw.canonical_property_id
+
+        # Re-point the raw listing to the new canonical
+        raw.canonical_property_id = canon.id
+        raw.review_status = "human_approved"
+
+        # Re-write match_explanation
+        me = dict(raw.match_explanation or {})
+        me["human_validated"] = True
+        me["human_decision"] = "not_duplicate"
+        me["old_canonical_id"] = old_canon_id
+        raw.match_explanation = me
+
+        # Move first_seen history to the new canonical
+        from core.models import ListingHistory
+        db.query(ListingHistory).filter(
+            ListingHistory.raw_listing_id == raw.id,
+            ListingHistory.canonical_property_id == old_canon_id,
+        ).update({ListingHistory.canonical_property_id: canon.id})
+
+        # Ensure there's a first_seen on the new canonical
+        has_fs = (
+            db.query(ListingHistory)
+            .filter(
+                ListingHistory.canonical_property_id == canon.id,
+                ListingHistory.raw_listing_id == raw.id,
+                ListingHistory.event_type == "first_seen",
+            )
+            .count()
+        )
+        if has_fs == 0:
+            db.add(ListingHistory(
+                raw_listing_id=raw.id,
+                canonical_property_id=canon.id,
+                event_type="first_seen",
+                price_observed=raw.price_parsed,
+                availability="available",
+                observed_at=raw.crawled_at,
+                crawl_session_id=raw.crawl_session_id,
+            ))
+
+        db.commit()
+        return {"ok": True, "action": "not_duplicate",
+                "canonical_property_id": canon.id,
+                "old_canonical_property_id": old_canon_id}
+
+    raise HTTPException(400, f"unknown action {action!r} — use confirm_duplicate or not_duplicate")
 
 
 # --------------------------------------------------------------------------- #

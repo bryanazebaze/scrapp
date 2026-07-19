@@ -264,6 +264,30 @@ export interface ChatResponse {
   tool_metadata: { type: string; data: Record<string, unknown> } | null
 }
 
+export interface DuplicateCanonical {
+  id: number
+  title: string
+  price: number | null
+  bedrooms: number | null
+  bathrooms: number | null
+  area_sqm: number | null
+  image_main: string | null
+}
+
+export interface DuplicateItem {
+  id: number
+  title_raw: string
+  price_parsed: number | null
+  currency: string | null
+  location_raw: string | null
+  url_source: string
+  match_confidence: number | null
+  match_explanation: Record<string, unknown> | null
+  image_main: string | null
+  crawled_at: string | null
+  canonical: DuplicateCanonical | null
+}
+
 // Ad-hoc shape returned by GET /admin/review/pending
 export interface PendingItem {
   id: number

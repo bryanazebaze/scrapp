@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from '@/lib/api'
-import type { SourceSchema, SchedulerJobSchema, CrawlResult, HealthSchema, PendingItem, ReviewAction, CrawlSessionSummary, DashboardStats } from '@/lib/types'
+import type { SourceSchema, SchedulerJobSchema, CrawlResult, HealthSchema, PendingItem, ReviewAction, CrawlSessionSummary, DashboardStats, DuplicateItem } from '@/lib/types'
 
 export function usePendingReviews(skip = 0, limit = 50) {
   return useQuery<PendingItem[]>({
@@ -85,5 +85,24 @@ export function useCrawlSessions(slug: string | null, limit = 10) {
     queryKey: ['crawl-sessions', slug, limit],
     queryFn: () => api.get(`/admin/sources/${slug}/crawl/sessions?limit=${limit}`),
     enabled: !!slug,
+  })
+}
+
+export function useDuplicates(skip = 0, limit = 50) {
+  return useQuery<DuplicateItem[]>({
+    queryKey: ['duplicates', skip, limit],
+    queryFn: () => api.get(`/admin/review/duplicates?skip=${skip}&limit=${limit}`),
+  })
+}
+
+export function useValidateDuplicate() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ id, action }: { id: number; action: 'confirm_duplicate' | 'not_duplicate' }) =>
+      api.post<{ ok: boolean; action: string }>(`/admin/review/duplicates/${id}`, { action }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['duplicates'] })
+      qc.invalidateQueries({ queryKey: ['dashboard'] })
+    },
   })
 }

@@ -170,7 +170,7 @@ class NeighborhoodAnalyticsSchema(BaseModel):
 # Admin
 # --------------------------------------------------------------------------- #
 class ReviewAction(BaseModel):
-    action: str  # 'approve' | 'reject'
+    action: str  # 'approve' | 'reject' | 'confirm_duplicate' | 'not_duplicate'
 
 
 class SchedulerJobSchema(BaseModel):
