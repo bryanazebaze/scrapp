@@ -21,16 +21,22 @@ from sqlalchemy.orm import Session
 
 from core.admin_auth import require_admin
 from core.database import get_db, SessionLocal
-from core.models import Source, RawListing, CanonicalProperty, Location, SchedulerJob, AdminUser
-from core.ingest import promote_raw_listing, create_canonical, resolve_location, explanation_dict
+from core.models import (
+    Source, RawListing, CanonicalProperty, Location, SchedulerJob,
+    AdminUser, ListingHistory, ImageCache,
+)
+from core.ingest import (
+    promote_raw_listing, create_canonical, resolve_location,
+    explanation_dict, recompute_canonical_prices,
+)
 from core.scheduler import (
     job_crawl_source, job_recompute_analytics, list_jobs,
     apply_job_config, job_crawl_source_streaming, get_scheduler,
 )
 from core.sse import broker, format_sse
 from core.schemas import (
-    SourceSchema, ReviewAction, SchedulerJobSchema, CrawlResult,
-    JobUpdateSchema, JobSchemaOut,
+    SourceSchema, SourceCreateSchema, ReviewAction, SchedulerJobSchema,
+    CrawlResult, JobUpdateSchema, JobSchemaOut,
 )
 
 logger = logging.getLogger(__name__)
@@ -438,7 +444,7 @@ def list_sources(db: Session = Depends(get_db),
 
 
 @router.post("/sources", response_model=SourceSchema)
-def create_source(src: SourceSchema, db: Session = Depends(get_db),
+def create_source(src: SourceCreateSchema, db: Session = Depends(get_db),
                    _admin: AdminUser = Depends(require_admin)):
     existing = db.query(Source).filter(Source.slug == src.slug).first()
     if existing:
@@ -496,6 +502,7 @@ async def crawl_source_stream(slug: str,
 async def crawl_test_stream(
     slug: str,
     max_pages: int = Query(1, ge=1, le=50, description="Max pages to crawl (default: 1)"),
+    max_listings: int = Query(5, ge=1, le=200, description="Max listings to extract (default: 5)"),
     _admin: AdminUser = Depends(require_admin),
 ):
     """SSE stream of a TEST crawl — fetches listings WITHOUT persisting to DB.
@@ -504,7 +511,8 @@ async def crawl_test_stream(
     (title, price, location, images, raw payload/HTML). A final ``done``
     event carries summary stats.
 
-    Set ``max_pages`` to control how many pages the adapter fetches.
+    Set ``max_pages`` to control how many index pages the adapter traverses,
+    and ``max_listings`` to cap how many detail pages it extracts.
     """
     from main import build_adapter
     from scrapers.drafts import RawListingDraft
@@ -530,10 +538,10 @@ async def crawl_test_stream(
                 "source": slug,
                 "page": 0,
                 "listings": 0,
-                "message": f"Crawl TEST démarré: {src.display_name} (max_pages={max_pages}, sans persistence DB)",
+                "message": f"Crawl TEST démarré: {src.display_name} (max_pages={max_pages}, max_listings={max_listings})",
             })
             adapter = build_adapter(src)
-            drafts = list(adapter.fetch_listings(max_pages=max_pages))
+            drafts = list(adapter.fetch_listings(max_pages=max_pages, max_listings=max_listings))
             total = len(drafts)
 
             broker.publish(slug, {
@@ -632,6 +640,89 @@ def toggle_source(slug: str, db: Session = Depends(get_db),
     db.commit()
     db.refresh(src)
     return src
+
+
+@router.delete("/sources/{slug}", response_model=CrawlResult)
+def delete_source(slug: str, db: Session = Depends(get_db),
+                  _admin: AdminUser = Depends(require_admin)):
+    """Delete a source and cascade-delete all its crawled data.
+
+    Removes listing_history, raw_listings (translations auto-cascade via
+    ondelete=CASCADE), image_cache, and scheduler_jobs for the source,
+    then the source itself. Recomputes canonical prices afterward since
+    some canonicals may have lost their best raw listing.
+
+    Refuses with 409 if a crawl is currently running for the source.
+    """
+    src = db.query(Source).filter(Source.slug == slug).first()
+    if not src:
+        raise HTTPException(404, f"Source '{slug}' not found")
+
+    # Refuse if a crawl is in progress for this source.
+    running = db.query(SchedulerJob).filter(
+        SchedulerJob.source_id == src.id,
+        SchedulerJob.status == "running",
+    ).first()
+    if running:
+        raise HTTPException(
+            409,
+            f"A crawl is in progress for '{slug}'. Wait for it to finish first.",
+        )
+
+    source_id = src.id
+    raw_ids = [
+        row[0] for row in
+        db.query(RawListing.id).filter(RawListing.source_id == source_id).all()
+    ]
+
+    try:
+        deleted_history = 0
+        if raw_ids:
+            deleted_history = (
+                db.query(ListingHistory)
+                .filter(ListingHistory.raw_listing_id.in_(raw_ids))
+                .delete(synchronize_session=False)
+            )
+        # listing_translations auto-cascade via ondelete="CASCADE" on raw_listings.
+        deleted_listings = (
+            db.query(RawListing)
+            .filter(RawListing.source_id == source_id)
+            .delete(synchronize_session=False)
+        )
+        deleted_images = (
+            db.query(ImageCache)
+            .filter(ImageCache.source_id == source_id)
+            .delete(synchronize_session=False)
+        )
+        deleted_jobs = (
+            db.query(SchedulerJob)
+            .filter(SchedulerJob.source_id == source_id)
+            .delete(synchronize_session=False)
+        )
+        db.query(Source).filter(Source.id == source_id).delete(
+            synchronize_session=False
+        )
+        db.commit()
+    except Exception as e:
+        db.rollback()
+        logger.exception("delete_source %s failed", slug)
+        raise HTTPException(500, f"Delete failed: {e}")
+
+    # Some canonicals may have lost their best raw listing — recompute.
+    try:
+        recompute_canonical_prices(db)
+    except Exception as e:
+        logger.warning("recompute_canonical_prices after delete failed: %s", e)
+
+    return CrawlResult(
+        ok=True,
+        stats={
+            "deleted_listings": deleted_listings,
+            "deleted_history": deleted_history,
+            "deleted_images": deleted_images,
+            "deleted_jobs": deleted_jobs,
+        },
+    )
 
 
 # --------------------------------------------------------------------------- #

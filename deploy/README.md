@@ -53,7 +53,7 @@ git clone https://github.com/<you>/scrapp.git /tmp/scrapp
 cd /tmp/scrapp
 
 # Optional: enable AI features (NL search + translations) by passing the key
-sudo DEEPSEEK_API_KEY=sk-xxxx ./deploy/setup.sh
+sudo QWEN_API_KEY=sk-xxxx ./deploy/setup.sh
 #   — or without AI features —
 sudo ./deploy/setup.sh
 ```
@@ -64,7 +64,7 @@ sudo ./deploy/setup.sh
 3. Create a Python venv and `pip install -r requirements.txt`.
 4. Create the `immo_user` Postgres role (auto-generated password) + `immo_db`.
 5. Restore `deploy/immo_db_backup.dump` into `immo_db`.
-6. Generate `/opt/centralimmo/.env` (DB URL, `API_HOST=0.0.0.0`, CORS, DeepSeek key).
+6. Generate `/opt/centralimmo/.env` (DB URL, `API_HOST=0.0.0.0`, CORS, Qwen key).
 7. Register + enable the `centralimmo` systemd service.
 
 At the end it prints the generated DB password — **save it** (it's also in
@@ -147,5 +147,5 @@ sudo systemctl restart centralimmo
   TCP 8000 from your IP; check `sudo systemctl status centralimmo`.
 - **`alembic_version` mismatch** — the dump already stamps `0005_bilingual`.
   Verify: `PGPASSWORD=... psql -U immo_user -d immo_db -c "SELECT * FROM alembic_version;"`
-- **AI features silent** — `DEEPSEEK_API_KEY` is empty in `.env`. Re-run
-  `sudo DEEPSEEK_API_KEY=sk-xxxx ./deploy/setup.sh`.
+- **AI features silent** — `QWEN_API_KEY` is empty in `.env`. Re-run
+  `sudo QWEN_API_KEY=sk-xxxx ./deploy/setup.sh`.

@@ -1,5 +1,5 @@
 """
-AI-powered scraper using DeepSeek to intelligently analyze real-estate sites.
+AI-powered scraper using Qwen 3.6 Flash to intelligently analyze real-estate sites.
 
 Instead of hardcoded heuristics, the AI inspects each page, discovers the
 DOM structure (cards, detail URLs, pagination), then extracts fields.
@@ -113,7 +113,7 @@ Rules:
 - If a field is not found, use null or empty array."""
 
 
-def _ai_call(client: OpenAI, system: str, html: str, model: str = "deepseek-chat") -> dict:
+def _ai_call(client: OpenAI, system: str, html: str, model: str = "qwen3.6-flash") -> dict:
     """Single AI call. Returns parsed JSON dict, or {} on failure."""
     try:
         resp = client.chat.completions.create(
@@ -124,6 +124,7 @@ def _ai_call(client: OpenAI, system: str, html: str, model: str = "deepseek-chat
             ],
             temperature=0.1,
             max_tokens=4096,
+            extra_body={"enable_thinking": False},
         )
         raw = resp.choices[0].message.content.strip()
         # Strip markdown fences if present
@@ -142,20 +143,29 @@ def _ai_call(client: OpenAI, system: str, html: str, model: str = "deepseek-chat
 class AIScraper(SourceAdapter, BaseFetchMixin):
     """Scrape any real-estate site by having an AI analyze the DOM.
 
-    The adapter first asks DeepSeek to map out the listing-page structure
-    (card selectors, detail-link patterns, pagination). It then crawls
-    detail pages and asks the AI to extract structured fields from each.
+    The adapter first asks Qwen 3.6 Flash to map out the listing-page
+    structure (card selectors, detail-link patterns, pagination). It then
+    crawls detail pages and asks the AI to extract structured fields from
+    each.
     """
 
     def __init__(self, source_id: Optional[int] = None,
                  crawl_config: dict | None = None,
-                 api_key: str = ""):
+                 api_key: str = "",
+                 base_url: str = "",
+                 model: str = ""):
         super().__init__(source_id)
         cfg = crawl_config or {}
         self.seed_url = cfg.get("seed_url", "")
         self.base_url = self._derive_base_url(self.seed_url)
         self.init_fetch(base_url=self.base_url, crawl_config=cfg)
         self.api_key = api_key
+        
+        # Load fallback defaults from global settings if not provided
+        from core.config import settings
+        self.ai_base_url = base_url or settings.qwen_base_url
+        self.ai_model = model or settings.qwen_model
+        
         self._client: Optional[OpenAI] = None
         self._structure_cache: dict[str, dict] = {}
 
@@ -169,7 +179,7 @@ class AIScraper(SourceAdapter, BaseFetchMixin):
         if self._client is None:
             self._client = OpenAI(
                 api_key=self.api_key,
-                base_url="https://api.deepseek.com",
+                base_url=self.ai_base_url,
             )
         return self._client
 
@@ -185,7 +195,7 @@ class AIScraper(SourceAdapter, BaseFetchMixin):
 
         soup = BeautifulSoup(html, "html.parser")
         cleaned = _clean_html(soup)
-        result = _ai_call(self.client, SYSTEM_PROMPT_STRUCTURE, cleaned)
+        result = _ai_call(self.client, SYSTEM_PROMPT_STRUCTURE, cleaned, model=self.ai_model)
         self._structure_cache[cache_key] = result
         return result
 
@@ -234,7 +244,7 @@ class AIScraper(SourceAdapter, BaseFetchMixin):
         """Ask AI to extract property fields from a detail page."""
         soup = BeautifulSoup(html, "html.parser")
         cleaned = _clean_detail_html(soup)
-        extracted = _ai_call(self.client, SYSTEM_PROMPT_EXTRACT, cleaned)
+        extracted = _ai_call(self.client, SYSTEM_PROMPT_EXTRACT, cleaned, model=self.ai_model)
         if not extracted or not extracted.get("title"):
             print(f"[ai_scraper] AI extraction empty for {detail_url[:80]}")
             return None
@@ -264,7 +274,7 @@ class AIScraper(SourceAdapter, BaseFetchMixin):
             confidence=0.50,  # AI-extracted starts at medium confidence
             payload={
                 "ai_extracted": True,
-                "ai_model": "deepseek-chat",
+                "ai_model": self.ai_model,
                 "extra_features": extracted.get("features", []),
                 "listing_purpose": extracted.get("listing_purpose"),
             },
@@ -323,7 +333,15 @@ class AIScraper(SourceAdapter, BaseFetchMixin):
     # ------------------------------------------------------------------ #
     # Orchestration
     # ------------------------------------------------------------------ #
-    def fetch_listings(self, max_pages: int | None = None) -> list[RawListingDraft]:
+    def fetch_listings(self, max_pages: int | None = None,
+                       max_listings: int | None = None, **kwargs) -> list[RawListingDraft]:
+        """Crawl the site and return extracted drafts.
+
+        ``max_pages`` caps how many listing/index pages we traverse.
+        ``max_listings`` caps how many complete property drafts we return —
+        once enough have been extracted, pagination and detail-page fetches
+        stop. ``None`` means unlimited.
+        """
         max_pages = max_pages or 5
         drafts: list[RawListingDraft] = []
         seen_detail_urls: set[str] = set()
@@ -371,11 +389,18 @@ class AIScraper(SourceAdapter, BaseFetchMixin):
             print(f"[ai_scraper] Page {crawled_pages}: {len(detail_urls)} detail URLs, "
                   f"{len(next_pages)} next pages, {len(all_detail_urls)} total unique")
 
+            # Stop paginating once we've collected enough detail URLs.
+            if max_listings and len(all_detail_urls) >= max_listings:
+                print(f"[ai_scraper] Reached max_listings={max_listings} URLs, stopping pagination")
+                break
+
         print(f"[ai_scraper] Phase 2 done: {len(all_detail_urls)} detail URLs to scrape")
 
         # Step 4: extract details from each listing page
-        for i, detail_url in enumerate(all_detail_urls):
-            print(f"[ai_scraper] Phase 3 [{i+1}/{len(all_detail_urls)}]: {detail_url[:100]}")
+        # Slice to max_listings so we don't fetch detail pages we'll discard.
+        urls_to_scrape = all_detail_urls[:max_listings] if max_listings else all_detail_urls
+        for i, detail_url in enumerate(urls_to_scrape):
+            print(f"[ai_scraper] Phase 3 [{i+1}/{len(urls_to_scrape)}]: {detail_url[:100]}")
             detail_html = self.fetch_text(detail_url, referer=self.base_url)
             if not detail_html:
                 continue
@@ -383,6 +408,9 @@ class AIScraper(SourceAdapter, BaseFetchMixin):
             if draft:
                 drafts.append(draft)
                 print(f"  -> {draft.title_raw[:70]} | {draft.price_parsed} {draft.currency} | {draft.property_type_raw}")
+                if max_listings and len(drafts) >= max_listings:
+                    print(f"[ai_scraper] Reached max_listings={max_listings} drafts, stopping")
+                    break
             time.sleep(0.5)  # Be polite
 
         print(f"[ai_scraper] === Done: {len(drafts)} drafts extracted ===")

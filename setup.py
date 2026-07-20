@@ -189,16 +189,13 @@ finally:
 # Command: restore
 # ---------------------------------------------------------------------------
 def cmd_restore(args: argparse.Namespace) -> None:
-    """Restore the database from the dump file."""
-    print("=== CentralImmo: Database Restore ===\n")
+    """Restore the database from the dump file (destructive — drops and recreates DB)."""
+    print("=== CentralImmo: Database Restore (destructive) ===\n")
 
-    # We need the DATABASE_URL from .env
     sys.path.insert(0, str(PROJECT_ROOT))
     from core.config import settings
 
     db_url = settings.database_url
-    # Parse DATABASE_URL into components for pg_restore/psql
-    # Format: postgresql://user:pass@host:port/dbname
     from urllib.parse import urlparse
     parsed = urlparse(db_url)
     db_host = parsed.hostname or "localhost"
@@ -206,47 +203,43 @@ def cmd_restore(args: argparse.Namespace) -> None:
     db_user = parsed.username or "immo_user"
     db_pass = parsed.password or ""
     db_name = parsed.path.lstrip("/") or "immo_db"
+    env = {**os.environ, "PGPASSWORD": db_pass}
 
-    # Try custom format first (pg_restore), fall back to plain SQL (psql).
+    # 1. Terminate existing connections and drop/recreate the database
+    print("[1/3] Dropping and recreating database...")
+    subprocess.run([
+        "psql", f"--host={db_host}", f"--port={db_port}",
+        f"--username={db_user}", "--dbname=postgres",
+        "-c", f"SELECT pg_terminate_backend(pid) FROM pg_stat_activity "
+              f"WHERE datname = '{db_name}' AND pid <> pg_backend_pid();",
+    ], env=env, check=False, capture_output=True)
+    subprocess.run([
+        "psql", f"--host={db_host}", f"--port={db_port}",
+        f"--username={db_user}", "--dbname=postgres",
+        "-c", f"DROP DATABASE IF EXISTS {db_name};",
+    ], env=env, check=True)
+    subprocess.run([
+        "psql", f"--host={db_host}", f"--port={db_port}",
+        f"--username={db_user}", "--dbname=postgres",
+        "-c", f"CREATE DATABASE {db_name} OWNER {db_user};",
+    ], env=env, check=True)
+    print("  -> Database recreated.")
+
+    # 2. Restore from dump
     if DUMP_FILE.exists():
-        print(f"[1/2] Restoring from custom dump: {DUMP_FILE}")
-        env = {**os.environ, "PGPASSWORD": db_pass}
-        try:
-            run([
-                "pg_restore",
-                f"--host={db_host}",
-                f"--port={db_port}",
-                f"--username={db_user}",
-                f"--dbname={db_name}",
-                "--clean",
-                "--if-exists",
-                "--no-owner",
-                "--no-privileges",
-                str(DUMP_FILE),
-            ], env=env)
-        except subprocess.CalledProcessError:
-            print("  -> pg_restore had issues, retrying...")
-            run([
-                "pg_restore",
-                f"--host={db_host}",
-                f"--port={db_port}",
-                f"--username={db_user}",
-                f"--dbname={db_name}",
-                "--clean",
-                "--if-exists",
-                "--no-owner",
-                "--no-privileges",
-                str(DUMP_FILE),
-            ], env=env)
-    elif SQL_DUMP_FILE.exists():
-        print(f"[1/2] Restoring from SQL dump: {SQL_DUMP_FILE}")
-        env = {**os.environ, "PGPASSWORD": db_pass}
+        print(f"[2/3] Restoring from custom dump: {DUMP_FILE}")
         run([
-            "psql",
-            f"--host={db_host}",
-            f"--port={db_port}",
-            f"--username={db_user}",
-            f"--dbname={db_name}",
+            "pg_restore",
+            f"--host={db_host}", f"--port={db_port}",
+            f"--username={db_user}", f"--dbname={db_name}",
+            "--no-owner", "--no-privileges",
+            str(DUMP_FILE),
+        ], env=env)
+    elif SQL_DUMP_FILE.exists():
+        print(f"[2/3] Restoring from SQL dump: {SQL_DUMP_FILE}")
+        run([
+            "psql", f"--host={db_host}", f"--port={db_port}",
+            f"--username={db_user}", f"--dbname={db_name}",
             "-f", str(SQL_DUMP_FILE),
         ], env=env)
     else:
@@ -255,14 +248,23 @@ def cmd_restore(args: argparse.Namespace) -> None:
         print(f"  {SQL_DUMP_FILE}")
         sys.exit(1)
 
-    print("\n[2/2] Verifying restore...")
-    env = {**os.environ, "PGPASSWORD": db_pass}
+    # 3. Run Alembic migrations to ensure schema is at latest revision
+    print("[3/3] Running Alembic migrations...")
+    python = str(VENV_DIR / "bin" / "python") if (VENV_DIR / "bin" / "python").exists() else sys.executable
+    result = subprocess.run(
+        [python, "-m", "alembic", "upgrade", "head"],
+        cwd=str(PROJECT_ROOT), capture_output=True, text=True,
+    )
+    if result.returncode == 0:
+        print(f"  -> {result.stdout.strip() or 'Already at head.'}")
+    else:
+        print(f"  [WARN] Migration output: {result.stderr.strip()}")
+
+    # Verify
+    print("\nVerifying restore...")
     result = subprocess.run([
-        "psql",
-        f"--host={db_host}",
-        f"--port={db_port}",
-        f"--username={db_user}",
-        f"--dbname={db_name}",
+        "psql", f"--host={db_host}", f"--port={db_port}",
+        f"--username={db_user}", f"--dbname={db_name}",
         "-t", "-c",
         "SELECT 'canonical_properties: ' || count(*) FROM canonical_properties;",
     ], env=env, capture_output=True, text=True)
@@ -336,7 +338,7 @@ def cmd_info(args: argparse.Namespace) -> None:
             print(f"  API_PORT:      {settings.api_port}")
             print(f"  CORS_ORIGINS:  {settings.cors_origins}")
             print(f"  LOG_LEVEL:     {settings.log_level}")
-            print(f"  DEEPSEEK_KEY:  {'configured' if settings.deepseek_api_key else 'not set'}")
+            print(f"  QWEN_KEY:      {'configured' if settings.qwen_api_key else 'not set'}")
         except Exception as e:
             print(f"  [Error reading settings: {e}]")
 

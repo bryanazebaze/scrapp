@@ -1,9 +1,10 @@
-"""AI chat agent endpoint with DeepSeek function-calling.
+"""AI chat agent endpoint with Qwen 3.6 Flash function-calling.
 
 Exposes POST /chat — a conversational agent that can call backend tools
-to query the database in real-time. The agent uses DeepSeek's OpenAI-compatible
-tool-calling capability to decide which tools to invoke based on the user's
-message, then synthesizes a natural-language reply from the tool results.
+to query the database in real-time. The agent uses Qwen 3.6 Flash's
+OpenAI-compatible tool-calling capability to decide which tools to invoke
+based on the user's message, then synthesizes a natural-language reply
+from the tool results.
 
 Tools available to the agent:
   1. search_properties       — NL or structured property search
@@ -15,8 +16,9 @@ Tools available to the agent:
   7. get_price_analysis      — market position of a property
   8. get_locations           — list all cities/neighborhoods
 
-The API key comes from settings.deepseek_api_key (in .env), never exposed
-to the frontend.
+The API key comes from settings.qwen_api_key (in .env), never exposed
+to the frontend. The same /chat endpoint serves both the Flutter mobile
+app and the web client.
 """
 from __future__ import annotations
 
@@ -85,12 +87,14 @@ RULES:
 1. Respond in English. Be very concise: maximum 2-3 sentences per response.
 2. Do NOT use markdown (no **, no ##, no tables).
 3. Do NOT use emojis.
-4. When you find properties, do not describe them individually — just state the count found and summarize the price range. Properties will be displayed visually.
+4. When you find properties, do not describe them individually — just state the count found and summarize the price range. Properties will be displayed as visual cards with images.
 5. For the safest city: call get_locations then get_city_safety_profile to compare.
 6. Suggest ONE follow-up question at the end.
 7. Prices are in XAF. 1 million = 1,000,000 XAF.
 8. For get_neighborhood_analytics: pass the neighborhood name directly (neighborhood) and optionally the city (city). No need to look up the slug.
 9. For price analysis: lands (Terrain) are compared by XAF/m2 (price_per_sqm); structures (Appartement, Maison, Villa, ...) are compared by total XAF price. The response's comparison_metric tells you which. Always mention the metric when summarizing an analysis.
+10. PROPERTY SEARCH: If the user asks to find, list, show, or search for properties (e.g. "rooms in Bastos", "cheapest property", "houses for sale", "any room at odza"), ALWAYS call search_properties. NEVER answer with property info from memory — always search the database first.
+11. MULTIPLE TOOLS: You can call multiple tools in a single response. If the question involves multiple aspects (e.g. properties + neighborhood safety, or properties + market analysis), call multiple tools at once to gather all needed information before answering.
 """
     return """Tu es CentralBot, l'assistant intelligent de CentralImmo, la plateforme d'intelligence immobiliere du Cameroun.
 
@@ -112,12 +116,14 @@ REGLES:
 1. Reponds en francais. Sois TRES concis: maximum 2-3 phrases par reponse.
 2. N'utilise PAS de markdown (pas de **, pas de ##, pas de tableaux).
 3. N'utilises PAS d'emojis.
-4. Quand tu trouves des proprietes, ne les decris pas individuellement — dis juste le nombre trouve et resume les prix. Les proprietes seront affichees visuellement.
+4. Quand tu trouves des proprietes, ne les decris pas individuellement — dis juste le nombre trouve et resume les prix. Les proprietes seront affichees en cartes visuelles avec images.
 5. Pour la ville la plus sure: appelle get_locations puis get_city_safety_profile pour comparer.
 6. Propose UNE question de suivi a la fin.
 7. Les prix sont en XAF. 1 million = 1 000 000 XAF.
 8. Pour get_neighborhood_analytics: passe directement le nom du quartier (neighborhood) et optionnellement la ville (city). Pas besoin de chercher le slug.
 9. Pour l'analyse de prix: les terrains (Terrain) sont compares en XAF/m2 (price_per_sqm); les structures (Appartement, Maison, Villa, ...) sont compares sur le prix total en XAF. Le champ comparison_metric de la reponse indique lequel. Mentionne toujours cette unite quand tu resumes une analyse.
+10. RECHERCHE DE BIENS: Si l'utilisateur demande de trouver, lister, voir ou chercher des biens (ex: "chambres a Bastos", "propriete la moins chere", "maisons a vendre", "chambre a odza"), appelle TOUJOURS search_properties. Ne reponds JAMAIS avec des infos sur des biens de memoire — cherche toujours dans la base de donnees.
+11. OUTILS MULTIPLES: Tu peux appeler plusieurs outils dans une seule reponse. Si la question implique plusieurs aspects (ex: biens + securite du quartier, ou biens + analyse de marche), appelle plusieurs outils en meme temps pour collecter toutes les informations avant de repondre.
 """
 
 
@@ -276,7 +282,7 @@ TOOLS = [
 
 
 # --------------------------------------------------------------------------- #
-# OpenAI client management
+# Qwen client management
 # --------------------------------------------------------------------------- #
 _client: AsyncOpenAI | None = None
 
@@ -284,12 +290,12 @@ _client: AsyncOpenAI | None = None
 def _get_client() -> AsyncOpenAI | None:
     """Lazy-init the AsyncOpenAI client. Returns None if no API key."""
     global _client
-    if not settings.deepseek_api_key:
+    if not settings.qwen_api_key:
         return None
     if _client is None:
         _client = AsyncOpenAI(
-            api_key=settings.deepseek_api_key,
-            base_url=settings.deepseek_base_url,
+            api_key=settings.qwen_api_key,
+            base_url=settings.qwen_base_url,
             timeout=120.0,  # 120s total — generous for unstable connections
             max_retries=3,  # SDK-level retries on transient failures
         )
@@ -657,9 +663,9 @@ MAX_TOOL_ROUNDS = 3
 async def chat(req: ChatRequest, db: Session = Depends(get_db)):
     """Conversational AI agent with tool-calling.
 
-    Sends the user message to DeepSeek with tool definitions. If DeepSeek requests
-    tool calls, executes them against the database, then sends results back
-    to DeepSeek for a final natural-language reply.
+    Sends the user message to Qwen 3.6 Flash with tool definitions. If Qwen
+    requests tool calls, executes them against the database, then sends
+    results back to Qwen for a final natural-language reply.
     """
     client = _get_client()
     lang = req.language if req.language in ("fr", "en") else "fr"
@@ -683,15 +689,8 @@ async def chat(req: ChatRequest, db: Session = Depends(get_db)):
         messages.append({"role": msg.role, "content": msg.content})
     messages.append({"role": "user", "content": req.message})
 
-    # Optional: enable DeepSeek's deep thinking mode
-    extra_body = (
-        {"thinking": {"type": "enabled"}}
-        if settings.deepseek_thinking_enabled
-        else None
-    )
-
     tool_results: list[dict] = []
-    tool_used: str | None = None
+    tool_used_names: list[str] = []
     tool_metadata: dict | None = None
 
     # Tools whose results should be passed as structured metadata for UI cards
@@ -707,18 +706,17 @@ async def chat(req: ChatRequest, db: Session = Depends(get_db)):
     for _round in range(MAX_TOOL_ROUNDS):
         try:
             kwargs: dict = dict(
-                model=settings.deepseek_model,
+                model=settings.qwen_model,
                 messages=messages,
                 tools=TOOLS,
                 tool_choice="auto",
                 temperature=0.3,
-                max_tokens=1000,
+                max_tokens=1500,
+                extra_body={"enable_thinking": False},
             )
-            if extra_body:
-                kwargs["extra_body"] = extra_body
             resp = await client.chat.completions.create(**kwargs)
         except Exception as e:
-            logger.exception("DeepSeek API call failed")
+            logger.exception("Qwen API call failed")
             error_msg = (
                 "Je rencontre une difficulte technique. Pouvez-vous reformuler votre question ?"
                 if lang == "fr"
@@ -738,7 +736,7 @@ async def chat(req: ChatRequest, db: Session = Depends(get_db)):
             return ChatResponse(
                 reply=msg.content or "Je n'ai pas de reponse pour le moment.",
                 properties=_extract_properties(tool_results),
-                tool_used=tool_used,
+                tool_used=", ".join(tool_used_names) if tool_used_names else None,
                 tool_metadata=tool_metadata,
             )
 
@@ -767,8 +765,8 @@ async def chat(req: ChatRequest, db: Session = Depends(get_db)):
                 args = {}
 
             tool_name = tc.function.name
-            if not tool_used:
-                tool_used = tool_name
+            if tool_name not in tool_used_names:
+                tool_used_names.append(tool_name)
 
             result = _execute_tool(tool_name, args, db, lang)
             tool_results.append(result)
@@ -790,13 +788,12 @@ async def chat(req: ChatRequest, db: Session = Depends(get_db)):
     # If we exhausted tool-call rounds, get a final text response
     try:
         kwargs: dict = dict(
-            model=settings.deepseek_model,
+            model=settings.qwen_model,
             messages=messages,
             temperature=0.3,
             max_tokens=800,
+            extra_body={"enable_thinking": False},
         )
-        if extra_body:
-            kwargs["extra_body"] = extra_body
         resp = await client.chat.completions.create(**kwargs)
         fallback_msg = (
             "Je n'ai pas pu traiter votre demande."
@@ -814,6 +811,6 @@ async def chat(req: ChatRequest, db: Session = Depends(get_db)):
     return ChatResponse(
         reply=reply,
         properties=_extract_properties(tool_results),
-        tool_used=tool_used,
+        tool_used=", ".join(tool_used_names) if tool_used_names else None,
         tool_metadata=tool_metadata,
     )

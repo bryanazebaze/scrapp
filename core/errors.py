@@ -46,16 +46,16 @@ def sanitize_error(exc: BaseException) -> str:
     except Exception:
         pass
 
-    # AI service errors: openai, deepseek, key errors, timeouts.
+    # AI service errors: openai, qwen, key errors, timeouts.
     try:
         import openai as _openai
         if isinstance(exc, _openai.APIError):
             return "Erreur du service IA"
     except Exception:
         pass
-    if isinstance(exc, (TimeoutError, TimeoutWarning)):
+    if isinstance(exc, TimeoutError):
         return "Erreur du service IA"
-    # Key errors raised when a DeepSeek/OpenAI key is missing/invalid.
+    # Key errors raised when a Qwen/OpenAI key is missing/invalid.
     if isinstance(exc, (KeyError, PermissionError)):
         return "Erreur du service IA"
 

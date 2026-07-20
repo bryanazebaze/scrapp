@@ -6,8 +6,8 @@ Parses queries like:
   "villa with pool in Yaoundé"
 
 Two parsing strategies:
-  1. AI-assisted: sends the query to DeepSeek which returns structured
-     JSON filters. Used when DEEPSEEK_API_KEY is configured.
+  1. AI-assisted: sends the query to Qwen 3.6 Flash which returns structured
+     JSON filters. Used when QWEN_API_KEY is configured.
   2. Regex fallback: keyword/regex extraction. Always available.
 """
 from __future__ import annotations
@@ -285,7 +285,7 @@ async def search(
 ):
     """Natural-language property search.
 
-    Tries AI parsing (DeepSeek) first, falls back to regex parsing.
+    Tries AI parsing (Qwen 3.6 Flash) first, falls back to regex parsing.
     Explicit query params (city, min_price, etc.) override parsed values.
 
     Examples:

@@ -41,16 +41,15 @@ class Settings(BaseSettings):
     http_proxy: str | None = None
     https_proxy: str | None = None
 
-    # --- AI / DeepSeek ---
-    deepseek_api_key: str | None = None
-    deepseek_model: str = "deepseek-v4-flash"
-    deepseek_base_url: str = "https://api.deepseek.com"
-    deepseek_thinking_enabled: bool = False
+    # --- AI / Qwen ---
+    qwen_api_key: str = "sk-ws-H.XILXMY.FtqY.MEUCIQCCuhPdAc1bJ6BouavWhfsLvzEqsV9jFJw17-U4GYmx9gIgeeww0tTMv_ddd1Qryo85yOIGAI7f2HQM9qhjkVDjWAI"
+    qwen_model: str = "qwen3.6-flash"
+    qwen_base_url: str = "https://ws-711m66u5kgmuf9cg.ap-southeast-1.maas.aliyuncs.com/compatible-mode/v1"
 
     # --- Logging ---
     log_level: str = "INFO"
 
-    # --- Notch Pay ---
+    # --- Nextpay / Notch Pay ---
     notchpay_public_key: Optional[str] = None
     notchpay_private_key: Optional[str] = None
     notchpay_hash_key: Optional[str] = None
@@ -63,7 +62,6 @@ class Settings(BaseSettings):
     # Default password for the two seeded admin accounts (changed on first login
     # in a real deployment). Override via .env.
     admin_seed_password: str = "Test123*#"
-    deepseek_api_key: str = ""  # DeepSeek API key for AI-powered scraper
 
     @property
     def cors_origin_list(self) -> list[str]:

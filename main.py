@@ -41,12 +41,22 @@ DEDICATED_ADAPTERS = {
 
 
 def build_adapter(source: Source):
-    """Instantiate the adapter for a source row, passing its crawl_config."""
+    """Instantiate the adapter for a source row, passing its crawl_config.
+
+    Universal sources use the AI-powered scraper (Qwen) which analyzes
+    page structure dynamically instead of relying on hardcoded heuristics.
+    """
     if source.adapter_kind == "universal":
-        from scrapers.universal import UniversalAdapter  # lazy import
-        return UniversalAdapter(source_id=source.id,
-                                crawl_config=source.crawl_config or {},
-                                seed_url=source.site_url)
+        from scrapers.ai_scraper import AIScraper
+        from core.config import settings
+        return AIScraper(
+            source_id=source.id,
+            crawl_config={
+                **(source.crawl_config or {}),
+                "seed_url": source.site_url,
+            },
+            api_key=settings.qwen_api_key,
+        )
     cls = DEDICATED_ADAPTERS.get(source.slug)
     if cls is None:
         raise ValueError(f"No dedicated adapter registered for source slug={source.slug!r}")

@@ -13,14 +13,18 @@ from pydantic import BaseModel, ConfigDict
 # --------------------------------------------------------------------------- #
 # Sources
 # --------------------------------------------------------------------------- #
-class SourceSchema(BaseModel):
-    id: int
+class SourceCreateSchema(BaseModel):
+    """Schema for creating a new source (no id)."""
     slug: str
     display_name: str
     site_url: str
-    adapter_kind: str
-    is_active: bool
+    adapter_kind: str = "universal"
+    is_active: bool = True
     crawl_config: Optional[dict] = None
+
+
+class SourceSchema(SourceCreateSchema):
+    id: int
 
     model_config = ConfigDict(from_attributes=True)
 

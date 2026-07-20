@@ -126,14 +126,14 @@ def cmd_universal(args: argparse.Namespace) -> None:
 
 
 def cmd_ai_scrape(args: argparse.Namespace) -> None:
-    """Crawl a URL with AI-powered scraper (DeepSeek)."""
+    """Crawl a URL with AI-powered scraper (Qwen)."""
     from urllib.parse import urlparse
     from core.config import settings
     from scrapers.ai_scraper import AIScraper
 
-    api_key = getattr(settings, "deepseek_api_key", "")
+    api_key = getattr(settings, "qwen_api_key", "")
     if not api_key:
-        print("[ai-scrape] ERROR: DEEPSEEK_API_KEY not set in .env")
+        print("[ai-scrape] ERROR: QWEN_API_KEY not set in .env")
         sys.exit(1)
 
     netloc = urlparse(args.url).netloc
@@ -216,7 +216,7 @@ def main() -> None:
     p_uni.add_argument("--max-pages", type=int, default=20)
     p_uni.set_defaults(func=cmd_universal)
 
-    p_ai = sub.add_parser("ai-scrape", help="Crawl a URL with AI-powered scraper (DeepSeek)")
+    p_ai = sub.add_parser("ai-scrape", help="Crawl a URL with AI-powered scraper (Qwen)")
     p_ai.add_argument("--url", required=True, help="Seed URL to crawl")
     p_ai.add_argument("--max-pages", type=int, default=5)
     p_ai.add_argument("--dry-run", action="store_true",

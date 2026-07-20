@@ -24,6 +24,10 @@ __pycache__/
 # OS
 .DS_Store
 
+# Runtime artifacts
+run/
+logs/
+
 # Deployment artifacts
 # The pg_dump binary (deploy/immo_db_backup.dump) IS committed so the server
 # can restore data via git pull (no re-scraping needed). Plain SQL exports are
